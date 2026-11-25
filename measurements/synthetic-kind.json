@@ -1,0 +1,22 @@
+{
+  "corpus": "synthetic",
+  "fields": {
+    "kind.invoice": {
+      "right": 25,
+      "total": 25
+    },
+    "kind.payslip": {
+      "right": 12,
+      "total": 12
+    },
+    "kind.statement": {
+      "right": 6,
+      "total": 6
+    },
+    "kind.unknown (scan)": {
+      "right": 5,
+      "total": 5
+    }
+  },
+  "reader": "kind"
+}

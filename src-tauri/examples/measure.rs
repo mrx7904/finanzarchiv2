@@ -13,8 +13,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use finanzarchiv2_lib::pages;
 use finanzarchiv2_lib::pdf::{self, Pdfium};
+use finanzarchiv2_lib::{documents, kinds, pages};
 use serde_json::{Value, json};
 
 #[derive(Default)]
@@ -28,17 +28,23 @@ fn fold(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-fn text_of(pdfium: &Pdfium, pdf: &Path) -> String {
-    let lines = fs::read(pdf)
+fn lines_of(pdfium: &Pdfium, pdf: &Path) -> Vec<String> {
+    fs::read(pdf)
         .ok()
         .and_then(|bytes| pages::read(pdfium, &bytes).ok())
         .map(|read| {
             read.iter()
                 .flat_map(|page| page.lines.iter().map(|line| line.text.clone()))
-                .collect::<Vec<_>>()
+                .collect()
         })
-        .unwrap_or_default();
-    fold(&lines.join("\n"))
+        .unwrap_or_default()
+}
+
+fn text_of(pdfium: &Pdfium, pdf: &Path) -> String {
+    fold(&lines_of(pdfium, pdf).join(
+        "
+",
+    ))
 }
 
 /// Every truth file below `dir` with its PDF.
@@ -108,6 +114,60 @@ fn measure(pdfium: &Pdfium, corpus: &Path) -> BTreeMap<String, Tally> {
     tallies
 }
 
+/// The reader `kind`: does code name the kind of each document right? A scan has no text, so
+/// "unknown" is right for it until #15 reads it as an image.
+fn measure_kind(pdfium: &Pdfium, corpus: &Path) -> BTreeMap<String, Tally> {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    for (pdf, truth) in documents(corpus) {
+        let scan = !truth["text_layer"].as_bool().unwrap_or(true);
+        let expected = if scan {
+            "unknown"
+        } else {
+            truth["kind"].as_str().unwrap_or("unknown")
+        };
+        let lines = lines_of(pdfium, &pdf);
+        let named = kinds::classify(lines.iter().map(String::as_str))
+            .kind
+            .code();
+        let tally = tallies
+            .entry(format!(
+                "kind.{expected}{}",
+                if scan { " (scan)" } else { "" }
+            ))
+            .or_default();
+        tally.total += 1;
+        if named == expected {
+            tally.right += 1;
+        }
+    }
+    tallies
+}
+
+/// How many documents of an archive (a copy of its database) code gives each kind. Counts only.
+fn archive_kinds(database: &Path) -> BTreeMap<String, Tally> {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    let Ok(conn) =
+        rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+    else {
+        eprintln!("{} ließ sich nicht öffnen", database.display());
+        return tallies;
+    };
+    let ids: Vec<i64> = conn
+        .prepare("SELECT id FROM documents ORDER BY id")
+        .and_then(|mut statement| statement.query_map([], |row| row.get(0))?.collect())
+        .unwrap_or_default();
+    for id in ids {
+        let lines = documents::lines_of(&conn, id).unwrap_or_default();
+        let kind = kinds::classify(lines.iter().map(String::as_str))
+            .kind
+            .code();
+        let tally = tallies.entry(format!("kind.{kind}")).or_default();
+        tally.total += 1;
+        tally.right += 1;
+    }
+    tallies
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -118,7 +178,7 @@ fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
             json!({ "right": tally.right, "total": tally.total }),
         );
     }
-    json!({ "reader": "text-layer", "corpus": name, "fields": fields })
+    json!({ "corpus": name, "fields": fields })
 }
 
 fn write(path: &Path, result: &Value) {
@@ -146,14 +206,26 @@ fn main() {
         eprintln!("PDFium fehlt, bitte `node scripts/fetch-pdfium.mjs` ausführen");
         std::process::exit(1);
     };
-    write(
-        &out.join("synthetic-text-layer.json"),
-        &report("synthetic", &measure(pdfium, &corpus)),
-    );
+    let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if let Some(database) = value("--archive") {
+        let mut result = report("archive", &archive_kinds(Path::new(&database)));
+        result["reader"] = json!("kind");
+        write(&out.join("private").join("archive-kind.json"), &result);
+        return;
+    }
+    let run = |corpus: &Path| match reader.as_str() {
+        "kind" => measure_kind(pdfium, corpus),
+        _ => measure(pdfium, corpus),
+    };
+    let mut result = report("synthetic", &run(&corpus));
+    result["reader"] = json!(reader);
+    write(&out.join(format!("synthetic-{reader}.json")), &result);
     if let Some(private) = std::env::var_os("CORPUS_PRIVATE").filter(|value| !value.is_empty()) {
+        let mut result = report("private", &run(Path::new(&private)));
+        result["reader"] = json!(reader);
         write(
-            &out.join("private").join("private-text-layer.json"),
-            &report("private", &measure(pdfium, Path::new(&private))),
+            &out.join("private").join(format!("private-{reader}.json")),
+            &result,
         );
     }
 }
