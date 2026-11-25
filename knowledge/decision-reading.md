@@ -55,3 +55,12 @@
 
 - Generated corpus, `npm run measure -- --reader code`: every field of the 12 payslips right, 12 of 12 each, and the 25 invoices still 25 of 25 each (`measurements/synthetic-code.json`).
 - The owner's archive (a copy of the database, `--archive`, counts only): no payslip among the 132 documents, so there is nothing to count yet. The counts of the 18 invoices are unchanged by the rule on rates (sender 18, gross 15, number 11, VAT 10, date 8, IBAN 6, net 4, rate 2, due date 1).
+
+## The local model reads what code cannot (#14)
+
+- After the stage `read`, the fields of the kind that no reader found (the owner's values count as found) go to the local model (`readers::model`), the rest never. A kind without fields (a statement, other, unknown) is never given to it. Which model reads and why stands in `decision-model.md`.
+- The model gets the numbered lines of the text (at most 400), each field with its German meaning, and a JSON schema for the answer (`format` of Ollama): per field the value as printed and the number of its line, an empty value and line 0 when it is not in the text. It is never asked how sure it is, and `think` is off.
+- Code takes a value only when it stands in the line the model named (whitespace and case folded), and parses it as for the code readers: an amount through `Cents::parse_de`, a date, a whole rate, an IBAN with its check sum, a month. Anything else is dropped and kept as a failed check `model:source` with the German reason, for the review of #17. The values are stored as `model:<name>` with the line, beside the values of code. A model's earlier values are replaced when it reads again.
+- Without an answer (Ollama not running, the model not installed, or no answer within 180 seconds) the job waits in the stage `model` with the German reason, which "Eingang" shows. The workers leave such jobs for 30 seconds and then ask again, so the job goes on by itself once Ollama answers. A waiting job does not hold back the snapshot after a large import. An answer that is no JSON is a finding, the document goes on without the model's values.
+- A model stays loaded one minute after its last document (`keep_alive` `1m`), so the GPU is soon free for a game.
+- Documents read again at start by a newer `READERS_VERSION` are read by code only. The model reads in the intake.

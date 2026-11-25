@@ -6,6 +6,7 @@ pub mod documents;
 pub mod intake;
 pub mod kinds;
 pub mod money;
+pub mod ollama;
 pub mod pages;
 pub mod pdf;
 pub mod previews;
@@ -37,7 +38,7 @@ pub fn run() -> ExitCode {
             }
             let path = app.path().app_data_dir()?.join(archive::FILE_NAME);
             let opened = archive::open(&path, jiff::Timestamp::now())?;
-            let workers = match &opened {
+            let (workers, model) = match &opened {
                 archive::Opened::Ready(ready) => {
                     if documents::classify_missing(ready.connection()).is_err() {
                         eprintln!("Die Art älterer Dokumente ließ sich nicht bestimmen");
@@ -53,9 +54,12 @@ pub fn run() -> ExitCode {
                     if readers::read_outdated(ready.connection(), jiff::Timestamp::now()).is_err() {
                         eprintln!("Ältere Dokumente ließen sich nicht neu lesen");
                     }
-                    intake::jobs::workers(ready.connection())
+                    (
+                        intake::jobs::workers(ready.connection()),
+                        readers::model::configured(ready.connection()),
+                    )
                 }
-                _ => 0,
+                _ => (0, String::new()),
             };
             let archive = Arc::new(Mutex::new(opened));
             let handle = app.handle().clone();
@@ -66,6 +70,10 @@ pub fn run() -> ExitCode {
                     let _ = IntakeChanged.emit(&handle);
                 }),
             );
+            match ollama::Ollama::from_env(&model) {
+                Ok(ollama) => intake.set_model(Arc::new(ollama)),
+                Err(error) => eprintln!("{error}"),
+            }
             if workers > 0 {
                 intake.start(workers, pdfium);
             }

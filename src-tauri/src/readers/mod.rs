@@ -4,6 +4,7 @@
 
 pub mod e_invoice;
 pub mod invoice;
+pub mod model;
 pub mod parse;
 pub mod payslip;
 

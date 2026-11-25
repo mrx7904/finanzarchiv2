@@ -56,7 +56,7 @@ fn drain(archive: &Mutex<Opened>, kill: &mut dyn FnMut(Point) -> bool) -> Result
         let Some(job) = open.into_iter().next() else {
             return Ok(());
         };
-        process(archive, Some(testing::pdfium()), &job, &running, kill)?;
+        process(archive, Some(testing::pdfium()), None, &job, &running, kill)?;
     }
 }
 
@@ -313,6 +313,7 @@ fn a_paused_job_keeps_its_stage_and_goes_on_later() {
     let stage = process(
         &archive,
         Some(testing::pdfium()),
+        None,
         &job,
         &paused,
         &mut |point| {
@@ -331,6 +332,7 @@ fn a_paused_job_keeps_its_stage_and_goes_on_later() {
         process(
             &archive,
             Some(testing::pdfium()),
+            None,
             &again,
             &paused,
             &mut |_| false
@@ -651,4 +653,116 @@ fn an_e_invoice_is_read_from_its_xml_and_a_broken_one_falls_back() {
     let (passed, detail) = check("kaputt.pdf");
     assert_eq!(passed, 0);
     assert!(detail.unwrap().contains("E-Rechnung"), "it says so");
+}
+
+#[test]
+fn without_ollama_a_job_waits_with_its_reason_and_goes_on_when_it_answers() {
+    let dir = tempfile::tempdir().unwrap();
+    let archive = open(&dir.path().join(archive::FILE_NAME));
+    let source = tempfile::tempdir().unwrap();
+    // Code finds the number and the gross, the sender line starts with a word code refuses.
+    let file = source.path().join("rechnung.pdf");
+    std::fs::write(
+        &file,
+        testing::pdf(&[
+            "Rechnung von Beispiel Werkstatt",
+            "Rechnungsnummer R-9",
+            "Umsatzsteuer 19 % 1,90",
+            "Rechnungsbetrag 11,90",
+            "Leistungsdatum 03.03.2026",
+        ]),
+    )
+    .unwrap();
+    with_ready(&archive, |conn| {
+        jobs::enqueue(conn, &[file], Source::Dialog, testing::t0()).unwrap()
+    });
+    let paused = AtomicBool::new(false);
+    let job = || with_ready(&archive, |conn| jobs::open_jobs(conn).unwrap()).remove(0);
+
+    let closed = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let nobody = closed.local_addr().unwrap().to_string();
+    drop(closed);
+    let missing =
+        crate::ollama::Ollama::new(&nobody, "beispiel:1b", Duration::from_secs(10)).unwrap();
+    let stage = process(
+        &archive,
+        Some(testing::pdfium()),
+        Some(&missing),
+        &job(),
+        &paused,
+        &mut |_| false,
+    )
+    .unwrap();
+    assert_eq!(stage, Stage::Model);
+    let (stage, error): (String, Option<String>) = with_ready(&archive, |conn| {
+        conn.query_row("SELECT stage, error FROM intake_jobs", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .unwrap()
+    });
+    assert_eq!(stage, "model");
+    assert!(
+        error.unwrap().contains("Ollama antwortet nicht"),
+        "a German reason"
+    );
+    assert_eq!(
+        count(
+            &archive,
+            "SELECT count(*) FROM intake_jobs WHERE stage = 'failed'"
+        ),
+        0
+    );
+
+    let answer = serde_json::json!({
+        "message": { "role": "assistant", "content": serde_json::json!({
+            "sender": { "printed": "Beispiel Werkstatt", "line": 1 },
+            "invoice_date": { "printed": "03.03.2026", "line": 5 },
+            "net": { "printed": "10,00", "line": 4 },
+        }).to_string() },
+        "done": true,
+    })
+    .to_string();
+    let (address, requests) = testing::fake_server(testing::http_response("200 OK", "", &answer));
+    let running =
+        crate::ollama::Ollama::new(&address, "beispiel:1b", Duration::from_secs(5)).unwrap();
+    let stage = process(
+        &archive,
+        Some(testing::pdfium()),
+        Some(&running),
+        &job(),
+        &paused,
+        &mut |_| false,
+    )
+    .unwrap();
+    assert_eq!(stage, Stage::Filed);
+    let asked = requests.recv().unwrap();
+    assert!(
+        !asked.contains("invoice_number"),
+        "only the fields code left empty"
+    );
+    let by_model = |field: &str| -> Option<String> {
+        with_ready(&archive, |conn| {
+            conn.query_row(
+                "SELECT value FROM field_values WHERE field = ?1 AND reader = 'model:beispiel:1b'",
+                [field],
+                |row| row.get(0),
+            )
+            .ok()
+        })
+    };
+    assert_eq!(by_model("sender").as_deref(), Some("Beispiel Werkstatt"));
+    assert_eq!(by_model("invoice_date").as_deref(), Some("2026-03-03"));
+    assert_eq!(by_model("net"), None, "10,00 is not in line 4");
+    assert_eq!(
+        count(
+            &archive,
+            "SELECT count(*) FROM field_checks WHERE check_id = 'model:source' AND field = 'net' AND passed = 0"
+        ),
+        1
+    );
+    let error: Option<String> = with_ready(&archive, |conn| {
+        conn.query_row("SELECT error FROM intake_jobs", [], |row| row.get(0))
+            .unwrap()
+    });
+    assert_eq!(error, None, "the reason is gone");
 }

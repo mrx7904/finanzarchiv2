@@ -9,7 +9,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use crate::documents::{self, Outcome, Source};
 
 /// The fixed stages of a job, in order. `Queued` waits for the store, `Filed`, `Waiting` and
-/// `Failed` end a job. The stages between are passed through until stage 2 gives them work.
+/// `Failed` end a job. `Model` holds a job while the local model does not answer (#14).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Stage {
     Queued,
@@ -17,6 +17,7 @@ pub enum Stage {
     Text,
     Classified,
     Read,
+    Model,
     Checked,
     Filed,
     Waiting,
@@ -31,6 +32,7 @@ impl Stage {
             Self::Text => "text",
             Self::Classified => "classified",
             Self::Read => "read",
+            Self::Model => "model",
             Self::Checked => "checked",
             Self::Filed => "filed",
             Self::Waiting => "waiting",
@@ -45,6 +47,7 @@ impl Stage {
             Self::Text,
             Self::Classified,
             Self::Read,
+            Self::Model,
             Self::Checked,
             Self::Filed,
             Self::Waiting,
@@ -65,7 +68,7 @@ impl Stage {
             Self::Stored => Self::Text,
             Self::Text => Self::Classified,
             Self::Classified => Self::Read,
-            Self::Read => Self::Checked,
+            Self::Read | Self::Model => Self::Checked,
             Self::Checked | Self::Filed => Self::Filed,
             Self::Waiting => Self::Waiting,
             Self::Failed => Self::Failed,
@@ -141,12 +144,36 @@ pub fn open_jobs(conn: &Connection) -> rusqlite::Result<Vec<Job>> {
     rows.collect()
 }
 
+/// Moves a job on. A reason it waited for is cleared, it is no longer true.
 pub fn set_stage(conn: &Connection, id: i64, stage: Stage, now: Timestamp) -> rusqlite::Result<()> {
     conn.execute(
-        "UPDATE intake_jobs SET stage = ?2, updated_at = ?3 WHERE id = ?1",
+        "UPDATE intake_jobs SET stage = ?2, error = NULL, updated_at = ?3 WHERE id = ?1",
         params![id, stage.code(), now.to_string()],
     )?;
     Ok(())
+}
+
+/// Holds a job in the stage `model` with the German reason the model gave none.
+pub fn wait_for_model(
+    conn: &Connection,
+    id: i64,
+    reason: &str,
+    now: Timestamp,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE intake_jobs SET stage = 'model', error = ?2, updated_at = ?3 WHERE id = ?1",
+        params![id, reason, now.to_string()],
+    )?;
+    Ok(())
+}
+
+/// The open jobs that are not waiting for the model: when none is left, an import is done.
+pub fn count_busy(conn: &Connection) -> rusqlite::Result<u32> {
+    conn.query_row(
+        "SELECT count(*) FROM intake_jobs WHERE stage NOT IN ('filed', 'waiting', 'failed', 'model')",
+        [],
+        |row| row.get(0),
+    )
 }
 
 /// The document a job stored, once it did.

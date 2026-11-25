@@ -34,9 +34,9 @@ pub struct Queued {
 pub struct JobRow {
     pub id: u32,
     pub name: String,
-    /// The stage as its code: queued, stored, text, classified, read, checked, failed.
+    /// The stage as its code: queued, stored, text, classified, read, model, checked, failed.
     pub stage: String,
-    /// Why a failed file was not taken, as a German sentence.
+    /// Why a failed file was not taken, or why a job waits for the model, as a German sentence.
     pub error: Option<String>,
 }
 
