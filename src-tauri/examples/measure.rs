@@ -10,7 +10,8 @@
 //! invoice carries). `--archive <db>` counts on a copy of the owner's database, `--files <folder>`
 //! counts the e-invoices among the PDFs of a copy of the owner's files. Both write to `private/`.
 //! `--reader model --model <name>` asks the local model at `OLLAMA_HOST` for every field, within
-//! 14 minutes, and unloads it afterwards.
+//! 14 minutes, and unloads it afterwards. `--reader image --model <name> --width <px>` reads the
+//! scans of the corpus as page images.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -639,6 +640,95 @@ fn run_model(pdfium: &Pdfium, model_name: &str, corpus: &Path, archive: Option<&
     write(&path, &result);
 }
 
+/// The reader `image` on the scans of the corpus (#15): the vision model names the kind and reads
+/// every field of it from the page images at the given width. Within the GPU budget, unloaded after.
+fn measure_image(pdfium: &Pdfium, model_name: &str, width: u32, corpus: &Path, out: &Path) {
+    let model = match ollama::Ollama::from_env(model_name) {
+        Ok(model) => model,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+    };
+    let started = std::time::Instant::now();
+    let mut run = ModelRun::default();
+    let mut gpu = None;
+    let mut pages = 0_u32;
+    for (pdf, truth) in documents(corpus) {
+        if truth["text_layer"].as_bool().unwrap_or(true) {
+            continue;
+        }
+        if started.elapsed() > MODEL_BUDGET {
+            run.stopped = Some("Zeitbudget erreicht".into());
+            break;
+        }
+        let bytes = fs::read(&pdf).unwrap_or_default();
+        let pngs = readers::image::pages_of(pdfium, &bytes, documents::FileType::Pdf, width);
+        pages += u32::try_from(pngs.len()).unwrap_or(0);
+        let asked = std::time::Instant::now();
+        let read = readers::image::ask(&model, None, &[], &pngs);
+        run.seconds += asked.elapsed().as_secs_f64();
+        run.documents += 1;
+        let read = match read {
+            Ok(read) => read,
+            Err(error) if error.should_wait() => {
+                run.stopped = Some(error.to_string());
+                break;
+            }
+            Err(_) => {
+                run.findings += 1;
+                readers::image::Read::default()
+            }
+        };
+        gpu = gpu.or_else(|| model.loaded_bytes());
+        run.findings += u32::try_from(read.findings.len()).unwrap_or(0);
+        let expected_kind = truth["kind"].as_str().unwrap_or("unknown");
+        let kind = run
+            .tallies
+            .entry(format!("{expected_kind}.kind"))
+            .or_default();
+        kind.total += 1;
+        kind.right += u32::from(read.kind.map(kinds::Kind::code) == Some(expected_kind));
+        let Some(fields) = truth["fields"].as_object() else {
+            continue;
+        };
+        for (field, expected) in fields {
+            let Some(expected) = expected.as_str() else {
+                continue;
+            };
+            let tally = run
+                .tallies
+                .entry(format!("{expected_kind}.{field}"))
+                .or_default();
+            tally.total += 1;
+            if read
+                .values
+                .iter()
+                .any(|value| value.field == field && as_truth(value) == fold(expected))
+            {
+                tally.right += 1;
+            }
+        }
+    }
+    if model.unload().is_err() {
+        eprintln!("Das Modell ließ sich nicht entladen, bitte ollama stop {model_name}");
+    }
+    let mut result = run.result("synthetic", &model, gpu);
+    result["reader"] = json!("image");
+    result["width"] = json!(width);
+    result["pages"] = json!(pages);
+    if let Some(reason) = &run.stopped {
+        eprintln!("Abgebrochen: {reason}");
+    }
+    write(
+        &out.join(format!(
+            "synthetic-image-{}-{width}.json",
+            file_part(model_name)
+        )),
+        &result,
+    );
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -678,6 +768,14 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if reader == "image" {
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        let width = value("--width")
+            .and_then(|width| width.parse().ok())
+            .unwrap_or(readers::image::WIDTH);
+        measure_image(pdfium, &model, width, &corpus, &out);
+        return;
+    }
     if reader == "model" {
         let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
         run_model(pdfium, &model, &corpus, value("--archive").as_deref(), &out);

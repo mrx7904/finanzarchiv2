@@ -62,7 +62,7 @@ pub fn process(
             Stage::Text => classify(archive, job, kill)?,
             Stage::Classified => read_values(archive, job, kill)?,
             Stage::Read | Stage::Model => {
-                let next = read_by_model(archive, model, job, kill)?;
+                let next = read_by_model(archive, pdfium, model, job, kill)?;
                 if next == Stage::Model {
                     return Ok(next);
                 }
@@ -276,39 +276,56 @@ fn advance(
     Ok(next)
 }
 
-/// The fields the model is asked for: those of the kind no reader found. Read under the lock.
-fn missing_fields(
-    conn: &rusqlite::Connection,
-    document: i64,
-) -> rusqlite::Result<(kinds::Kind, Vec<readers::model::Field>, Vec<readers::Line>)> {
-    let kind: String = conn.query_row(
-        "SELECT kind FROM documents WHERE id = ?1",
-        [document],
-        |row| row.get(0),
+/// What the model step needs of a document, read under the lock: the kind, the fields of the kind
+/// no reader found, the lines, whether it has text, and where the file lies.
+struct Asked {
+    id: i64,
+    kind: kinds::Kind,
+    fields: Vec<readers::model::Field>,
+    lines: Vec<readers::Line>,
+    found: Vec<String>,
+    scan: bool,
+    stored: Option<(PathBuf, documents::FileType)>,
+}
+
+fn asked(conn: &rusqlite::Connection, root: &std::path::Path, id: i64) -> rusqlite::Result<Asked> {
+    let (kind, state): (String, Option<String>) = conn.query_row(
+        "SELECT kind, text_state FROM documents WHERE id = ?1",
+        [id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
     )?;
     let kind = kinds::Kind::from_code(&kind);
-    let found: HashSet<String> = conn
-        .prepare("SELECT DISTINCT field FROM field_values WHERE document_id = ?1 AND reader NOT LIKE 'model:%'")?
-        .query_map([document], |row| row.get(0))?
+    let found: Vec<String> = conn
+        .prepare("SELECT DISTINCT field FROM field_values WHERE document_id = ?1 AND reader NOT LIKE 'model:%' AND reader NOT LIKE 'image:%'")?
+        .query_map([id], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
     let fields: Vec<readers::model::Field> = readers::model::fields_of(kind)
         .iter()
         .copied()
-        .filter(|(name, _, _)| !found.contains(*name))
+        .filter(|(name, _, _)| !found.iter().any(|f| f == name))
         .collect();
-    let lines = if fields.is_empty() {
-        Vec::new()
-    } else {
-        readers::lines_of(conn, document)?
-    };
-    Ok((kind, fields, lines))
+    Ok(Asked {
+        id,
+        kind,
+        lines: if fields.is_empty() {
+            Vec::new()
+        } else {
+            readers::lines_of(conn, id)?
+        },
+        fields,
+        found,
+        scan: matches!(state.as_deref(), Some("scan" | "image")),
+        stored: documents::stored_of(conn, root, id)?,
+    })
 }
 
-/// The stage after `read`: the local model reads the fields code left empty. Asking runs beside
-/// the database. Without an answer the job waits in the stage `model` with the reason and is asked
-/// again later. A document without missing fields, or an app without a model, goes on at once.
+/// The stage after `read`: the local model reads the fields code left empty, from the text, and a
+/// scan or a decisive value still missing from the page image (#15). Asking runs beside the
+/// database. Without an answer the job waits in the stage `model` with the reason and is asked
+/// again later. A document without anything to ask, or an app without a model, goes on at once.
 fn read_by_model(
     archive: &Mutex<Opened>,
+    pdfium: Option<&Pdfium>,
     model: Option<&dyn LocalModel>,
     job: &Job,
     kill: &mut dyn FnMut(Point) -> bool,
@@ -318,21 +335,66 @@ fn read_by_model(
         let Opened::Ready(ready) = &*guard else {
             return Err(Stopped::NotReady);
         };
+        let root = documents::archive_root(ready.path());
         match jobs::document_of(ready.connection(), job.id).map_err(|_| Stopped::Database)? {
-            Some(id) => Some((
-                id,
-                missing_fields(ready.connection(), id).map_err(|_| Stopped::Database)?,
-            )),
+            Some(id) => Some(asked(ready.connection(), &root, id).map_err(|_| Stopped::Database)?),
             None => None,
         }
     };
-    let (Some(model), Some((id, (kind, fields, lines)))) = (model, asked) else {
+    let (Some(model), Some(asked)) = (model, asked) else {
         return advance(archive, job, Stage::Read, kill);
     };
-    if fields.is_empty() || lines.is_empty() {
-        return advance(archive, job, Stage::Read, kill);
+    let wait = |error: &crate::ollama::ModelError| error.should_wait().then(|| error.to_string());
+    let spoiled = |error: crate::ollama::ModelError| readers::model::Finding {
+        field: "",
+        detail: error.to_string(),
+    };
+
+    let mut text = None;
+    if !asked.scan && !asked.fields.is_empty() && !asked.lines.is_empty() {
+        match readers::model::ask(model, asked.kind, &asked.fields, &asked.lines) {
+            Err(error) if wait(&error).is_some() => {
+                return hold_for_model(archive, job, &error.to_string());
+            }
+            Err(error) => {
+                text = Some(readers::model::Read {
+                    values: Vec::new(),
+                    findings: vec![spoiled(error)],
+                });
+            }
+            Ok(read) => text = Some(read),
+        }
     }
-    let answer = readers::model::ask(model, kind, &fields, &lines);
+    let mut found = asked.found.clone();
+    found.extend(
+        text.iter()
+            .flat_map(|read| read.values.iter().map(|value| value.field.to_owned())),
+    );
+    let lacking = readers::image::lacks_decisive(asked.kind, &found);
+    let mut image = None;
+    if asked.scan || !lacking.is_empty() {
+        let pngs = match (&asked.stored, pdfium) {
+            (Some((path, file_type)), Some(pdfium)) => fs::read(path)
+                .map(|bytes| {
+                    readers::image::pages_of(pdfium, &bytes, *file_type, readers::image::WIDTH)
+                })
+                .unwrap_or_default(),
+            _ => Vec::new(),
+        };
+        let kind = (!asked.scan).then_some(asked.kind);
+        match readers::image::ask(model, kind, &lacking, &pngs) {
+            Err(error) if wait(&error).is_some() => {
+                return hold_for_model(archive, job, &error.to_string());
+            }
+            Err(error) => {
+                image = Some(readers::image::Read {
+                    findings: vec![spoiled(error)],
+                    ..readers::image::Read::default()
+                });
+            }
+            Ok(read) => image = Some(read),
+        }
+    }
     if kill(Point::Prepared) {
         return Err(Stopped::Killed);
     }
@@ -345,24 +407,16 @@ fn read_by_model(
         .unchecked_transaction()
         .map_err(|_| Stopped::Database)?;
     let now = Timestamp::now();
-    let read = match answer {
-        Err(error) if error.should_wait() => {
-            jobs::wait_for_model(&tx, job.id, &error.to_string(), now)
-                .map_err(|_| Stopped::Database)?;
-            tx.commit().map_err(|_| Stopped::Database)?;
-            return Ok(Stage::Model);
+    let name = model.name();
+    if let Some(read) = &text {
+        readers::model::save(&tx, asked.id, &name, read, now).map_err(|_| Stopped::Database)?;
+    }
+    if let Some(read) = &image {
+        if let Some(kind) = read.kind {
+            documents::set_kind(&tx, asked.id, kind, &["image"]).map_err(|_| Stopped::Database)?;
         }
-        // An answer the model spoiled is a finding, the document goes on without its values.
-        Err(error) => readers::model::Read {
-            values: Vec::new(),
-            findings: vec![readers::model::Finding {
-                field: "",
-                detail: error.to_string(),
-            }],
-        },
-        Ok(read) => read,
-    };
-    readers::model::save(&tx, id, &model.name(), &read, now).map_err(|_| Stopped::Database)?;
+        readers::image::save(&tx, asked.id, &name, read, now).map_err(|_| Stopped::Database)?;
+    }
     jobs::set_stage(&tx, job.id, Stage::Checked, now).map_err(|_| Stopped::Database)?;
     if kill(Point::BeforeCommit) {
         return Err(Stopped::Killed);
@@ -372,6 +426,17 @@ fn read_by_model(
         return Err(Stopped::Killed);
     }
     Ok(Stage::Checked)
+}
+
+/// Holds the job in the stage `model` with the German reason the model gave none.
+fn hold_for_model(archive: &Mutex<Opened>, job: &Job, reason: &str) -> Result<Stage, Stopped> {
+    let guard = archive.lock().map_err(|_| Stopped::Database)?;
+    let Opened::Ready(ready) = &*guard else {
+        return Err(Stopped::NotReady);
+    };
+    jobs::wait_for_model(ready.connection(), job.id, reason, Timestamp::now())
+        .map_err(|_| Stopped::Database)?;
+    Ok(Stage::Model)
 }
 
 /// How long the jobs in the stage `model` rest after Ollama gave no answer.

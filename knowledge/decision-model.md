@@ -23,3 +23,15 @@ RTX 5080 with 16 GB, Ollama 0.40.16, `npm run measure -- --reader model --model 
 - `gemma4:12b-it-qat` finds the most with the fewest findings (values the model named that did not stand in their line) and needs 3 GB less than the 8-bit Qwen. `qwen3.5:9b` is the fastest but misses the gross on half the invoices.
 - Only `mimo-v2.6:9b` found due dates on the owner's invoices (4, one of them also found by code). They mostly print none.
 - `mimo-v2.6:9b`, the newest suitable model at ollama.com/library on 2026-11-25 (Xiaomi, built on Qwen3.5-9B, text and image, 6.6 GB), is fast but finds less than gemma4 on the owner's invoices and gives no value of the one receipt.
+
+## Reading by image (#15), measured on 2026-11-25
+
+`npm run measure -- --reader image --model gemma4:12b-it-qat --width <px>` on the 5 scans of the generated corpus (invoices rendered and stored as JPEG without text), unloaded afterwards:
+
+| Width | Kind right | Fields right | s per page | GPU |
+|---|---|---|---|---|
+| 640 | 5 of 5 | 37 of 45 (sender 1, number 2, IBAN 4 of 5) | 10.5 | 8.1 GB |
+| 1280 | 5 of 5 | 45 of 45 | 9.2 | 8.1 GB |
+
+- 1280 pixels is the width (`readers::image::WIDTH`). At 640 the small print of sender, number and IBAN is lost, and it is not faster. The page images of #06 are cached at 160, 640 and 1280, so 1280 needs no new size.
+- The owner's archive has 1 scan, not measured on its own here. It is read when the new version reads the archive.

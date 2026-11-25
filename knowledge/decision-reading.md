@@ -64,3 +64,16 @@
 - Without an answer (Ollama not running, the model not installed, or no answer within 180 seconds) the job waits in the stage `model` with the German reason, which "Eingang" shows. The workers leave such jobs for 30 seconds and then ask again, so the job goes on by itself once Ollama answers. A waiting job does not hold back the snapshot after a large import. An answer that is no JSON is a finding, the document goes on without the model's values.
 - A model stays loaded one minute after its last document (`keep_alive` `1m`), so the GPU is soon free for a game.
 - Documents read again at start by a newer `READERS_VERSION` are read by code only. The model reads in the intake.
+
+## Reading the page as an image (#15)
+
+- A scan or an image (`text_state` `scan` or `image`) goes to the vision model as page images, at most 3 pages of 1280 pixels width (`readers::image::WIDTH`, chosen by measurement in `decision-model.md`). The model first names the kind from a fixed list, then copies every field of that kind as printed with the number of its page. The kind is stored with the signal `image`, the values as `image:<model>` with their page and no line.
+- A document with text goes to the image only for a decisive value that neither code nor the text model found: the gross of an invoice or receipt, the Brutto and the Netto of a payslip. It is then asked for those fields only.
+- There is no line to hold an image value against, so code only parses what the model copied. A value it cannot parse, or a page that does not exist, is a failed check `image:source` with the German reason. Whether an image value is enough to file a document is for the checks of #16.
+- Without an answer the job waits in the stage `model` as for the text model.
+
+### Local text recognition of the system, checked on 2026-11-25
+
+- Windows: `Windows.Media.Ocr` (WinRT, since Windows 10 10240, learn.microsoft.com/uwp/api/windows.media.ocr.ocrengine) recognizes the languages installed on the machine. On the owner's PC it offers `de-DE` with images up to 10,000 pixels (asked with `OcrEngine.AvailableRecognizerLanguages` and `MaxImageDimension`). It gives lines and words with their boxes.
+- macOS: `VNRecognizeTextRequest` of Vision (since macOS 10.15, developer.apple.com) with `recognitionLevel`, `usesLanguageCorrection` and `automaticallyDetectsLanguage`, also with boxes.
+- Either would give a scan real lines with boxes. Then the code readers and the text model would read it like any PDF with text, and "the value stands in its line" would hold for scans too. The vision model reads all 5 scans of the corpus right without it, so it is not built. It is the next step if the owner's scans show findings, or if the owner asks.

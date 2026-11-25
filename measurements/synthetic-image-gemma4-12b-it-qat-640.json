@@ -1,0 +1,54 @@
+{
+  "corpus": "synthetic",
+  "documents": 5,
+  "fields": {
+    "invoice.due_date": {
+      "right": 5,
+      "total": 5
+    },
+    "invoice.gross": {
+      "right": 5,
+      "total": 5
+    },
+    "invoice.iban": {
+      "right": 4,
+      "total": 5
+    },
+    "invoice.invoice_date": {
+      "right": 5,
+      "total": 5
+    },
+    "invoice.invoice_number": {
+      "right": 2,
+      "total": 5
+    },
+    "invoice.kind": {
+      "right": 5,
+      "total": 5
+    },
+    "invoice.net": {
+      "right": 5,
+      "total": 5
+    },
+    "invoice.sender": {
+      "right": 1,
+      "total": 5
+    },
+    "invoice.vat": {
+      "right": 5,
+      "total": 5
+    },
+    "invoice.vat_rate": {
+      "right": 5,
+      "total": 5
+    }
+  },
+  "findings": 1,
+  "gpu_bytes": 8082769836,
+  "model": "gemma4:12b-it-qat",
+  "pages": 5,
+  "reader": "image",
+  "seconds_per_document": 10.5,
+  "stopped": null,
+  "width": 640
+}
