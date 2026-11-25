@@ -413,6 +413,46 @@ pub fn save_pages(
     Ok(())
 }
 
+/// The lines of every page of a document, top to bottom, page after page.
+pub fn lines_of(conn: &Connection, id: i64) -> rusqlite::Result<Vec<String>> {
+    let mut statement =
+        conn.prepare("SELECT text FROM page_lines WHERE document_id = ?1 ORDER BY page, line")?;
+    let lines = statement.query_map([id], |row| row.get(0))?;
+    lines.collect()
+}
+
+/// Sets the kind of a document and the signals it rests on.
+pub fn set_kind(
+    conn: &Connection,
+    id: i64,
+    kind: crate::kinds::Kind,
+    signals: &[&str],
+) -> rusqlite::Result<()> {
+    let signals = serde_json::to_string(signals).unwrap_or_else(|_| "[]".into());
+    conn.execute(
+        "UPDATE documents SET kind = ?2, kind_signals = ?3 WHERE id = ?1",
+        rusqlite::params![id, kind.code(), signals],
+    )?;
+    Ok(())
+}
+
+/// Gives every document read by an older version its kind (#10): those with text but no signals.
+/// Returns how many it classified.
+pub fn classify_missing(conn: &Connection) -> rusqlite::Result<usize> {
+    let ids: Vec<i64> = conn
+        .prepare("SELECT id FROM documents WHERE text_state IS NOT NULL AND kind_signals IS NULL")?
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let tx = conn.unchecked_transaction()?;
+    for id in &ids {
+        let lines = lines_of(&tx, *id)?;
+        let found = crate::kinds::classify(lines.iter().map(String::as_str));
+        set_kind(&tx, *id, found.kind, &found.signals)?;
+    }
+    tx.commit()?;
+    Ok(ids.len())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -449,6 +489,37 @@ mod tests {
             Source::Dialog,
             testing::t0(),
         )
+    }
+
+    #[test]
+    fn documents_read_before_the_kind_existed_get_it_once() {
+        let fixture = fixture();
+        let conn = fixture.archive.connection();
+        let Outcome::Added { id } = import(
+            &fixture,
+            &testing::pdf(&["Rechnungsnummer 1", "Umsatzsteuer 1,00"]),
+            "r.pdf",
+        ) else {
+            panic!("not added")
+        };
+        let read = crate::pages::read(
+            testing::pdfium(),
+            &testing::pdf(&["Rechnungsnummer 1", "Umsatzsteuer 1,00"]),
+        )
+        .unwrap();
+        save_pages(conn, id, &read, "text").unwrap();
+        assert_eq!(classify_missing(conn).unwrap(), 1);
+        let kind: String = conn
+            .query_row("SELECT kind FROM documents WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(kind, "invoice");
+        assert_eq!(
+            classify_missing(conn).unwrap(),
+            0,
+            "a second start classifies nothing again"
+        );
     }
 
     #[test]

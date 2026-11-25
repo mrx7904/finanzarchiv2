@@ -180,6 +180,65 @@ fn the_stage_text_stores_the_lines_and_marks_scans_and_images() {
 }
 
 #[test]
+fn the_stage_classified_gives_each_document_its_kind_and_signals() {
+    let dir = tempfile::tempdir().unwrap();
+    let archive = open(&dir.path().join(archive::FILE_NAME));
+    let source = tempfile::tempdir().unwrap();
+    let invoice = source.path().join("rechnung.pdf");
+    std::fs::write(
+        &invoice,
+        testing::pdf(&[
+            "Rechnungsnummer R-7",
+            "Umsatzsteuer 19 % 7,98 EUR",
+            "Rechnungsbetrag 49,99 EUR",
+        ]),
+    )
+    .unwrap();
+    let payslip = source.path().join("gehalt.pdf");
+    std::fs::write(
+        &payslip,
+        testing::pdf(&[
+            "Verdienstabrechnung März 2026",
+            "Gesamtbrutto 3.800,00",
+            "Auszahlungsbetrag 2.512,10",
+        ]),
+    )
+    .unwrap();
+    let scan = source.path().join("scan.pdf");
+    std::fs::write(&scan, testing::pdf_without_text()).unwrap();
+    with_ready(&archive, |conn| {
+        jobs::enqueue(
+            conn,
+            &[invoice, payslip, scan],
+            Source::Dialog,
+            testing::t0(),
+        )
+        .unwrap()
+    });
+    drain(&archive, &mut |_| false).unwrap();
+
+    let row = |name: &str| -> (String, String) {
+        with_ready(&archive, |conn| {
+            conn.query_row(
+                "SELECT kind, kind_signals FROM documents WHERE original_name = ?1",
+                [name],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap()
+        })
+    };
+    assert_eq!(
+        row("rechnung.pdf"),
+        (
+            "invoice".into(),
+            r#"["rechnungsnummer","rechnungsbetrag","umsatzsteuer"]"#.into()
+        )
+    );
+    assert_eq!(row("gehalt.pdf").0, "payslip");
+    assert_eq!(row("scan.pdf"), ("unknown".into(), "[]".into()));
+}
+
+#[test]
 fn a_large_import_is_saved_once_the_queue_is_empty() {
     use crate::archive::snapshots::{self, AFTER_IMPORT_THRESHOLD};
     let dir = tempfile::tempdir().unwrap();
@@ -381,7 +440,15 @@ fn several_workers_drain_the_queue_and_report_each_change() {
         std::thread::sleep(Duration::from_millis(20));
     }
     assert_eq!(count(&archive, "SELECT count(*) FROM documents"), 40);
-    assert!(changes.load(std::sync::atomic::Ordering::SeqCst) >= 40);
+    // A worker reports after the job is filed (and after the snapshot check of #19), so the last
+    // report may come a moment after the last row.
+    while changes.load(std::sync::atomic::Ordering::SeqCst) < 40 {
+        assert!(
+            Instant::now() < deadline,
+            "the workers did not report every change"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    }
 }
 
 const CHILD_ARCHIVE: &str = "FINANZARCHIV2_KILL_TEST_ARCHIVE";

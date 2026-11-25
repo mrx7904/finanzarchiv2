@@ -30,7 +30,7 @@ Order of work: #01 first. Then #02, #03 and #07 in parallel. Then #04, #05 and #
 
 | # | Title | Requirements | Depends on | Status |
 |---|---|---|---|---|
-| [#10](010-kind-by-code.md) | The kind of a document by code | FA-14 | none | open |
+| [#10](010-kind-by-code.md) | The kind of a document by code | FA-14 | none | done |
 | [#11](011-values-and-invoice-reader.md) | Values with their source, and invoices read by code | FA-15, FA-16 | #10 | open |
 | [#12](012-e-invoices.md) | E-invoices from their XML | FA-17 | #11 | open |
 | [#13](013-payslips-by-code.md) | Payslips read by code | FA-18 | #11 | open |

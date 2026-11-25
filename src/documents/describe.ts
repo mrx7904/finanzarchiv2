@@ -1,6 +1,14 @@
-/** The German label of a kind of document. Until stage 2 reads them, every kind is unknown. */
+/** The German label of a kind of document (#10). */
 export function kindLabel(kind: string): string {
-  return kind === "unknown" ? "unbekannt" : kind;
+  const labels: Record<string, string> = {
+    invoice: "Rechnung",
+    payslip: "Gehaltsabrechnung",
+    receipt: "Zahlungsbeleg",
+    statement: "Kontoauszug",
+    other: "Sonstiges",
+    unknown: "Art offen",
+  };
+  return labels[kind] ?? "Art offen";
 }
 
 /** "25.11.2026", in the time zone of the computer. */

@@ -4,6 +4,7 @@ pub mod archive;
 pub mod commands;
 pub mod documents;
 pub mod intake;
+pub mod kinds;
 pub mod money;
 pub mod pages;
 pub mod pdf;
@@ -36,7 +37,12 @@ pub fn run() -> ExitCode {
             let path = app.path().app_data_dir()?.join(archive::FILE_NAME);
             let opened = archive::open(&path, jiff::Timestamp::now())?;
             let workers = match &opened {
-                archive::Opened::Ready(ready) => intake::jobs::workers(ready.connection()),
+                archive::Opened::Ready(ready) => {
+                    if documents::classify_missing(ready.connection()).is_err() {
+                        eprintln!("Die Art älterer Dokumente ließ sich nicht bestimmen");
+                    }
+                    intake::jobs::workers(ready.connection())
+                }
                 _ => 0,
             };
             let archive = Arc::new(Mutex::new(opened));

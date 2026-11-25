@@ -14,6 +14,7 @@ use jiff::Timestamp;
 
 use crate::archive::Opened;
 use crate::documents::{self, Outcome, Refusal, Source};
+use crate::kinds;
 use crate::pages;
 use crate::pdf::Pdfium;
 pub use jobs::{Job, Stage};
@@ -55,6 +56,7 @@ pub fn process(
         stage = match stage {
             Stage::Queued => store(archive, pdfium, job, kill)?,
             Stage::Stored => read_text(archive, pdfium, job, kill)?,
+            Stage::Text => classify(archive, job, kill)?,
             _ => advance(archive, job, stage, kill)?,
         };
     }
@@ -167,6 +169,41 @@ fn read_text(
         return Err(Stopped::Killed);
     }
     Ok(Stage::Text)
+}
+
+/// The stage `classified`: the kind of the document from the lines the stage `text` stored, with
+/// the signals it rests on, in one transaction with the stage.
+fn classify(
+    archive: &Mutex<Opened>,
+    job: &Job,
+    kill: &mut dyn FnMut(Point) -> bool,
+) -> Result<Stage, Stopped> {
+    {
+        let guard = archive.lock().map_err(|_| Stopped::Database)?;
+        let Opened::Ready(ready) = &*guard else {
+            return Err(Stopped::NotReady);
+        };
+        let tx = ready
+            .connection()
+            .unchecked_transaction()
+            .map_err(|_| Stopped::Database)?;
+        if let Some(id) = jobs::document_of(&tx, job.id).map_err(|_| Stopped::Database)? {
+            let lines = documents::lines_of(&tx, id).map_err(|_| Stopped::Database)?;
+            let found = kinds::classify(lines.iter().map(String::as_str));
+            documents::set_kind(&tx, id, found.kind, &found.signals)
+                .map_err(|_| Stopped::Database)?;
+        }
+        jobs::set_stage(&tx, job.id, Stage::Classified, Timestamp::now())
+            .map_err(|_| Stopped::Database)?;
+        if kill(Point::BeforeCommit) {
+            return Err(Stopped::Killed);
+        }
+        tx.commit().map_err(|_| Stopped::Database)?;
+    }
+    if kill(Point::AfterCommit) {
+        return Err(Stopped::Killed);
+    }
+    Ok(Stage::Classified)
 }
 
 fn advance(

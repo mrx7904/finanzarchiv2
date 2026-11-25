@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import { formatDay, kindLabel, textStateLabel } from "./describe";
 
 describe("the list of documents", () => {
-  it("names an unread kind in German", () => {
-    expect(kindLabel("unknown")).toBe("unbekannt");
+  it("names every kind in German", () => {
+    expect(kindLabel("invoice")).toBe("Rechnung");
+    expect(kindLabel("payslip")).toBe("Gehaltsabrechnung");
+    expect(kindLabel("receipt")).toBe("Zahlungsbeleg");
+    expect(kindLabel("statement")).toBe("Kontoauszug");
+    expect(kindLabel("other")).toBe("Sonstiges");
+    expect(kindLabel("unknown")).toBe("Art offen");
+    expect(kindLabel("something new")).toBe("Art offen");
   });
 
   it("shows the day of import in German order", () => {
