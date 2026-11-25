@@ -17,6 +17,7 @@ use crate::documents::{self, Outcome, Refusal, Source};
 use crate::kinds;
 use crate::pages;
 use crate::pdf::Pdfium;
+use crate::readers;
 pub use jobs::{Job, Stage};
 
 /// The places where a test may stop a worker as if the app had been killed there.
@@ -57,6 +58,7 @@ pub fn process(
             Stage::Queued => store(archive, pdfium, job, kill)?,
             Stage::Stored => read_text(archive, pdfium, job, kill)?,
             Stage::Text => classify(archive, job, kill)?,
+            Stage::Classified => read_values(archive, job, kill)?,
             _ => advance(archive, job, stage, kill)?,
         };
     }
@@ -204,6 +206,44 @@ fn classify(
         return Err(Stopped::Killed);
     }
     Ok(Stage::Classified)
+}
+
+/// The stage `read`: the readers that fit the kind fill `field_values`, in one transaction with
+/// the stage. The model and the image reader join in #14 and #15.
+fn read_values(
+    archive: &Mutex<Opened>,
+    job: &Job,
+    kill: &mut dyn FnMut(Point) -> bool,
+) -> Result<Stage, Stopped> {
+    {
+        let guard = archive.lock().map_err(|_| Stopped::Database)?;
+        let Opened::Ready(ready) = &*guard else {
+            return Err(Stopped::NotReady);
+        };
+        let tx = ready
+            .connection()
+            .unchecked_transaction()
+            .map_err(|_| Stopped::Database)?;
+        if let Some(id) = jobs::document_of(&tx, job.id).map_err(|_| Stopped::Database)? {
+            let kind: String = tx
+                .query_row("SELECT kind FROM documents WHERE id = ?1", [id], |row| {
+                    row.get(0)
+                })
+                .map_err(|_| Stopped::Database)?;
+            readers::read_document(&tx, id, kinds::Kind::from_code(&kind), Timestamp::now())
+                .map_err(|_| Stopped::Database)?;
+        }
+        jobs::set_stage(&tx, job.id, Stage::Read, Timestamp::now())
+            .map_err(|_| Stopped::Database)?;
+        if kill(Point::BeforeCommit) {
+            return Err(Stopped::Killed);
+        }
+        tx.commit().map_err(|_| Stopped::Database)?;
+    }
+    if kill(Point::AfterCommit) {
+        return Err(Stopped::Killed);
+    }
+    Ok(Stage::Read)
 }
 
 fn advance(

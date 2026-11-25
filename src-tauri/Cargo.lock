@@ -1044,6 +1044,7 @@ dependencies = [
  "lopdf",
  "pdfium-render",
  "proptest",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",

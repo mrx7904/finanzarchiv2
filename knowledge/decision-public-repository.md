@@ -14,8 +14,12 @@
 
 ## Enforcement
 
-`node scripts/check.mjs` scans every tracked file and refuses an IBAN outside `fixtures/synthetic/`, a mail address other than an example or noreply address, and an absolute path into a user's home folder. `--self-test` proves the scan fails on each.
+`node scripts/check.mjs` scans every tracked file and refuses an IBAN with a valid check sum outside `fixtures/synthetic/` (since 2026-11-25 a string with a wrong check sum is no account and is not refused, and the two public examples of ISO 13616, DE89 3704 … and GB82 WEST …, are allowed for tests), a mail address other than an example or noreply address, and an absolute path into a user's home folder. `--self-test` proves the scan fails on each.
 
 ## Why
 
 The owner allowed the repository to be public and asked that this is respected (2026-11-25). An archive of one's own finances is the most private data an app can hold, and a public history can never be cleaned completely.
+
+## Test data are invented
+
+**Decided:** 2026-11-25, after a near miss: a probe IBAN for the self-test was built from the digits of the owner's real account, read from a file name in a screenshot. It was caught before any commit and replaced. Test values are invented from scratch (bank code `12345678`, account `0000004711`) or are public examples of a standard, never taken from anything the owner showed or the archive holds. The self-test builds its probe IBAN at run time, so no file holds one.

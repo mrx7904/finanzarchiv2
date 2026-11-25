@@ -14,6 +14,19 @@ pub enum Kind {
 }
 
 impl Kind {
+    pub fn from_code(code: &str) -> Self {
+        [
+            Self::Invoice,
+            Self::Payslip,
+            Self::Receipt,
+            Self::Statement,
+            Self::Other,
+        ]
+        .into_iter()
+        .find(|kind| kind.code() == code)
+        .unwrap_or(Self::Unknown)
+    }
+
     pub fn code(self) -> &'static str {
         match self {
             Self::Invoice => "invoice",
