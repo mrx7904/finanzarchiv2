@@ -50,7 +50,7 @@ Befehle:
 
 ## Installieren
 
-Unter Windows installiert `Finanzarchiv 2_<Version>_x64-setup.exe` die App für den angemeldeten Benutzer nach `%LOCALAPPDATA%Finanzarchiv 2`, ohne Administratorrechte. Finanzarchiv 2 liegt neben Finanzarchiv 1.0 und hat einen eigenen Datenordner (`%APPDATA%de.mrx7904.finanzarchiv2`). Für den Mac baut `node scripts/release.mjs` auf dem Mac ein dmg, ohne Apple-Entwicklerkonto nur ad hoc signiert: Beim ersten Öffnen fragt macOS nach, unter Systemeinstellungen › Datenschutz und Sicherheit lässt es sich „Dennoch öffnen“.
+Unter Windows installiert `Finanzarchiv 2_<Version>_x64-setup.exe` die App für den angemeldeten Benutzer nach `%LOCALAPPDATA%\Finanzarchiv 2`, ohne Administratorrechte. Finanzarchiv 2 liegt neben Finanzarchiv 1.0 und hat einen eigenen Datenordner (`%APPDATA%\de.mrx7904.finanzarchiv2`). Für den Mac baut `node scripts/release.mjs` auf dem Mac ein dmg, ohne Apple-Entwicklerkonto nur ad hoc signiert: Beim ersten Öffnen fragt macOS nach, unter Systemeinstellungen › Datenschutz und Sicherheit lässt es sich „Dennoch öffnen“.
 
 ## Datenschutz
 

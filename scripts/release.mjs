@@ -20,7 +20,10 @@ const upload = process.argv.includes("--upload");
 
 function run(command, args, options = {}) {
   console.log(`> ${command} ${args.join(" ")}`);
-  const result = spawnSync(command, args, { cwd: ROOT, stdio: options.capture ? "pipe" : "inherit", shell: process.platform === "win32", encoding: "utf8" });
+  // Only npm and npx are scripts on Windows and need the shell. Everything else runs directly, so an
+  // argument with a space (the title of a release, the path of the installer) stays one argument.
+  const shell = process.platform === "win32" && ["npm", "npx"].includes(command);
+  const result = spawnSync(command, args, { cwd: ROOT, stdio: options.capture ? "pipe" : "inherit", shell, encoding: "utf8" });
   if (result.status !== 0 && !options.mayFail) {
     console.error(`${command} failed, nothing was released`);
     process.exit(1);
