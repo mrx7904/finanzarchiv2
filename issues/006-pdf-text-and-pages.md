@@ -5,7 +5,7 @@
 
 ## Done when
 
-- [ ] Which PDFium binaries `pdfium-render` expects, where they come from and their licence is checked at the primary source and stands in `decision-stack.md` with the date.
+- [x] Which PDFium binaries `pdfium-render` expects, where they come from and their licence is checked at the primary source and stands in `decision-pdf.md` with the date (done with #04).
 - [ ] The text of each page is stored with the box of each line in `pages`. A test on a generated invoice finds every printed amount with its line.
 - [ ] A page renders as an image for the preview, cached, and the first page shows in the list of #04.
 - [ ] A scan without a text layer is marked as such, for the reading by image of stage 2.

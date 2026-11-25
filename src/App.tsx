@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { commands } from "./bindings";
+import { Documents } from "./documents/Documents";
 import { Button } from "./ui";
 
 // The showcase of the design system (#07), only in the dev build: the branch is removed from the release.
@@ -36,16 +37,20 @@ export function App() {
   }
 
   const line = loaded ? describeLoaded(loaded) : null;
+  const ready = loaded?.status === "ok" && loaded.data.archive.state === "ready";
   return (
-    <main className="flex h-screen flex-col items-center justify-center gap-2 bg-canvas font-sans text-fg">
-      <h1 className="font-title text-title">Finanzarchiv</h1>
-      <p className={line?.tone === "problem" ? "text-danger" : "text-fg-muted"}>{line ? line.text : "Das Archiv wird geöffnet …"}</p>
-      {line?.version ? <p className="text-small text-fg-muted">Version {line.version}</p> : null}
-      {Showcase && (
-        <Button className="mt-4" onClick={() => (window.location.hash = "gestaltung")}>
-          Gestaltung ansehen
-        </Button>
-      )}
+    <main className="flex min-h-screen flex-col items-center gap-6 overflow-y-auto bg-canvas px-8 py-10 font-sans text-fg">
+      <header className="flex flex-col items-center gap-1">
+        <h1 className="font-title text-title">Finanzarchiv</h1>
+        <p className={line?.tone === "problem" ? "text-danger" : "text-fg-muted"}>{line ? line.text : "Das Archiv wird geöffnet …"}</p>
+        {line?.version ? <p className="text-small text-fg-muted">Version {line.version}</p> : null}
+        {Showcase && (
+          <Button className="mt-2" onClick={() => (window.location.hash = "gestaltung")}>
+            Gestaltung ansehen
+          </Button>
+        )}
+      </header>
+      {ready ? <Documents /> : null}
     </main>
   );
 }

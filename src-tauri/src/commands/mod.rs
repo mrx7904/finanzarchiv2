@@ -1,6 +1,8 @@
 //! The commands the window may call. Each is written once here, the TypeScript bindings in
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
+pub mod documents;
+
 use std::sync::Mutex;
 
 use serde::Serialize;
@@ -25,7 +27,7 @@ pub enum ErrorKind {
 }
 
 impl CommandError {
-    fn internal() -> Self {
+    pub(crate) fn internal() -> Self {
         Self {
             kind: ErrorKind::Internal,
             message: "Ein interner Fehler ist aufgetreten. Bitte starte Finanzarchiv neu.".into(),
@@ -99,10 +101,16 @@ pub fn app_status(
     })
 }
 
-/// Every command of the app, for the invoke handler and for the bindings.
+/// Every command and event of the app, for the invoke handler and for the bindings.
 pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
-        .commands(tauri_specta::collect_commands![app_status])
+        .commands(tauri_specta::collect_commands![
+            app_status,
+            documents::import_files,
+            documents::import_folder,
+            documents::list_documents,
+        ])
+        .events(tauri_specta::collect_events![documents::ImportFinished])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
 

@@ -4,7 +4,10 @@
 use rusqlite::Connection;
 
 /// Every migration, numbered from 1 without gaps. `PRAGMA user_version` holds the last applied one.
-pub const MIGRATIONS: &[(u32, &str)] = &[(1, include_str!("../../migrations/0001_settings.sql"))];
+pub const MIGRATIONS: &[(u32, &str)] = &[
+    (1, include_str!("../../migrations/0001_settings.sql")),
+    (2, include_str!("../../migrations/0002_documents.sql")),
+];
 
 #[derive(Debug, thiserror::Error)]
 #[error("Migration {number} schlug fehl")]

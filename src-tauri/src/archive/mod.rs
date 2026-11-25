@@ -152,7 +152,7 @@ mod tests {
     fn schema(archive: &Archive) -> Vec<String> {
         let mut statement = archive
             .connection()
-            .prepare("SELECT sql FROM sqlite_schema WHERE type = 'table' ORDER BY name")
+            .prepare("SELECT sql FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
             .unwrap();
         statement
             .query_map([], |row| row.get(0))

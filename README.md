@@ -38,6 +38,7 @@ Befehle:
 | Befehl | Wirkung |
 |---|---|
 | `npm install` | lädt die Pakete der Oberfläche |
+| `node scripts/fetch-pdfium.mjs` | lädt PDFium, die PDF-Bibliothek, für dieses System und prüft ihre Prüfsumme. Die Prüfung ruft es selbst auf |
 | `npm run tauri dev` | startet die App mit Neuladen bei Änderungen |
 | `npm run tauri build` | baut die App für dieses System |
 | `node scripts/check.mjs` | alle Prüfungen: Links, Anforderungen und Issues, Datenschutz, Rust (fmt, clippy, Tests), TypeScript (Typen, Lint, Tests) |

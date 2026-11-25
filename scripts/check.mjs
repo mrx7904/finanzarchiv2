@@ -194,7 +194,13 @@ function runStep(root, step, quiet = false) {
 }
 
 function presentSteps(root) {
-  return CODE_STEPS.filter((step) => existsSync(path.join(root, step.needs)));
+  const steps = CODE_STEPS.filter((step) => existsSync(path.join(root, step.needs)));
+  // The tests of the core read PDFs through PDFium. Fetching is a no-op when it is there.
+  if (steps.some((step) => step.cwd === "src-tauri") && existsSync(path.join(root, "scripts", "fetch-pdfium.mjs"))) {
+    const fetched = spawnSync("node", [path.join("scripts", "fetch-pdfium.mjs")], { cwd: root, stdio: "inherit" });
+    if (fetched.status !== 0) throw new Error("PDFium could not be fetched, the Rust tests cannot run");
+  }
+  return steps;
 }
 
 /** Runs one step with its probe in place and gives the tree back as it was. */

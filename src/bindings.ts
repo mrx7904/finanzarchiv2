@@ -2,11 +2,23 @@
 
 import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 import type { InvokeOptions } from "@tauri-apps/api/core";
+import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
 	/**  The version of the app and the state of its archive. */
 	appStatus: (options?: InvokeOptions) => typedError<AppStatus, CommandError>(__TAURI_INVOKE("app_status", undefined, options)),
+	/**  Asks for files in the dialog of the system and imports them. */
+	importFiles: (options?: InvokeOptions) => typedError<ImportSummary_Serialize, CommandError>(__TAURI_INVOKE("import_files", undefined, options)),
+	/**  Asks for a folder in the dialog of the system and imports everything in it. */
+	importFolder: (options?: InvokeOptions) => typedError<ImportSummary_Serialize, CommandError>(__TAURI_INVOKE("import_folder", undefined, options)),
+	/**  The documents of the archive, newest first. */
+	listDocuments: (options?: InvokeOptions) => typedError<DocumentRow_Serialize[], CommandError>(__TAURI_INVOKE("list_documents", undefined, options)),
+};
+
+/** Events */
+export const events = {
+	importFinished: makeEvent<ImportFinished_Serialize, ImportFinished_Deserialize>("import-finished"),
 };
 
 /* Types */
@@ -27,9 +39,70 @@ export type CommandError = {
 	message: string,
 };
 
+export type DocumentRow = DocumentRow_Serialize | DocumentRow_Deserialize;
+
+export type DocumentRow_Deserialize = {
+	id: number,
+	name: string,
+	kind: string,
+	fileType: string,
+	pages?: number | null,
+	/**  UTC, ISO 8601. */
+	importedAt: string,
+};
+
+export type DocumentRow_Serialize = {
+	id: number,
+	name: string,
+	kind: string,
+	fileType: string,
+	pages: number | null,
+	/**  UTC, ISO 8601. */
+	importedAt: string,
+};
+
 export type ErrorKind = 
 /**  A fault of the app itself. Restarting it is the owner's way out. */
 "internal";
+
+/**  Sent when files dropped on the window were imported. */
+export type ImportFinished = ImportFinished_Serialize | ImportFinished_Deserialize;
+
+/**  Sent when files dropped on the window were imported. */
+export type ImportFinished_Deserialize = {
+	summary: ImportSummary_Deserialize,
+};
+
+/**  Sent when files dropped on the window were imported. */
+export type ImportFinished_Serialize = {
+	summary: ImportSummary_Serialize,
+};
+
+/**  What one import did, for the line the window shows after it. */
+export type ImportSummary = ImportSummary_Serialize | ImportSummary_Deserialize;
+
+/**  What one import did, for the line the window shows after it. */
+export type ImportSummary_Deserialize = {
+	added: number,
+	known: number,
+	refused: RefusedFile[],
+	/**  Set when nothing could be imported at all, as a German sentence. */
+	problem?: string | null,
+};
+
+/**  What one import did, for the line the window shows after it. */
+export type ImportSummary_Serialize = {
+	added: number,
+	known: number,
+	refused: RefusedFile[],
+	/**  Set when nothing could be imported at all, as a German sentence. */
+	problem: string | null,
+};
+
+export type RefusedFile = {
+	name: string,
+	reason: string,
+};
 
 export type SnapshotInfo = {
 	name: string,
@@ -45,4 +118,29 @@ async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; dat
         if (e instanceof Error) throw e;
         return { status: "error", error: e as any };
     }
+}
+
+type EventEmit<T> = [T] extends [null] ? () => Promise<void> : (payload: T) => Promise<void>;
+
+type EventEmitTo<T> = [T] extends [null] ? (target: __TAURI_EVENT.EventTarget | string) => Promise<void> : (target: __TAURI_EVENT.EventTarget | string, payload: T) => Promise<void>;
+
+function makeEvent<TListen, TEmit = TListen>(name: string, serialize?: (payload: TEmit) => unknown, deserialize?: (payload: any) => TListen) {
+    const mapEvent = (cb: __TAURI_EVENT.EventCallback<TListen>) => (event: __TAURI_EVENT.Event<any>) => cb({ ...event, payload: deserialize ? deserialize(event.payload) : event.payload });
+    const mapPayload = (payload: TEmit) => serialize ? serialize(payload) : payload;
+
+    const base = {
+        listen: (cb: __TAURI_EVENT.EventCallback<TListen>) => __TAURI_EVENT.listen(name, mapEvent(cb)),
+        once: (cb: __TAURI_EVENT.EventCallback<TListen>) => __TAURI_EVENT.once(name, mapEvent(cb)),
+        emit: ((payload: TEmit) => __TAURI_EVENT.emit(name, mapPayload(payload)) as unknown) as EventEmit<TEmit>,
+        emitTo: ((to: __TAURI_EVENT.EventTarget | string, payload: TEmit) => __TAURI_EVENT.emitTo(to, name, mapPayload(payload)) as unknown) as EventEmitTo<TEmit>
+    };
+
+    const fn = (target: import("@tauri-apps/api/webview").Webview | import("@tauri-apps/api/window").Window) => ({
+        listen: (cb: __TAURI_EVENT.EventCallback<TListen>) => target.listen(name, mapEvent(cb)),
+        once: (cb: __TAURI_EVENT.EventCallback<TListen>) => target.once(name, mapEvent(cb)),
+        emit: ((payload: TEmit) => target.emit(name, mapPayload(payload)) as unknown) as EventEmit<TEmit>,
+        emitTo: ((to: __TAURI_EVENT.EventTarget | string, payload: TEmit) => target.emitTo(to, name, mapPayload(payload)) as unknown) as EventEmitTo<TEmit>
+    });
+
+    return Object.assign(fn, base);
 }
