@@ -5,10 +5,10 @@
 
 ## Done when
 
-- [ ] One example command (the version and the state of the archive) is written once in Rust and called from the UI through the generated bindings.
-- [ ] Errors reach the UI as a kind and a German message, never as the text of a library.
-- [ ] The check generates the bindings and fails when the generated file differs from the committed one, shown by changing a command without regenerating.
-- [ ] `conventions.md` names the command that regenerates the bindings.
+- [x] One example command (the version and the state of the archive) is written once in Rust and called from the UI through the generated bindings.
+- [x] Errors reach the UI as a kind and a German message, never as the text of a library.
+- [x] The check generates the bindings and fails when the generated file differs from the committed one, shown by changing a command without regenerating.
+- [x] `conventions.md` names the command that regenerates the bindings.
 
 ## Out of scope
 
