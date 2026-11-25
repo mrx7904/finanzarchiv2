@@ -6,7 +6,7 @@ Finanzarchiv 2.0 ist der Neuanfang von Finanzarchiv 1.0 (Electron) auf Basis von
 
 ## Stand
 
-Konzeptphase. Es gibt noch keinen Programmcode. Die erste Stufe („Fundament“) ist in Issues geschnitten:
+Erste Stufe „Fundament“ in Arbeit. Die leere App öffnet ihr Fenster unter Windows, der Mac steht noch aus. Archiv, Import und Lesen folgen in den nächsten Issues:
 
 - Konzept: [`spec/concept.md`](spec/concept.md)
 - Anforderungen: [`spec/requirements.md`](spec/requirements.md)
@@ -23,6 +23,25 @@ Konzeptphase. Es gibt noch keinen Programmcode. Die erste Stufe („Fundament“
 | KI | lokal über Ollama |
 
 Geprüft wird lokal mit `node scripts/check.mjs`. GitHub Actions wird nicht verwendet, Releases werden auf dem jeweiligen Rechner gebaut.
+
+## Selbst bauen und entwickeln
+
+Voraussetzungen:
+
+- Node 24 oder neuer
+- Rust über [rustup](https://rustup.rs). Die passende Version aus `rust-toolchain.toml` lädt rustup beim ersten Aufruf selbst
+- Windows: in Visual Studio oder den Build Tools die Arbeitsauslastung „Desktopentwicklung mit C++“. WebView2 ist in Windows 11 enthalten
+- macOS: die Xcode-Befehlszeilenwerkzeuge (`xcode-select --install`)
+
+Befehle:
+
+| Befehl | Wirkung |
+|---|---|
+| `npm install` | lädt die Pakete der Oberfläche |
+| `npm run tauri dev` | startet die App mit Neuladen bei Änderungen |
+| `npm run tauri build` | baut die App für dieses System |
+| `node scripts/check.mjs` | alle Prüfungen: Links, Anforderungen und Issues, Datenschutz, Rust (fmt, clippy, Tests), TypeScript (Typen, Lint, Tests) |
+| `node scripts/check.mjs --self-test` | zeigt, dass jede Prüfung bei einem eingebauten Fehler anschlägt |
 
 ## Datenschutz
 

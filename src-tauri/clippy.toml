@@ -1,0 +1,3 @@
+# unwrap and expect are denied in the core (Cargo.toml) but allowed in tests, where a panic is the failure.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

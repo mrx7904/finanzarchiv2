@@ -75,7 +75,11 @@ The command an AgentOS session must pass before it may end. The backend reads th
 
 Check: `node scripts/check.mjs`
 
-It checks the links of the Markdown files, the traceability between requirements and issues, and that no personal data stands in a tracked file. Once `Cargo.toml` or `package.json` exist it also runs the Rust and TypeScript steps (#01). `node scripts/check.mjs --self-test` proves that each step can fail.
+It checks the links of the Markdown files, the traceability between requirements and issues and that no personal data stands in a tracked file, then runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` in `src-tauri/` and `npm run typecheck`, `npm run lint` and `npm test`. `node scripts/check.mjs --self-test` proves that each step passes on the clean tree and fails on a planted fault, and gives the tree back as it was. A new step gets its probe in `CODE_STEPS` in the same change.
+
+Prerequisites of a machine: Node 24 or newer, Rust through rustup (the toolchain of `rust-toolchain.toml` installs itself), on Windows the workload "Desktop development with C++" of Visual Studio, on macOS the Xcode command line tools (`decision-stack.md`, "The shell of #01").
+
+`npm run tauri dev` starts the app with the dev server, `npm run tauri build` builds it.
 
 ## Machine settings
 

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The main window. It is granted nothing until a feature needs a permission, which its change names (knowledge/conventions.md).",
+  "windows": ["main"],
+  "permissions": []
+}
