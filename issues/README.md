@@ -22,6 +22,8 @@ At most one stage is open. The next stage is cut into issues and begun only afte
 
 **Stage 1 is done when the owner installs 2.0 on the Windows PC and on the Mac from a release, drops 20 real PDFs, sees each in the list with its first page, quits in the middle of the import, and after the next start finds every file once.**
 
+**Status:** Accepted in part on Windows on 2026-11-25. The owner imported 135 real files through the dialog into the installed 0.1.0 in about 16 seconds, which the owner called fast: 132 PDFs stored once each under their hash (132 distinct hashes, no row without its file, no partial file, no open job), 131 read with text and 1 marked as a scan, 3 refused with their reason (two CSV statements, one spreadsheet). Open: quitting in the middle of an import and starting again (the archive holds no snapshot, so it was not started a second time), dropping files on the window, and everything on the Mac.
+
 Order of work: #01 first. Then #02, #03 and #07 in parallel. Then #04, #05 and #06, then #08 and #09.
 
 ## Later stages
