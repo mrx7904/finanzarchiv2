@@ -1,0 +1,22 @@
+# Build output
+/target/
+node_modules/
+dist/
+/src-tauri/target/
+/src-tauri/gen/
+*.log
+
+# Machine settings and secrets, see knowledge/conventions.md
+.env
+.claude/settings.local.json
+
+# Private data never enters this public repository, see knowledge/decision-public-repository.md
+/private/
+/corpus-private/
+*.db
+*.db-wal
+*.db-shm
+/measurements/private/
+
+.DS_Store
+Thumbs.db
