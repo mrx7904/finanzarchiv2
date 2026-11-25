@@ -9,7 +9,7 @@
 - [x] The text of each page is stored with the box of each line in `pages`. A test on a generated invoice finds every printed amount with its line.
 - [x] A page renders as an image for the preview, cached, and the first page shows in the list of #04.
 - [x] A scan without a text layer is marked as such, for the reading by image of stage 2.
-- [ ] The installer of #08 carries the library, checked by starting the installed app on Windows and on the Mac.
+- [ ] The installer of #08 carries the library, checked by starting the installed app on Windows and on the Mac. Windows: the installed 0.1.0 read an invoice with its own PDFium on 2026-11-25. The Mac is open.
 
 ## Out of scope
 

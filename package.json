@@ -1,6 +1,5 @@
 {
   "name": "finanzarchiv2",
-  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Finanzarchiv 2.0, die Oberfläche",

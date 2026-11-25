@@ -1,6 +1,5 @@
 [package]
 name = "finanzarchiv2"
-version = "0.1.0"
 description = "Finanzarchiv 2.0, der Kern"
 edition = "2024"
 rust-version = "1.100"
