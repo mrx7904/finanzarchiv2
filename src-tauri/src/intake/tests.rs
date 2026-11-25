@@ -129,6 +129,57 @@ fn every_job_ends_filed_or_failed_with_its_reason() {
 }
 
 #[test]
+fn the_stage_text_stores_the_lines_and_marks_scans_and_images() {
+    let dir = tempfile::tempdir().unwrap();
+    let archive = open(&dir.path().join(archive::FILE_NAME));
+    let source = tempfile::tempdir().unwrap();
+    let invoice = source.path().join("rechnung.pdf");
+    std::fs::write(
+        &invoice,
+        testing::pdf(&["Rechnung Nr. 7", "Brutto 49,99 EUR"]),
+    )
+    .unwrap();
+    let scan = source.path().join("scan.pdf");
+    std::fs::write(&scan, testing::pdf_without_text()).unwrap();
+    let photo = source.path().join("foto.png");
+    std::fs::write(&photo, testing::PNG).unwrap();
+    with_ready(&archive, |conn| {
+        jobs::enqueue(conn, &[invoice, scan, photo], Source::Dialog, testing::t0()).unwrap()
+    });
+    drain(&archive, &mut |_| false).unwrap();
+
+    let state = |name: &str| -> String {
+        with_ready(&archive, |conn| {
+            conn.query_row(
+                "SELECT text_state FROM documents WHERE original_name = ?1",
+                [name],
+                |row| row.get(0),
+            )
+            .unwrap()
+        })
+    };
+    assert_eq!(state("rechnung.pdf"), "text");
+    assert_eq!(state("scan.pdf"), "scan");
+    assert_eq!(state("foto.png"), "image");
+    let lines: Vec<String> = with_ready(&archive, |conn| {
+        let mut statement = conn
+            .prepare("SELECT l.text FROM page_lines l JOIN documents d ON d.id = l.document_id WHERE d.original_name = 'rechnung.pdf' ORDER BY l.line")
+            .unwrap();
+        statement
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect()
+    });
+    assert_eq!(lines, ["Rechnung Nr. 7", "Brutto 49,99 EUR"]);
+    assert_eq!(
+        count(&archive, "SELECT count(*) FROM pages"),
+        2,
+        "one page each for the two PDFs, none for the image"
+    );
+}
+
+#[test]
 fn a_paused_job_keeps_its_stage_and_goes_on_later() {
     let dir = tempfile::tempdir().unwrap();
     let archive = open(&dir.path().join(archive::FILE_NAME));

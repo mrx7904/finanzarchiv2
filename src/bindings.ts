@@ -20,6 +20,11 @@ export const commands = {
 	dismissFailed: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("dismiss_failed", undefined, options)),
 	/**  The documents of the archive, newest first. */
 	listDocuments: (options?: InvokeOptions) => typedError<DocumentRow_Serialize[], CommandError>(__TAURI_INVOKE("list_documents", undefined, options)),
+	/**
+	 *  A page of a document as an image for the window, as a data URL. The width is rounded up to
+	 *  one of `previews::WIDTHS`.
+	 */
+	pageImage: (document: number, page: number, width: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("page_image", { document, page, width }, options)),
 };
 
 /** Events */
@@ -55,6 +60,8 @@ export type DocumentRow_Deserialize = {
 	pages?: number | null,
 	/**  UTC, ISO 8601. */
 	importedAt: string,
+	/**  text, scan or image, null while the intake has not read it. */
+	textState?: string | null,
 };
 
 export type DocumentRow_Serialize = {
@@ -65,13 +72,17 @@ export type DocumentRow_Serialize = {
 	pages: number | null,
 	/**  UTC, ISO 8601. */
 	importedAt: string,
+	/**  text, scan or image, null while the intake has not read it. */
+	textState: string | null,
 };
 
 export type ErrorKind = 
 /**  A fault of the app itself. Restarting it is the owner's way out. */
 "internal" | 
 /**  The archive is damaged or missing, so nothing can be written. */
-"archiveNotReady";
+"archiveNotReady" | 
+/**  What was asked for is not in the archive. */
+"notFound";
 
 /**  Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched. */
 export type IntakeChanged = null;

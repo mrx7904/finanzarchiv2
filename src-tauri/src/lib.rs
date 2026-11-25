@@ -5,7 +5,9 @@ pub mod commands;
 pub mod documents;
 pub mod intake;
 pub mod money;
+pub mod pages;
 pub mod pdf;
+pub mod previews;
 #[cfg(test)]
 mod testing;
 

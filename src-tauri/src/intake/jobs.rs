@@ -80,6 +80,8 @@ pub struct Job {
     pub path: PathBuf,
     pub name: String,
     pub stage: Stage,
+    /// The document the job stored, once it did.
+    pub document: Option<i64>,
 }
 
 /// One job per file below the paths, folders walked through, system files left out.
@@ -120,7 +122,7 @@ fn file_name(path: &Path) -> String {
 /// The jobs that are not done, oldest first.
 pub fn open_jobs(conn: &Connection) -> rusqlite::Result<Vec<Job>> {
     let mut statement = conn.prepare(
-        "SELECT id, source, path, name, stage FROM intake_jobs
+        "SELECT id, source, path, name, stage, document_id FROM intake_jobs
          WHERE stage NOT IN ('filed', 'waiting', 'failed') ORDER BY id",
     )?;
     let rows = statement.query_map([], |row| {
@@ -133,6 +135,7 @@ pub fn open_jobs(conn: &Connection) -> rusqlite::Result<Vec<Job>> {
             path: PathBuf::from(path),
             name: row.get(3)?,
             stage: Stage::from_code(&stage).unwrap_or(Stage::Queued),
+            document: row.get(5)?,
         })
     })?;
     rows.collect()
@@ -144,6 +147,15 @@ pub fn set_stage(conn: &Connection, id: i64, stage: Stage, now: Timestamp) -> ru
         params![id, stage.code(), now.to_string()],
     )?;
     Ok(())
+}
+
+/// The document a job stored, once it did.
+pub fn document_of(conn: &Connection, id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT document_id FROM intake_jobs WHERE id = ?1",
+        [id],
+        |row| row.get(0),
+    )
 }
 
 /// Records what the store did and returns the stage the job goes on with.
