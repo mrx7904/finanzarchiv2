@@ -7,5 +7,7 @@ export { Icon, type IconName } from "./icons";
 export { Capsule, List, ListRow, type Tone } from "./List";
 export { Menu, type MenuEntry } from "./Menu";
 export { AnimatePresence, MotionRoot, cn, m, quick, spring } from "./motion";
+export { AppShell, TopBar } from "./AppShell";
+export { closeWindow, isWindowMaximized, minimizeWindow, toggleMaximizeWindow, windowSystem, type WindowSystem } from "./window";
 export { Kbd, QuickSearch, isMac, useQuickSearchKey, type SearchEntry } from "./QuickSearch";
 export { fold, matchScore } from "./search";

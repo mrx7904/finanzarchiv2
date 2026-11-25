@@ -9,6 +9,7 @@ const PAIRS: [text: string, backgrounds: string[]][] = [
   ["--fg-muted", SURFACES],
   ["--fg-accent", ["--canvas", "--sidebar", "--surface", "--raised", "--hover"]],
   ["--on-accent", ["--accent", "--accent-hover"]],
+  ["--on-window-close", ["--window-close"]],
   ["--ok", ["--surface", "--raised"]],
   ["--warn", ["--surface", "--raised"]],
   ["--danger", ["--danger-soft", "--surface", "--raised", "--hover", "--selected"]],
