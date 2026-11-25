@@ -3,7 +3,7 @@ import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { commands } from "./bindings";
 import { Documents } from "./documents/Documents";
 import { Intake } from "./intake/Intake";
-import { Button } from "./ui";
+import { AppShell, Button } from "./ui";
 
 // The showcase of the design system (#07), only in the dev build: the branch is removed from the release.
 const Showcase = import.meta.env.DEV ? lazy(() => import("./showcase/Showcase").then((module) => ({ default: module.Showcase }))) : null;
@@ -18,7 +18,8 @@ function useHash() {
   return hash;
 }
 
-// The empty shell of #01 in the look of #07, with the state of the archive from the core (#03).
+// The shell of #01 in the look of #07, with the state of the archive from the core (#03) the intake of #05 and the documents of #04.
+// Its top bar is the title bar of the window from the start (decision-app-shell.md).
 export function App() {
   const hash = useHash();
   const [loaded, setLoaded] = useState<LoadedStatus | null>(null);
@@ -40,19 +41,24 @@ export function App() {
   const line = loaded ? describeLoaded(loaded) : null;
   const ready = loaded?.status === "ok" && loaded.data.archive.state === "ready";
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 overflow-y-auto bg-canvas px-8 py-10 font-sans text-fg">
-      <header className="flex flex-col items-center gap-1">
-        <h1 className="font-title text-title">Finanzarchiv</h1>
-        <p className={line?.tone === "problem" ? "text-danger" : "text-fg-muted"}>{line ? line.text : "Das Archiv wird geöffnet …"}</p>
-        {line?.version ? <p className="text-small text-fg-muted">Version {line.version}</p> : null}
-        {Showcase && (
-          <Button className="mt-2" onClick={() => (window.location.hash = "gestaltung")}>
+    <AppShell
+      title={ready ? "Dokumente" : "Finanzarchiv"}
+      actions={
+        Showcase && (
+          <Button kind="plain" onClick={() => (window.location.hash = "gestaltung")}>
             Gestaltung ansehen
           </Button>
-        )}
-      </header>
-      {ready ? <Intake /> : null}
-      {ready ? <Documents /> : null}
-    </main>
+        )
+      }
+    >
+      <main className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-8 py-8">
+        <header className="flex flex-col items-center gap-1">
+          <p className={line?.tone === "problem" ? "text-danger" : "text-fg-muted"}>{line ? line.text : "Das Archiv wird geöffnet …"}</p>
+          {line?.version ? <p className="text-small text-fg-muted">Version {line.version}</p> : null}
+        </header>
+        {ready ? <Intake /> : null}
+        {ready ? <Documents /> : null}
+      </main>
+    </AppShell>
   );
 }

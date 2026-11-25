@@ -35,6 +35,8 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-backdrop: var(--backdrop);
+  --color-window-close: var(--window-close);
+  --color-on-window-close: var(--on-window-close);
 
   --text-small: var(--size-small);
   --text-small--line-height: var(--leading-small);
@@ -44,6 +46,8 @@
   --text-heading--line-height: var(--leading-heading);
   --text-title: var(--size-title);
   --text-title--line-height: var(--leading-title);
+  --text-bar-title: var(--size-bar-title);
+  --text-bar-title--line-height: var(--leading-bar-title);
 
   --radius-control: var(--r-control);
   --radius-row: var(--r-row);
@@ -68,6 +72,8 @@
   --leading-heading: 20px;
   --size-title: 24px;
   --leading-title: 30px;
+  --size-bar-title: 17px;
+  --leading-bar-title: 22px;
   --title-weight: 600;
   --title-tracking: -0.025em;
 
@@ -76,6 +82,11 @@
   --control-height: 34px;
   --row-height: 56px;
   --sidebar-width: 232px;
+  /* The top bar is the title bar of the window: page title, actions, and the window buttons or the traffic lights. */
+  --bar-height: 47px;
+  /* Room the traffic lights of macOS take at the left of the bar, and the width of a window button of Windows. */
+  --traffic-lights-width: 80px;
+  --window-button-width: 46px;
 
   /* Radii: soft and large, the further front the rounder. */
   --r-control: 8px;
@@ -114,6 +125,10 @@
   --warn: light-dark(#a16207, #facc15);
   --danger: light-dark(#b91c1c, #f87171);
   --danger-soft: light-dark(#fdeeee, #2c1616);
+
+  /* The close button of the window on Windows turns the red of Windows under the pointer, in light and dark. */
+  --window-close: light-dark(#c42b1c, #c42b1c);
+  --on-window-close: light-dark(#ffffff, #ffffff);
 
   /* Motion: short, and zero under reduced motion (below). */
   --duration-quick: 140ms;

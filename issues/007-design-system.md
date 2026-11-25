@@ -10,6 +10,7 @@
 - [x] Colors, type, spacing, radii and surfaces are tokens in one file. Text has a contrast of at least 4.5 to 1, checked by a test over the tokens. `src/ui/tokens.css`, `src/ui/tokens.test.ts`.
 - [x] Button, field, list row, dialog, menu, empty state and the quick search exist as components, each piece taken from a source with its header comment. `src/ui/`.
 - [x] Every motion stops under reduced motion, checked by a test. `src/ui/motion.test.ts`.
+- [x] The top bar of the app is the title bar of the window, from the start, with the page title, the view's actions and the window buttons (added by the owner on 2026-11-25). `src/ui/AppShell.tsx`, `knowledge/decision-app-shell.md`, `src/window.test.ts`. Seen on Windows in the dev app and tried by the owner, the Mac follows with #08.
 
 ## Out of scope
 

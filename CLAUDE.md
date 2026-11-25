@@ -31,6 +31,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | build, package or release, or think about CI | [`knowledge/decision-local-builds.md`](./knowledge/decision-local-builds.md) |
 | add a file, a fixture, a test document or anything else to the repository | [`knowledge/decision-public-repository.md`](./knowledge/decision-public-repository.md) |
 | touch the look, motion or a UI library | [`knowledge/decision-ui-libraries.md`](./knowledge/decision-ui-libraries.md) |
+| touch the top bar, the window frame, the window buttons or the window's permissions | [`knowledge/decision-app-shell.md`](./knowledge/decision-app-shell.md) |
 | need what version 1.0 did and what it taught | [`docs/analyse-finanzarchiv-1.0.md`](./docs/analyse-finanzarchiv-1.0.md) and the repository `mrx7904/finanzarchiv` (private) |
 | make or challenge a design decision | `knowledge/decision-*.md` |
 | need what happened | the git history, the commit messages carry the evidence |
