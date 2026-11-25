@@ -134,19 +134,17 @@ fn read_text(
         return advance(archive, job, Stage::Stored, kill);
     };
     let read = match (file_type, pdfium) {
-        (documents::FileType::Pdf, Some(pdfium)) => fs::read(&path)
-            .ok()
-            .and_then(|bytes| pages::read(pdfium, &bytes).ok())
-            .map(|read| {
-                let state = if pages::is_scan(&read) {
-                    "scan"
-                } else {
-                    "text"
-                };
-                (read, state)
-            }),
+        (documents::FileType::Pdf, Some(pdfium)) => fs::read(&path).ok().and_then(|bytes| {
+            let read = pages::read(pdfium, &bytes).ok()?;
+            let state = if pages::is_scan(&read) {
+                "scan"
+            } else {
+                "text"
+            };
+            Some((read, state, readers::e_invoice::attachment(pdfium, &bytes)))
+        }),
         (documents::FileType::Pdf, None) => None,
-        _ => Some((Vec::new(), "image")),
+        _ => Some((Vec::new(), "image", None)),
     };
     if kill(Point::Prepared) {
         return Err(Stopped::Killed);
@@ -159,8 +157,10 @@ fn read_text(
         .connection()
         .unchecked_transaction()
         .map_err(|_| Stopped::Database)?;
-    if let Some((read, state)) = read {
+    if let Some((read, state, attachment)) = read {
         documents::save_pages(&tx, id, &read, state).map_err(|_| Stopped::Database)?;
+        readers::e_invoice::save_attachment(&tx, id, attachment.as_ref())
+            .map_err(|_| Stopped::Database)?;
     }
     jobs::set_stage(&tx, job.id, Stage::Text, Timestamp::now()).map_err(|_| Stopped::Database)?;
     if kill(Point::BeforeCommit) {

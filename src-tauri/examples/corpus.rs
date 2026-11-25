@@ -307,7 +307,15 @@ fn invoices(rng: &mut Rng, pdfium: &Pdfium, out: &Writer) {
         if e_invoice {
             attach_factur_x(
                 &mut doc,
-                &factur_x(&invoice_number, issued, sender, net, vat, gross, rate),
+                &factur_x(
+                    &invoice_number,
+                    issued,
+                    due,
+                    sender,
+                    &account,
+                    [net, vat, gross],
+                    rate,
+                ),
             );
         }
         let pdf = bytes(doc);
@@ -331,10 +339,10 @@ fn invoices(rng: &mut Rng, pdfium: &Pdfium, out: &Writer) {
 fn factur_x(
     number: &str,
     issued: Date,
+    due: Date,
     sender: &str,
-    net: i64,
-    vat: i64,
-    gross: i64,
+    account: &str,
+    [net, vat, gross]: [i64; 3],
     rate: i64,
 ) -> String {
     let amount = |cents: i64| format!("{}.{:02}", cents / 100, cents % 100);
@@ -352,7 +360,9 @@ fn factur_x(
     </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeSettlement>
       <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount><ram:IBANID>{iban}</ram:IBANID></ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>
       <ram:ApplicableTradeTax><ram:CalculatedAmount>{vat}</ram:CalculatedAmount><ram:RateApplicablePercent>{rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>
+      <ram:SpecifiedTradePaymentTerms><ram:DueDateDateTime><udt:DateTimeString format="102">{due}</udt:DateTimeString></ram:DueDateDateTime></ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
         <ram:TaxBasisTotalAmount>{net}</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="EUR">{vat}</ram:TaxTotalAmount>
@@ -363,6 +373,8 @@ fn factur_x(
 </rsm:CrossIndustryInvoice>
 "#,
         issued = issued.strftime("%Y%m%d"),
+        due = due.strftime("%Y%m%d"),
+        iban = account.replace(' ', ""),
         net = amount(net),
         vat = amount(vat),
         gross = amount(gross),

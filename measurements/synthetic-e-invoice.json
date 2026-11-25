@@ -1,0 +1,42 @@
+{
+  "corpus": "synthetic",
+  "fields": {
+    "invoice.due_date": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.gross": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.iban": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.invoice_date": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.invoice_number": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.net": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.sender": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.vat": {
+      "right": 1,
+      "total": 1
+    },
+    "invoice.vat_rate": {
+      "right": 1,
+      "total": 1
+    }
+  },
+  "reader": "e-invoice"
+}

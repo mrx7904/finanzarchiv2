@@ -17,7 +17,7 @@ In 1.0 the same question had three answers depending on the period (payments typ
 
 ### Provenance
 
-- A value read from a document is a row of `field_values`: document, field, value, the reader that produced it (`code`, `parser:<name>`, `model:<name>`, `vision:<name>`, `owner`), the place in the document (page, the line of text, a box when known) and the time.
+- A value read from a document is a row of `field_values`: document, field, value, the reader that produced it with its version (`code:2`, `e-invoice:2`, `model:<name>`, `vision:<name>`, and `owner` without one), the place in the document (page, the line of text, a box when known) and the time.
 - The checks a value passed or failed are rows of `field_checks`.
 - The confirmed values are materialized into typed tables (`invoices`, `payslips`, `statements`) for queries and views. They are derived, the source is `field_values`.
 - The history of a value, undo and "Warum?" are queries on these rows, no extra table per feature.

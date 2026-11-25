@@ -32,6 +32,35 @@ impl Cents {
         self.0
     }
 
+    /// An amount as a machine writes it, the XML of an e-invoice above all: "1234.56", "-5", "19.5"
+    /// or "100.0000". A point before the decimals, no grouping. Decimals past the cent must be zero,
+    /// so nothing is rounded. `None` for anything else.
+    pub fn parse_decimal(text: &str) -> Option<Self> {
+        let text = text.trim();
+        let (negative, unsigned) = match text.strip_prefix('-') {
+            Some(rest) => (true, rest),
+            None => (false, text.strip_prefix('+').unwrap_or(text)),
+        };
+        let (whole, fraction) = unsigned.split_once('.').unwrap_or((unsigned, ""));
+        let digits = |part: &str| part.bytes().all(|b| b.is_ascii_digit());
+        let dangling_point = unsigned.ends_with('.');
+        if whole.is_empty() || dangling_point || !digits(whole) || !digits(fraction) {
+            return None;
+        }
+        let (cent_digits, rest) = fraction.split_at(fraction.len().min(2));
+        if rest.bytes().any(|b| b != b'0') {
+            return None;
+        }
+        let cents = match cent_digits.len() {
+            0 => 0,
+            _ => parse_fraction(cent_digits)?,
+        };
+        let value = to_cents(whole, cents)?;
+        i64::try_from(if negative { -value } else { value })
+            .ok()
+            .map(Self)
+    }
+
     pub fn checked_add(self, other: Self) -> Option<Self> {
         self.0.checked_add(other.0).map(Self)
     }
@@ -282,7 +311,50 @@ mod tests {
         assert_eq!(Cents::ZERO.checked_sub(Cents::new(7)), Some(Cents::new(-7)));
     }
 
+    #[test]
+    fn decimals_are_read_as_machines_write_them() {
+        let read = |text: &str| Cents::parse_decimal(text).map(Cents::value);
+        assert_eq!(read("1234.56"), Some(123_456));
+        assert_eq!(read("19.5"), Some(1_950));
+        assert_eq!(read("100"), Some(10_000));
+        assert_eq!(read("100.0000"), Some(10_000));
+        assert_eq!(read("-5.00"), Some(-500));
+        assert_eq!(read("+5.00"), Some(500));
+        assert_eq!(read(" 0.07 "), Some(7));
+        assert_eq!(
+            read("1.005"),
+            None,
+            "a decimal past the cent is never rounded"
+        );
+        for refused in [
+            "",
+            "-",
+            ".5",
+            "5.",
+            "1,50",
+            "1.234.56",
+            "1e3",
+            "12a",
+            "--1",
+            "99999999999999999999",
+        ] {
+            assert_eq!(read(refused), None, "{refused:?}");
+        }
+    }
+
     proptest! {
+        #[test]
+        fn writing_as_a_machine_then_reading_gives_the_same_amount(value in -(i64::MAX / 100)..(i64::MAX / 100)) {
+            let sign = if value < 0 { "-" } else { "" };
+            let written = format!("{sign}{}.{:02}", (value / 100).unsigned_abs(), (value % 100).unsigned_abs());
+            prop_assert_eq!(Cents::parse_decimal(&written), Some(Cents::new(value)), "written as {}", written);
+        }
+
+        #[test]
+        fn reading_a_decimal_never_panics(text in "\\PC{0,24}") {
+            let _ = Cents::parse_decimal(&text);
+        }
+
         #[test]
         fn printing_then_reading_gives_the_same_amount(value in any::<i64>()) {
             let printed = Cents::new(value).to_string();
