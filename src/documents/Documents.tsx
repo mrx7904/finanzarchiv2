@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { type DocumentRow_Serialize as DocumentRow, type ImportSummary_Serialize as ImportSummary, commands, events } from "../bindings";
+import { Button, EmptyState, Icon, List, ListRow } from "../ui";
 import { describeImport, formatDay, kindLabel } from "./describe";
 
-// The list of #04 in the placeholder look of #01, until the design system of #07 replaces it.
+// The documents of #04 in the pieces of the design system (#07). The view of its own comes with stage 2.
 export function Documents() {
   const [rows, setRows] = useState<DocumentRow[]>([]);
+  const [chosen, setChosen] = useState<number | null>(null);
   const [last, setLast] = useState<ImportSummary | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,49 +41,45 @@ export function Documents() {
     if (result.status === "ok") finish(result.data);
   };
 
+  const actions = (
+    <div className="flex items-center gap-2">
+      <Button kind="primary" icon="upload" busy={busy} onClick={() => void pick("files")}>
+        Dateien importieren …
+      </Button>
+      <Button icon="folder" disabled={busy} onClick={() => void pick("folder")}>
+        Ordner importieren …
+      </Button>
+    </div>
+  );
   const line = last ? describeImport(last) : null;
   return (
     <section className="flex w-full max-w-3xl flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <button type="button" disabled={busy} onClick={() => void pick("files")} className="rounded-md bg-neutral-800 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-neutral-200 dark:text-neutral-900">
-          Dateien importieren …
-        </button>
-        <button type="button" disabled={busy} onClick={() => void pick("folder")} className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-neutral-700">
-          Ordner importieren …
-        </button>
-        <span className="text-xs text-neutral-500">oder Dateien und Ordner ins Fenster ziehen</span>
-      </div>
+      {rows.length > 0 ? actions : null}
       {line ? (
-        <div className="text-sm">
+        <div className="text-body">
           <p>{line.text}</p>
           {line.refused.map((entry) => (
-            <p key={entry} className="text-xs text-red-600 dark:text-red-400">
+            <p key={entry} className="text-small text-danger">
               {entry}
             </p>
           ))}
         </div>
       ) : null}
       {rows.length === 0 ? (
-        <p className="text-sm text-neutral-500">Noch keine Dokumente im Archiv.</p>
+        <EmptyState icon="document" title="Noch keine Dokumente im Archiv" hint="Ziehe Dateien oder Ordner ins Fenster oder wähle sie aus." actions={actions} />
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs text-neutral-500">
-            <tr>
-              <th className="py-1 font-normal">Name</th>
-              <th className="py-1 font-normal">Art</th>
-              <th className="py-1 font-normal">Importiert</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="py-1">{row.name}</td>
-                <td className="py-1">{kindLabel(row.kind)}</td>
-                <td className="py-1 tabular-nums">{formatDay(row.importedAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <List label="Dokumente">
+          {rows.map((row) => (
+            <ListRow
+              key={row.id}
+              title={row.name}
+              detail={`${kindLabel(row.kind)}, importiert am ${formatDay(row.importedAt)}`}
+              leading={<Icon name="document" />}
+              selected={chosen === row.id}
+              onSelect={() => setChosen(row.id)}
+            />
+          ))}
+        </List>
       )}
     </section>
   );

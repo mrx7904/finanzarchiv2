@@ -16,7 +16,7 @@ At most one stage is open. The next stage is cut into issues and begun only afte
 | [#04](004-document-store.md) | Unchanged originals under their hash, in by drop and dialog | FA-07, FA-08 | #02, #03 | done |
 | [#05](005-intake-queue.md) | One intake queue that survives a restart | FA-09 | #04 | open |
 | [#06](006-pdf-text-and-pages.md) | Text and pages of a PDF in the core | FA-10 | #05 | open |
-| [#07](007-design-system.md) | The design system, chosen by the owner | FA-11 | #01 | open |
+| [#07](007-design-system.md) | The design system, chosen by the owner | FA-11 | #01 | done |
 | [#08](008-local-releases.md) | Releases built on the owner's machines | FA-12 | #01, #06 | open |
 | [#09](009-corpus.md) | A generated corpus and a measure command | FA-13 | #06 | open |
 
