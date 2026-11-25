@@ -6,7 +6,7 @@
 ## Done when
 
 - [x] The version lives in one place and the scripts read it from there.
-- [ ] The Windows script builds the installer, uploads it with `gh`, and the app installs and starts on the PC.
+- [x] The Windows script builds the installer, uploads it with `gh`, and the app installs and starts on the PC. Draft v0.1.0 with `Finanzarchiv.2_0.1.0_x64-setup.exe` (6,470,286 bytes) uploaded on 2026-11-25 from commit 6d22bcf.
 - [ ] The macOS script builds the dmg for Apple silicon, signed ad hoc, uploads it to the same release, and the app opens on the Mac after the download.
 - [ ] The size of both installers stands in `decision-stack.md`.
 - [x] No file under `.github/workflows/` exists.
