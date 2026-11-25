@@ -259,6 +259,7 @@ impl Intake {
                     if let Ok(mut claimed) = self.claimed.lock() {
                         claimed.remove(&job.id);
                     }
+                    self.snapshot_when_done();
                     (self.on_change)();
                 }
                 claimed => {
@@ -268,6 +269,29 @@ impl Intake {
                     self.sleep();
                 }
             }
+        }
+    }
+
+    /// Once the queue is empty, a snapshot when many documents came in (#19). Under the lock of
+    /// the archive, so two workers that finish together take one snapshot.
+    fn snapshot_when_done(&self) {
+        let Ok(guard) = self.archive.lock() else {
+            return;
+        };
+        let Opened::Ready(ready) = &*guard else {
+            return;
+        };
+        if jobs::count_open(ready.connection()).ok() != Some(0) {
+            return;
+        }
+        if crate::archive::snapshots::after_import(
+            ready.connection(),
+            ready.path(),
+            Timestamp::now(),
+        )
+        .is_err()
+        {
+            eprintln!("Der Sicherungspunkt nach dem Import schlug fehl");
         }
     }
 

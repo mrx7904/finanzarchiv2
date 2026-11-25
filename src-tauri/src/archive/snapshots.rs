@@ -18,6 +18,7 @@ const STAMP: &str = "%Y%m%dT%H%M%SZ";
 pub enum Reason {
     Daily,
     BeforeMigration,
+    AfterImport,
 }
 
 impl Reason {
@@ -25,6 +26,7 @@ impl Reason {
         match self {
             Self::Daily => "taeglich",
             Self::BeforeMigration => "vor-migration",
+            Self::AfterImport => "nach-import",
         }
     }
 }
@@ -95,6 +97,35 @@ pub fn daily_due(snapshots: &[Snapshot], now: Timestamp) -> bool {
     snapshots
         .first()
         .is_none_or(|newest| now.duration_since(newest.taken_at) >= SignedDuration::from_hours(24))
+}
+
+/// New documents since the newest snapshot that make a snapshot due when the queue empties
+/// (#19). The owner's first 132 documents had none until the next start.
+pub const AFTER_IMPORT_THRESHOLD: i64 = 20;
+
+/// Takes a snapshot when at least `AFTER_IMPORT_THRESHOLD` documents came in since the newest one.
+pub fn after_import(
+    conn: &Connection,
+    database: &Path,
+    now: Timestamp,
+) -> Result<Option<PathBuf>, SnapshotError> {
+    let since = list(database)?
+        .first()
+        .map(|newest| newest.taken_at.to_string());
+    let added: i64 = match since {
+        Some(since) => conn.query_row(
+            "SELECT count(*) FROM documents WHERE imported_at > ?1",
+            [since],
+            |row| row.get(0),
+        )?,
+        None => conn.query_row("SELECT count(*) FROM documents", [], |row| row.get(0))?,
+    };
+    if added < AFTER_IMPORT_THRESHOLD {
+        return Ok(None);
+    }
+    let path = take(conn, database, Reason::AfterImport, now)?;
+    prune(database)?;
+    Ok(Some(path))
 }
 
 /// Removes all but the newest `KEEP`.
