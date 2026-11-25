@@ -180,6 +180,66 @@ fn the_stage_text_stores_the_lines_and_marks_scans_and_images() {
 }
 
 #[test]
+fn a_large_import_is_saved_once_the_queue_is_empty() {
+    use crate::archive::snapshots::{self, AFTER_IMPORT_THRESHOLD};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join(archive::FILE_NAME);
+    let archive = open(&path);
+    let source = tempfile::tempdir().unwrap();
+    let threshold = usize::try_from(AFTER_IMPORT_THRESHOLD).unwrap();
+    let paths = files(source.path(), threshold);
+    let now = Timestamp::now();
+
+    with_ready(&archive, |conn| {
+        jobs::enqueue(conn, &paths[..threshold - 1], Source::Drop, testing::t0()).unwrap()
+    });
+    drain(&archive, &mut |_| false).unwrap();
+    with_ready(&archive, |conn| {
+        assert_eq!(
+            snapshots::after_import(conn, &path, now).unwrap(),
+            None,
+            "below the threshold"
+        )
+    });
+
+    with_ready(&archive, |conn| {
+        jobs::enqueue(conn, &paths[threshold - 1..], Source::Drop, testing::t0()).unwrap()
+    });
+    drain(&archive, &mut |_| false).unwrap();
+    let taken = with_ready(&archive, |conn| {
+        snapshots::after_import(conn, &path, now).unwrap()
+    });
+    assert!(taken.is_some_and(|file| file.to_string_lossy().ends_with("-nach-import.db")));
+    let later = now + jiff::SignedDuration::from_secs(5);
+    with_ready(&archive, |conn| {
+        assert_eq!(
+            snapshots::after_import(conn, &path, later).unwrap(),
+            None,
+            "nothing new since"
+        )
+    });
+    assert_eq!(snapshots::list(&path).unwrap().len(), 1);
+}
+
+#[test]
+fn the_workers_save_a_large_import_by_themselves() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join(archive::FILE_NAME);
+    let archive = Arc::new(open(&path));
+    let intake = Intake::new(Arc::clone(&archive), Box::new(|| {}));
+    let source = tempfile::tempdir().unwrap();
+    let paths = files(source.path(), 25);
+    intake.start(2, Some(testing::pdfium()));
+    intake.enqueue(&paths, Source::Dialog).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(60);
+    while crate::archive::snapshots::list(&path).unwrap().is_empty() {
+        assert!(Instant::now() < deadline, "no snapshot after the import");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert_eq!(count(&archive, "SELECT count(*) FROM documents"), 25);
+}
+
+#[test]
 fn a_paused_job_keeps_its_stage_and_goes_on_later() {
     let dir = tempfile::tempdir().unwrap();
     let archive = open(&dir.path().join(archive::FILE_NAME));

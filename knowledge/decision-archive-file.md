@@ -12,6 +12,13 @@
 - Time comes from `jiff` 1.0.3 and is passed in, so the rules are tested without waiting.
 - Amounts are `Cents(i64)`. `Cents::parse_de` reads German print ("1.234,56", "-12,50", "12,5", "1234", "49,99 €", the minus sign U+2212) and refuses "12.50" with the suggestion "12,50", because a guess could be off by a factor of a hundred. `Display` prints "1.234,56 €". A property test prints and reads every `i64` back to itself.
 
+## A snapshot after a large import (#19)
+
+**Decided:** 2026-11-25, found in the owner's acceptance of stage 1: the first 132 documents had no snapshot until the second start.
+
+- When the intake queue becomes empty, a worker counts the documents imported since the newest snapshot. From `AFTER_IMPORT_THRESHOLD` = 20 on it writes a snapshot with the reason `nach-import` and keeps the newest ten. The count and the snapshot run under the lock of the archive, so two workers that finish together write one.
+- Tested: 19 new documents write none, the twentieth writes one, a second call with nothing new writes none, and the workers write it by themselves after 25 documents.
+
 ## Evidence
 
 On 2026-11-25: 17 tests of the core, among them a truncated file that is reported as damaged and stays byte for byte as it was, and twelve days of starts that leave ten snapshots. `cargo mutants --file src/money.rs` first left two survivors. One was a real gap ("12,+5" was read as 12,50 €), now refused and tested. The other was an arbitrary length limit, now replaced by checked arithmetic. The run after the fixes caught 60 of 60.

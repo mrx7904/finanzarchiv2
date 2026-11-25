@@ -5,8 +5,8 @@
 
 ## Done when
 
-- [ ] When the queue becomes empty after at least a threshold of new documents since the last snapshot (one value in the core), a snapshot with the reason `nach-import` is written. Found on 2026-11-25: the owner's first 132 documents had no snapshot until the second start.
-- [ ] Tested with a temporary folder: below the threshold none, at the threshold one, the newest ten kept as before.
+- [x] When the queue becomes empty after at least a threshold of new documents since the last snapshot (one value in the core), a snapshot with the reason `nach-import` is written. Found on 2026-11-25: the owner's first 132 documents had no snapshot until the second start.
+- [x] Tested with a temporary folder: below the threshold none, at the threshold one, the newest ten kept as before.
 
 ## Out of scope
 
