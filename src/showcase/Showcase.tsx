@@ -1,9 +1,11 @@
 // The showcase of #07: the pieces of the design system at real size in a window that looks like the app, a sidebar,
 // a list, a preview, a form, a menu, a dialog and the quick search. The owner picked the look Graphit from four
-// variants here (knowledge/decision-ui-libraries.md). A strip at the top switches between light and dark. Only in the
-// dev build (App.tsx).
+// variants here (knowledge/decision-ui-libraries.md). Everything stands in the AppShell, whose top bar is the title
+// bar of the window. The foot of the sidebar switches light and dark and the bar of Windows or macOS. Only in the dev
+// build (App.tsx).
 import { useCallback, useState } from "react";
 import {
+  AppShell,
   Button,
   Dialog,
   EmptyState,
@@ -18,8 +20,10 @@ import {
   cn,
   isMac,
   useQuickSearchKey,
+  windowSystem,
   type IconName,
   type SearchEntry,
+  type WindowSystem,
 } from "../ui";
 import { categories, documents, formatCents, type SampleDocument } from "./sample";
 
@@ -40,6 +44,7 @@ const views: { id: string; label: string; icon: IconName; count?: number }[][] =
 
 export function Showcase() {
   const [theme, setTheme] = useState<Theme>("system");
+  const [system, setSystem] = useState<WindowSystem>(windowSystem() === "mac" ? "mac" : "windows");
   const [view, setView] = useState("dokumente");
   const [filter, setFilter] = useState<"offen" | "erledigt">("offen");
   const [chosenId, setChosenId] = useState("d1");
@@ -59,49 +64,23 @@ export function Showcase() {
   ];
 
   return (
-    <div className="flex h-full flex-col">
-      <ShowcaseStrip theme={theme} onTheme={setTheme} />
-      <div
-        data-theme={theme === "system" ? undefined : theme}
-        className="flex min-h-0 flex-1 overflow-hidden bg-canvas font-sans text-body text-fg"
-      >
-        <aside className="flex w-(--sidebar-width) shrink-0 flex-col gap-4 bg-sidebar px-3 pt-4 pb-3 shadow-[inset_-1px_0_0_var(--line)]">
-          <div className="flex items-center gap-2 px-2">
-            <span className="flex size-6 items-center justify-center rounded-[6px] bg-accent text-on-accent">
+    <div data-theme={theme === "system" ? undefined : theme} className="relative h-full">
+      {system === "mac" && windowSystem() !== "mac" && <DrawnTrafficLights />}
+      <AppShell
+        system={system}
+        title="Dokumente"
+        appName={
+          <>
+            <span data-tauri-drag-region className="flex size-6 items-center justify-center rounded-[6px] bg-accent text-on-accent">
               <Icon name="folder" size={14} />
             </span>
-            <span className="font-semibold">Finanzarchiv</span>
-          </div>
-          <button
-            type="button"
-            onClick={openSearch}
-            className="flex h-(--control-height) items-center gap-2 rounded-control bg-field px-2.5 text-fg-muted shadow-[inset_0_0_0_1px_var(--line)] transition-quick hover:text-fg"
-          >
-            <Icon name="search" size={15} />
-            <span className="flex-1 text-left">Suchen</span>
-            <Kbd>{isMac ? "⌘" : "Strg"}</Kbd>
-            <Kbd>K</Kbd>
-          </button>
-          <nav aria-label="Ansichten" className="flex flex-1 flex-col gap-4">
-            {views.map((group, i) => (
-              <ul key={i} className="flex flex-col gap-px">
-                {group.map((v) => (
-                  <li key={v.id}>
-                    <SidebarRow {...v} selected={view === v.id} onSelect={() => setView(v.id)} />
-                  </li>
-                ))}
-              </ul>
-            ))}
-          </nav>
-          <SidebarRow id="einstellungen" label="Einstellungen" icon="gear" selected={view === "einstellungen"} onSelect={() => setView("einstellungen")} />
-        </aside>
-
-        <main className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-end gap-4 px-6 pt-6 pb-4">
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <h1 className="font-title text-title">Dokumente</h1>
-              <p className="max-w-2xl text-fg-muted">Alles, was im Archiv liegt. Wähle ein Dokument, um seine Angaben zu prüfen.</p>
-            </div>
+            <span data-tauri-drag-region className="font-semibold">
+              Finanzarchiv
+            </span>
+          </>
+        }
+        actions={
+          <>
             <Menu
               align="end"
               entries={[
@@ -125,8 +104,41 @@ export function Showcase() {
             <Button kind="primary" icon="inbox">
               Prüfen starten
             </Button>
-          </header>
-
+          </>
+        }
+        sidebar={
+          <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3">
+            <button
+              type="button"
+              onClick={openSearch}
+              className="flex h-(--control-height) items-center gap-2 rounded-control bg-field px-2.5 text-fg-muted shadow-[inset_0_0_0_1px_var(--line)] transition-quick hover:text-fg"
+            >
+              <Icon name="search" size={15} />
+              <span className="flex-1 text-left">Suchen</span>
+              <Kbd>{isMac ? "⌘" : "Strg"}</Kbd>
+              <Kbd>K</Kbd>
+            </button>
+            <nav aria-label="Ansichten" className="flex flex-1 flex-col gap-4">
+              {views.map((group, i) => (
+                <ul key={i} className="flex flex-col gap-px">
+                  {group.map((v) => (
+                    <li key={v.id}>
+                      <SidebarRow {...v} selected={view === v.id} onSelect={() => setView(v.id)} />
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            </nav>
+            <SidebarRow id="einstellungen" label="Einstellungen" icon="gear" selected={view === "einstellungen"} onSelect={() => setView("einstellungen")} />
+            <div className="flex flex-col gap-2 border-t border-line pt-3 text-small text-fg-muted">
+              <span>Vorschau</span>
+              <Segments value={theme} onChange={setTheme} options={[{ value: "system", label: "System" }, { value: "light", label: "Hell" }, { value: "dark", label: "Dunkel" }]} />
+              <Segments value={system} onChange={setSystem} options={[{ value: "windows", label: "Windows" }, { value: "mac", label: "macOS" }]} />
+            </div>
+          </div>
+        }
+      >
+          <p className="px-6 pt-4 pb-4 text-fg-muted">Alles, was im Archiv liegt. Wähle ein Dokument, um seine Angaben zu prüfen.</p>
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(320px,400px)_minmax(0,1fr)_minmax(280px,340px)] gap-4 px-6 pb-6">
             <section aria-label="Liste" className="flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
               <div className="flex flex-col gap-3 border-b border-line p-3">
@@ -204,7 +216,7 @@ export function Showcase() {
               )}
             </section>
           </div>
-        </main>
+      </AppShell>
 
         <Dialog
           open={deleting}
@@ -222,7 +234,17 @@ export function Showcase() {
           }
         />
         <QuickSearch open={searching} onClose={() => setSearching(false)} entries={entries} />
-      </div>
+    </div>
+  );
+}
+
+/** The traffic lights macOS draws over the bar, drawn here only to preview the bar of the Mac on another system. */
+function DrawnTrafficLights() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute top-[calc(var(--bar-height)/2-6px)] left-5 z-10 flex gap-2">
+      {["#ff5f57", "#febc2e", "#28c840"].map((color) => (
+        <span key={color} className="size-3 rounded-full" style={{ backgroundColor: color }} />
+      ))}
     </div>
   );
 }
@@ -337,18 +359,9 @@ function PaperPreview({ document }: { document: SampleDocument }) {
   );
 }
 
-function ShowcaseStrip({ theme, onTheme }: { theme: Theme; onTheme: (theme: Theme) => void }) {
-  return (
-    <div className="flex h-11 shrink-0 items-center gap-3 border-b border-[#d0d0d5] bg-[#e9e9ed] px-4 text-[12px] text-[#1d1d1f] [color-scheme:light]">
-      <span className="font-semibold">Gestaltung Graphit</span>
-      <Segments value={theme} onChange={onTheme} options={[{ value: "system", label: "System" }, { value: "light", label: "Hell" }, { value: "dark", label: "Dunkel" }]} />
-    </div>
-  );
-}
-
 function Segments<T extends string>({ value, onChange, options }: { value: T; onChange: (value: T) => void; options: { value: T; label: string }[] }) {
   return (
-    <div role="radiogroup" className="inline-flex rounded-[7px] bg-[#d9d9de] p-0.5">
+    <div role="radiogroup" className="flex rounded-control bg-canvas p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
       {options.map((o) => (
         <button
           key={o.value}
@@ -356,7 +369,10 @@ function Segments<T extends string>({ value, onChange, options }: { value: T; on
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cn("h-6 rounded-[5px] px-2.5 font-medium", value === o.value ? "bg-white shadow-[0_1px_2px_rgb(0_0_0/0.15)]" : "text-[#3a3a40]")}
+          className={cn(
+            "h-6 flex-1 rounded-[calc(var(--r-control)-2px)] px-2 text-small font-medium transition-quick",
+            value === o.value ? "bg-surface text-fg shadow-panel" : "text-fg-muted hover:text-fg",
+          )}
         >
           {o.label}
         </button>

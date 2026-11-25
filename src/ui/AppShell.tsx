@@ -1,0 +1,117 @@
+// The frame of every view: the top bar is the title bar of the window, there is no strip of the system above it
+// (asked for by the owner on 2026-11-25: the bar is part of the app from the start, for the page title, its buttons
+// and whatever else a view needs). It carries the title at the left, the view's actions at the right, and is the
+// region by which the window is dragged and, by a double click, maximized. On macOS the native traffic lights lie
+// over its left end (the window's title bar style is "Overlay"), on Windows the app draws minimize, maximize and close
+// at its right end in the size and order of Windows 11.
+// No piece of the six UI sources is a window title bar, so this is after the idea of the custom title bar of the Tauri
+// guide (v2.tauri.app/learn/window-customization, MIT): a drag region and three buttons calling the window API. The
+// buttons follow the caption buttons of Windows 11 (46 px wide, close turning red), the bar the unified toolbar of
+// macOS apps.
+import { useEffect, useState, type ReactNode } from "react";
+import { cn } from "./motion";
+import { closeWindow, isWindowMaximized, minimizeWindow, toggleMaximizeWindow, windowSystem, type WindowSystem } from "./window";
+
+type AppShellProps = {
+  /** The page title in the bar. */
+  title: string;
+  /** Buttons and other controls of the view, at the right end of the bar. */
+  actions?: ReactNode;
+  /** The sidebar's content. Without one the bar spans the window. */
+  sidebar?: ReactNode;
+  /** The name in the sidebar's top, beside the traffic lights on macOS. */
+  appName?: ReactNode;
+  children: ReactNode;
+  /** For the showcase, which draws the bar of another system. */
+  system?: WindowSystem;
+};
+
+export function AppShell({ title, actions, sidebar, appName, children, system = windowSystem() }: AppShellProps) {
+  return (
+    <div className="flex h-full min-h-0 overflow-hidden bg-canvas font-sans text-body text-fg">
+      {sidebar && (
+        <aside className="flex w-(--sidebar-width) shrink-0 flex-col bg-sidebar shadow-[inset_-1px_0_0_var(--line)]">
+          <div
+            data-tauri-drag-region
+            className={cn("flex h-(--bar-height) shrink-0 items-center gap-2 select-none", system === "mac" ? "pl-(--traffic-lights-width)" : "pl-5")}
+          >
+            {appName}
+          </div>
+          {sidebar}
+        </aside>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar title={title} actions={actions} system={system} insetForTrafficLights={!sidebar && system === "mac"} />
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+type TopBarProps = { title: string; actions?: ReactNode; system: WindowSystem; insetForTrafficLights: boolean };
+
+export function TopBar({ title, actions, system, insetForTrafficLights }: TopBarProps) {
+  const buttons = system === "windows";
+  return (
+    <header
+      data-tauri-drag-region
+      className={cn(
+        "flex h-(--bar-height) shrink-0 items-center gap-3 border-b border-line bg-canvas select-none",
+        insetForTrafficLights ? "pl-(--traffic-lights-width)" : "pl-6",
+        buttons ? "pr-0" : "pr-4",
+      )}
+    >
+      {/* A drag region holds only on the element that carries it, so the title and the gap carry it too. */}
+      <h1 data-tauri-drag-region className="min-w-0 truncate font-title text-bar-title">
+        {title}
+      </h1>
+      <div data-tauri-drag-region className="h-full min-w-4 flex-1" />
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {buttons && <WindowButtons />}
+    </header>
+  );
+}
+
+function WindowButtons() {
+  const [maximized, setMaximized] = useState(false);
+  useEffect(() => {
+    const update = () => void isWindowMaximized().then(setMaximized);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const button = "flex h-full w-(--window-button-width) items-center justify-center text-fg transition-quick";
+  return (
+    <div className="ml-2 flex h-full shrink-0 self-start">
+      <button type="button" aria-label="Minimieren" title="Minimieren" onClick={minimizeWindow} className={cn(button, "hover:bg-hover")}>
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+          <path d="M0 5.5h10" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        aria-label={maximized ? "Wiederherstellen" : "Maximieren"}
+        title={maximized ? "Wiederherstellen" : "Maximieren"}
+        onClick={toggleMaximizeWindow}
+        className={cn(button, "hover:bg-hover")}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden>
+          {maximized ? (
+            <>
+              <rect x="0.5" y="2.5" width="7" height="7" rx="1" />
+              <path d="M2.5 2.5V1.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1" />
+            </>
+          ) : (
+            <rect x="0.5" y="0.5" width="9" height="9" rx="1" />
+          )}
+        </svg>
+      </button>
+      <button type="button" aria-label="Schließen" title="Schließen" onClick={closeWindow} className={cn(button, "hover:bg-window-close hover:text-on-window-close")}>
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+          <path d="M0.5 0.5l9 9M9.5 0.5l-9 9" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      </button>
+    </div>
+  );
+}
