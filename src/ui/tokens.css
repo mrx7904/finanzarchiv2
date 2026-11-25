@@ -1,0 +1,189 @@
+/*
+ * The tokens of the design system (#07, FA-11): colors, type, spacing, radii, surfaces and motion, in one file.
+ * Every color is one `light-dark()` pair, so a token has one line and follows the color scheme of the element it is
+ * used on. The look is Graphit, picked by the owner on 2026-11-25 (knowledge/decision-ui-libraries.md).
+ * `src/ui/tokens.test.ts` reads this file and checks that every text color reaches 4.5 to 1 on every surface
+ * it stands on, in light and dark.
+ * Components use the tokens through the Tailwind names below (`bg-surface`, `text-fg-muted`, `rounded-panel`), never a
+ * gray or a size of their own.
+ */
+
+/* `inline`, so a utility reads the token where it is used and a subtree with `data-theme` gets its own scheme. */
+@theme inline {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-title);
+
+  --color-canvas: var(--canvas);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-field: var(--field);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-mark: var(--mark);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-accent: var(--fg-accent);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-backdrop: var(--backdrop);
+
+  --text-small: var(--size-small);
+  --text-small--line-height: var(--leading-small);
+  --text-body: var(--size-body);
+  --text-body--line-height: var(--leading-body);
+  --text-heading: var(--size-heading);
+  --text-heading--line-height: var(--leading-heading);
+  --text-title: var(--size-title);
+  --text-title--line-height: var(--leading-title);
+
+  --radius-control: var(--r-control);
+  --radius-row: var(--r-row);
+  --radius-panel: var(--r-panel);
+  --radius-dialog: var(--r-dialog);
+
+  --shadow-panel: var(--panel-shadow);
+  --shadow-raised: var(--raised-shadow);
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* Type: the system font (SF Pro on the Mac, Segoe UI on Windows), titles semibold and tight. */
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-title: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --size-small: 12px;
+  --leading-small: 16px;
+  --size-body: 14px;
+  --leading-body: 20px;
+  --size-heading: 15px;
+  --leading-heading: 20px;
+  --size-title: 24px;
+  --leading-title: 30px;
+  --title-weight: 600;
+  --title-tracking: -0.025em;
+
+  /* Spacing: Tailwind's 4 px step, plus the heights of a control and of a list row. */
+  --spacing: 4px;
+  --control-height: 34px;
+  --row-height: 56px;
+  --sidebar-width: 232px;
+
+  /* Radii: soft and large, the further front the rounder. */
+  --r-control: 8px;
+  --r-row: 10px;
+  --r-panel: 14px;
+  --r-dialog: 18px;
+
+  /* Surfaces, from back to front: the window, the sidebar beside it, panels on the window, what floats above. */
+  --canvas: light-dark(#fafafa, #0f0f11);
+  --sidebar: light-dark(#f4f4f5, #141417);
+  --surface: light-dark(#ffffff, #18181b);
+  --raised: light-dark(#ffffff, #222226);
+  --field: light-dark(#ffffff, #1d1d20);
+  --hover: light-dark(#f1f1f3, #232327);
+  --selected: light-dark(#e8e8eb, #2c2c31);
+  --mark: light-dark(#e8e8eb, #2c2c31);
+  --line: light-dark(#e7e7ea, #27272b);
+  --line-strong: light-dark(#d1d1d6, #3f3f46);
+  --backdrop: light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.6));
+  --panel-shadow: 0 0 0 1px light-dark(#ececef, #232327), 0 1px 3px light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.4));
+  --raised-shadow: 0 0 0 1px light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.06)), 0 16px 40px light-dark(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.55));
+
+  /* Text */
+  --fg: light-dark(#18181b, #f4f4f5);
+  --fg-muted: light-dark(#63636b, #a1a1aa);
+  --fg-accent: light-dark(#18181b, #f4f4f5);
+
+  /* No color accent: the main action is black in light and white in dark. */
+  --accent: light-dark(#18181b, #f4f4f5);
+  --accent-hover: light-dark(#3f3f46, #d4d4d8);
+  --on-accent: light-dark(#ffffff, #18181b);
+  --focus: light-dark(rgb(24 24 27 / 0.35), rgb(244 244 245 / 0.4));
+
+  /* States: color only where a state needs it, as the dot of a capsule, a text on a panel, the soft danger button. */
+  --ok: light-dark(#15803d, #4ade80);
+  --warn: light-dark(#a16207, #facc15);
+  --danger: light-dark(#b91c1c, #f87171);
+  --danger-soft: light-dark(#fdeeee, #2c1616);
+
+  /* Motion: short, and zero under reduced motion (below). */
+  --duration-quick: 140ms;
+  --duration-move: 240ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* A choice of light or dark in the app beats the system's (the showcase offers both). */
+[data-theme="light"] {
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/*
+ * Every motion stops under reduced motion of the system: the duration tokens go to zero, and a rule with
+ * `!important` catches any transition or animation a piece sets inline. Motion's own animations are stopped in
+ * `src/ui/motion.tsx`. Checked by `src/ui/motion.test.ts`.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-quick: 0s;
+    --duration-move: 0s;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A color, background or ring that changes on hover or focus, short and never on layout. */
+@utility transition-quick {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--duration-quick);
+  transition-timing-function: var(--ease-out);
+}
+
+@utility font-title {
+  font-family: var(--font-title);
+  font-weight: var(--title-weight);
+  letter-spacing: var(--title-tracking);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    line-height: var(--leading-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 1px;
+  }
+  ::selection {
+    background-color: var(--selected);
+  }
+}
