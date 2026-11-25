@@ -1,8 +1,8 @@
-//! Commands of the document store (#04). The window never sends a path: the core asks the
-//! system dialog itself or receives the dropped paths from the window event.
+//! Commands of the document store (#04) and the intake queue (#05). The window never sends a
+//! path: the core asks the system dialog itself or receives the dropped paths from the window event.
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -12,34 +12,44 @@ use tauri_specta::Event;
 
 use super::CommandError;
 use crate::archive::Opened;
-use crate::documents::{self, FileResult, Outcome, Source};
-use crate::pdf;
+use crate::documents::{self, Source};
+use crate::intake::{Intake, jobs};
 
 const EXTENSIONS: &[&str] = &["pdf", "png", "jpg", "jpeg", "webp"];
 
-/// What one import did, for the line the window shows after it.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, Type, PartialEq, Eq)]
+/// Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type, Event)]
+pub struct IntakeChanged;
+
+/// How many files an import put into the queue.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImportSummary {
-    pub added: u32,
-    pub known: u32,
-    pub refused: Vec<RefusedFile>,
-    /// Set when nothing could be imported at all, as a German sentence.
-    pub problem: Option<String>,
+pub struct Queued {
+    pub files: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct RefusedFile {
+pub struct JobRow {
+    pub id: u32,
     pub name: String,
-    pub reason: String,
+    /// The stage as its code: queued, stored, text, classified, read, checked, failed.
+    pub stage: String,
+    /// Why a failed file was not taken, as a German sentence.
+    pub error: Option<String>,
 }
 
-/// Sent when files dropped on the window were imported.
-#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+/// What the window shows under "Eingang".
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImportFinished {
-    pub summary: ImportSummary,
+pub struct IntakeOverview {
+    pub paused: bool,
+    pub open: u32,
+    /// The oldest open jobs, at most 50.
+    pub running: Vec<JobRow>,
+    pub failed: Vec<JobRow>,
+    /// New documents of the last 24 hours.
+    pub added_today: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
@@ -54,54 +64,30 @@ pub struct DocumentRow {
     pub imported_at: String,
 }
 
-pub fn summarize(results: &[FileResult]) -> ImportSummary {
-    let mut summary = ImportSummary::default();
-    for result in results {
-        match &result.outcome {
-            Outcome::Added { .. } => summary.added += 1,
-            Outcome::Known { .. } => summary.known += 1,
-            Outcome::Refused(refusal) => summary.refused.push(RefusedFile {
-                name: result.name.clone(),
-                reason: refusal.to_string(),
-            }),
-        }
+fn enqueue(intake: &Intake, paths: &[PathBuf], source: Source) -> Result<Queued, CommandError> {
+    if paths.is_empty() {
+        return Ok(Queued { files: 0 });
     }
-    summary
+    intake
+        .enqueue(paths, source)
+        .map(|files| Queued { files })
+        .map_err(|_| CommandError::archive_not_ready())
 }
 
-/// Imports the paths into the open archive. Used by the dialog commands and the drop handler.
-pub fn import(archive: &Mutex<Opened>, paths: &[PathBuf], source: Source) -> ImportSummary {
-    let Ok(opened) = archive.lock() else {
-        return ImportSummary {
-            problem: Some(CommandError::internal().message),
-            ..ImportSummary::default()
-        };
-    };
-    let Opened::Ready(ready) = &*opened else {
-        return ImportSummary {
-            problem: Some("Das Archiv ist nicht bereit, deshalb wurde nichts importiert.".into()),
-            ..ImportSummary::default()
-        };
-    };
-    let root = documents::archive_root(ready.path());
-    let results = documents::import_paths(
-        ready.connection(),
-        &root,
-        pdf::engine().ok(),
-        paths,
-        source,
-        jiff::Timestamp::now(),
-    );
-    summarize(&results)
+/// Puts dropped files into the queue. Called by the window event, not by the window.
+pub fn enqueue_dropped(intake: &Intake, paths: &[PathBuf]) {
+    if enqueue(intake, paths, Source::Drop).is_err() {
+        eprintln!("Gezogene Dateien konnten nicht in den Eingang");
+    }
 }
 
-/// Asks for files in the dialog of the system and imports them.
+/// Asks for files in the dialog of the system and puts them into the queue.
 #[tauri::command]
 #[specta::specta]
 pub async fn import_files(
     app: AppHandle,
-    archive: State<'_, Mutex<Opened>>,
-) -> Result<ImportSummary, CommandError> {
+    intake: State<'_, Arc<Intake>>,
+) -> Result<Queued, CommandError> {
     let picked = app
         .dialog()
         .file()
@@ -113,16 +99,16 @@ pub async fn import_files(
         .into_iter()
         .filter_map(|file| file.into_path().ok())
         .collect();
-    Ok(import(&archive, &paths, Source::Dialog))
+    enqueue(&intake, &paths, Source::Dialog)
 }
 
-/// Asks for a folder in the dialog of the system and imports everything in it.
+/// Asks for a folder in the dialog of the system and puts everything in it into the queue.
 #[tauri::command]
 #[specta::specta]
 pub async fn import_folder(
     app: AppHandle,
-    archive: State<'_, Mutex<Opened>>,
-) -> Result<ImportSummary, CommandError> {
+    intake: State<'_, Arc<Intake>>,
+) -> Result<Queued, CommandError> {
     let picked = app
         .dialog()
         .file()
@@ -132,13 +118,80 @@ pub async fn import_folder(
         .and_then(|folder| folder.into_path().ok())
         .into_iter()
         .collect();
-    Ok(import(&archive, &paths, Source::Dialog))
+    enqueue(&intake, &paths, Source::Dialog)
+}
+
+fn job_row(job: jobs::Listed) -> Result<JobRow, CommandError> {
+    Ok(JobRow {
+        id: u32::try_from(job.id).map_err(|_| CommandError::internal())?,
+        name: job.name,
+        stage: job.stage.code().to_owned(),
+        error: job.error,
+    })
+}
+
+/// The state of the queue for "Eingang".
+#[tauri::command]
+#[specta::specta]
+pub fn intake_overview(intake: State<'_, Arc<Intake>>) -> Result<IntakeOverview, CommandError> {
+    let guard = intake
+        .archive()
+        .lock()
+        .map_err(|_| CommandError::internal())?;
+    let Opened::Ready(ready) = &*guard else {
+        return Err(CommandError::archive_not_ready());
+    };
+    let conn = ready.connection();
+    let database = |_| CommandError::internal();
+    let day_ago = jiff::Timestamp::now() - jiff::SignedDuration::from_hours(24);
+    Ok(IntakeOverview {
+        paused: intake.is_paused(),
+        open: jobs::count_open(conn).map_err(database)?,
+        running: jobs::listed(conn, true, 50)
+            .map_err(database)?
+            .into_iter()
+            .map(job_row)
+            .collect::<Result<_, _>>()?,
+        failed: jobs::listed(conn, false, 200)
+            .map_err(database)?
+            .into_iter()
+            .map(job_row)
+            .collect::<Result<_, _>>()?,
+        added_today: jobs::count_added_since(conn, day_ago).map_err(database)?,
+    })
+}
+
+/// Pauses the queue or lets it go on. A running job finishes its stage and keeps it.
+#[tauri::command]
+#[specta::specta]
+pub fn set_intake_paused(intake: State<'_, Arc<Intake>>, paused: bool) {
+    intake.set_paused(paused);
+}
+
+/// Takes the failed files off the list under "Eingang".
+#[tauri::command]
+#[specta::specta]
+pub fn dismiss_failed(intake: State<'_, Arc<Intake>>) -> Result<(), CommandError> {
+    {
+        let guard = intake
+            .archive()
+            .lock()
+            .map_err(|_| CommandError::internal())?;
+        let Opened::Ready(ready) = &*guard else {
+            return Err(CommandError::archive_not_ready());
+        };
+        jobs::dismiss_failed(ready.connection()).map_err(|_| CommandError::internal())?;
+    }
+    intake.set_paused(intake.is_paused());
+    Ok(())
 }
 
 /// The documents of the archive, newest first.
 #[tauri::command]
 #[specta::specta]
-pub fn list_documents(archive: State<'_, Mutex<Opened>>) -> Result<Vec<DocumentRow>, CommandError> {
+pub fn list_documents(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+) -> Result<Vec<DocumentRow>, CommandError> {
     let opened = archive.lock().map_err(|_| CommandError::internal())?;
     let Opened::Ready(ready) = &*opened else {
         return Ok(Vec::new());
@@ -161,42 +214,26 @@ pub fn list_documents(archive: State<'_, Mutex<Opened>>) -> Result<Vec<DocumentR
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::documents::Refusal;
 
     #[test]
-    fn a_summary_counts_and_names_each_refused_file() {
-        let results = [
-            FileResult {
-                name: "a.pdf".into(),
-                outcome: Outcome::Added { id: 1 },
-            },
-            FileResult {
-                name: "a-kopie.pdf".into(),
-                outcome: Outcome::Known { id: 1 },
-            },
-            FileResult {
-                name: "notiz.txt".into(),
-                outcome: Outcome::Refused(Refusal::UnknownType),
-            },
-        ];
-        let summary = summarize(&results);
-        assert_eq!((summary.added, summary.known), (1, 1));
-        assert_eq!(summary.refused.len(), 1);
-        assert_eq!(summary.refused[0].name, "notiz.txt");
-        assert!(
-            summary.refused[0]
-                .reason
-                .contains("PDF, PNG, JPEG und WebP")
-        );
+    fn nothing_is_queued_into_an_archive_that_is_not_ready() {
+        let archive = Arc::new(Mutex::new(Opened::Damaged {
+            snapshots: Vec::new(),
+        }));
+        let intake = Intake::new(archive, Box::new(|| {}));
+        let error = enqueue(&intake, &[PathBuf::from("egal.pdf")], Source::Drop).unwrap_err();
+        assert!(error.message.contains("nicht bereit"));
     }
 
     #[test]
-    fn nothing_is_imported_into_an_archive_that_is_not_ready() {
-        let archive = Mutex::new(Opened::Damaged {
+    fn an_empty_pick_queues_nothing() {
+        let archive = Arc::new(Mutex::new(Opened::Damaged {
             snapshots: Vec::new(),
-        });
-        let summary = import(&archive, &[PathBuf::from("egal.pdf")], Source::Drop);
-        assert_eq!(summary.added, 0);
-        assert!(summary.problem.unwrap().contains("nicht bereit"));
+        }));
+        let intake = Intake::new(archive, Box::new(|| {}));
+        assert_eq!(
+            enqueue(&intake, &[], Source::Dialog).unwrap(),
+            Queued { files: 0 }
+        );
     }
 }

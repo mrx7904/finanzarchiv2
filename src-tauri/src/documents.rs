@@ -60,10 +60,18 @@ pub enum Source {
 }
 
 impl Source {
-    fn code(self) -> &'static str {
+    pub fn code(self) -> &'static str {
         match self {
             Self::Drop => "drop",
             Self::Dialog => "dialog",
+        }
+    }
+
+    pub fn from_code(code: &str) -> Option<Self> {
+        match code {
+            "drop" => Some(Self::Drop),
+            "dialog" => Some(Self::Dialog),
+            _ => None,
         }
     }
 }
@@ -146,6 +154,20 @@ fn import_checked(
     source: Source,
     now: Timestamp,
 ) -> Result<Outcome, Refusal> {
+    let prepared = prepare(pdfium, bytes)?;
+    store(conn, root, &prepared, bytes, original_name, source, now)
+}
+
+/// What is known about a file before the archive is touched: its type, its pages and its hash.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Prepared {
+    pub file_type: FileType,
+    pub pages: Option<u32>,
+    pub sha256: String,
+}
+
+/// Checks and hashes the bytes. Needs no database, so workers do it side by side.
+pub fn prepare(pdfium: Option<&Pdfium>, bytes: &[u8]) -> Result<Prepared, Refusal> {
     if bytes.is_empty() {
         return Err(Refusal::Empty);
     }
@@ -158,20 +180,42 @@ fn import_checked(
         },
         _ => None,
     };
-    let sha256 = hex(&Sha256::digest(bytes));
-    if let Some(id) = find_by_hash(conn, &sha256).map_err(|_| Refusal::NotStored)? {
+    Ok(Prepared {
+        file_type,
+        pages,
+        sha256: hex(&Sha256::digest(bytes)),
+    })
+}
+
+/// Writes the file under its hash and adds its row. Run it inside the transaction that also
+/// moves the job on, so a crash leaves either both or neither. A file written by a crashed
+/// attempt is found under its hash and kept.
+pub fn store(
+    conn: &Connection,
+    root: &Path,
+    prepared: &Prepared,
+    bytes: &[u8],
+    original_name: &str,
+    source: Source,
+    now: Timestamp,
+) -> Result<Outcome, Refusal> {
+    if let Some(id) = find_by_hash(conn, &prepared.sha256).map_err(|_| Refusal::NotStored)? {
         return Ok(Outcome::Known { id });
     }
-    write_once(&stored_path(root, &sha256, file_type), bytes).map_err(|_| Refusal::NotStored)?;
+    write_once(
+        &stored_path(root, &prepared.sha256, prepared.file_type),
+        bytes,
+    )
+    .map_err(|_| Refusal::NotStored)?;
     conn.execute(
         "INSERT INTO documents (sha256, file_type, original_name, size_bytes, pages, source, imported_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         (
-            &sha256,
-            file_type.code(),
+            &prepared.sha256,
+            prepared.file_type.code(),
             original_name,
             i64::try_from(bytes.len()).map_err(|_| Refusal::NotStored)?,
-            pages,
+            prepared.pages,
             source.code(),
             now.to_string(),
         ),
@@ -263,7 +307,7 @@ pub fn import_paths(
 }
 
 /// Files the system keeps beside the owner's, such as `.DS_Store` or `Thumbs.db`.
-fn is_hidden(path: &Path) -> bool {
+pub fn is_hidden(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| {

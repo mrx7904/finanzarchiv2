@@ -8,17 +8,23 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  The version of the app and the state of its archive. */
 	appStatus: (options?: InvokeOptions) => typedError<AppStatus, CommandError>(__TAURI_INVOKE("app_status", undefined, options)),
-	/**  Asks for files in the dialog of the system and imports them. */
-	importFiles: (options?: InvokeOptions) => typedError<ImportSummary_Serialize, CommandError>(__TAURI_INVOKE("import_files", undefined, options)),
-	/**  Asks for a folder in the dialog of the system and imports everything in it. */
-	importFolder: (options?: InvokeOptions) => typedError<ImportSummary_Serialize, CommandError>(__TAURI_INVOKE("import_folder", undefined, options)),
+	/**  Asks for files in the dialog of the system and puts them into the queue. */
+	importFiles: (options?: InvokeOptions) => typedError<Queued, CommandError>(__TAURI_INVOKE("import_files", undefined, options)),
+	/**  Asks for a folder in the dialog of the system and puts everything in it into the queue. */
+	importFolder: (options?: InvokeOptions) => typedError<Queued, CommandError>(__TAURI_INVOKE("import_folder", undefined, options)),
+	/**  The state of the queue for "Eingang". */
+	intakeOverview: (options?: InvokeOptions) => typedError<IntakeOverview_Serialize, CommandError>(__TAURI_INVOKE("intake_overview", undefined, options)),
+	/**  Pauses the queue or lets it go on. A running job finishes its stage and keeps it. */
+	setIntakePaused: (paused: boolean, options?: InvokeOptions) => __TAURI_INVOKE<void>("set_intake_paused", { paused }, options),
+	/**  Takes the failed files off the list under "Eingang". */
+	dismissFailed: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("dismiss_failed", undefined, options)),
 	/**  The documents of the archive, newest first. */
 	listDocuments: (options?: InvokeOptions) => typedError<DocumentRow_Serialize[], CommandError>(__TAURI_INVOKE("list_documents", undefined, options)),
 };
 
 /** Events */
 export const events = {
-	importFinished: makeEvent<ImportFinished_Serialize, ImportFinished_Deserialize>("import-finished"),
+	intakeChanged: makeEvent<IntakeChanged, IntakeChanged>("intake-changed"),
 };
 
 /* Types */
@@ -63,45 +69,61 @@ export type DocumentRow_Serialize = {
 
 export type ErrorKind = 
 /**  A fault of the app itself. Restarting it is the owner's way out. */
-"internal";
+"internal" | 
+/**  The archive is damaged or missing, so nothing can be written. */
+"archiveNotReady";
 
-/**  Sent when files dropped on the window were imported. */
-export type ImportFinished = ImportFinished_Serialize | ImportFinished_Deserialize;
+/**  Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched. */
+export type IntakeChanged = null;
 
-/**  Sent when files dropped on the window were imported. */
-export type ImportFinished_Deserialize = {
-	summary: ImportSummary_Deserialize,
+/**  What the window shows under "Eingang". */
+export type IntakeOverview = IntakeOverview_Serialize | IntakeOverview_Deserialize;
+
+/**  What the window shows under "Eingang". */
+export type IntakeOverview_Deserialize = {
+	paused: boolean,
+	open: number,
+	/**  The oldest open jobs, at most 50. */
+	running: JobRow_Deserialize[],
+	failed: JobRow_Deserialize[],
+	/**  New documents of the last 24 hours. */
+	addedToday: number,
 };
 
-/**  Sent when files dropped on the window were imported. */
-export type ImportFinished_Serialize = {
-	summary: ImportSummary_Serialize,
+/**  What the window shows under "Eingang". */
+export type IntakeOverview_Serialize = {
+	paused: boolean,
+	open: number,
+	/**  The oldest open jobs, at most 50. */
+	running: JobRow_Serialize[],
+	failed: JobRow_Serialize[],
+	/**  New documents of the last 24 hours. */
+	addedToday: number,
 };
 
-/**  What one import did, for the line the window shows after it. */
-export type ImportSummary = ImportSummary_Serialize | ImportSummary_Deserialize;
+export type JobRow = JobRow_Serialize | JobRow_Deserialize;
 
-/**  What one import did, for the line the window shows after it. */
-export type ImportSummary_Deserialize = {
-	added: number,
-	known: number,
-	refused: RefusedFile[],
-	/**  Set when nothing could be imported at all, as a German sentence. */
-	problem?: string | null,
-};
-
-/**  What one import did, for the line the window shows after it. */
-export type ImportSummary_Serialize = {
-	added: number,
-	known: number,
-	refused: RefusedFile[],
-	/**  Set when nothing could be imported at all, as a German sentence. */
-	problem: string | null,
-};
-
-export type RefusedFile = {
+export type JobRow_Deserialize = {
+	id: number,
 	name: string,
-	reason: string,
+	/**  The stage as its code: queued, stored, text, classified, read, checked, failed. */
+	stage: string,
+	/**  Why a failed file was not taken, as a German sentence. */
+	error?: string | null,
+};
+
+export type JobRow_Serialize = {
+	id: number,
+	name: string,
+	/**  The stage as its code: queued, stored, text, classified, read, checked, failed. */
+	stage: string,
+	/**  Why a failed file was not taken, as a German sentence. */
+	error: string | null,
+};
+
+/**  How many files an import put into the queue. */
+export type Queued = {
+	files: number,
 };
 
 export type SnapshotInfo = {

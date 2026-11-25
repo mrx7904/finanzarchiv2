@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { commands } from "./bindings";
 import { Documents } from "./documents/Documents";
+import { Intake } from "./intake/Intake";
 import { AppShell, Button } from "./ui";
 
 // The showcase of the design system (#07), only in the dev build: the branch is removed from the release.
@@ -17,7 +18,7 @@ function useHash() {
   return hash;
 }
 
-// The shell of #01 in the look of #07, with the state of the archive from the core (#03) and the documents of #04.
+// The shell of #01 in the look of #07, with the state of the archive from the core (#03) the intake of #05 and the documents of #04.
 // Its top bar is the title bar of the window from the start (decision-app-shell.md).
 export function App() {
   const hash = useHash();
@@ -55,6 +56,7 @@ export function App() {
           <p className={line?.tone === "problem" ? "text-danger" : "text-fg-muted"}>{line ? line.text : "Das Archiv wird geöffnet …"}</p>
           {line?.version ? <p className="text-small text-fg-muted">Version {line.version}</p> : null}
         </header>
+        {ready ? <Intake /> : null}
         {ready ? <Documents /> : null}
       </main>
     </AppShell>
