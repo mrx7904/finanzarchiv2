@@ -5,6 +5,12 @@
       "pdfium/mac-arm64/lib/libpdfium.dylib": "pdfium/libpdfium.dylib",
       "pdfium/mac-arm64/LICENSE": "pdfium/LICENSE",
       "pdfium/mac-arm64/licenses/": "pdfium/licenses/"
+    },
+    "targets": [
+      "dmg"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
     }
   }
 }

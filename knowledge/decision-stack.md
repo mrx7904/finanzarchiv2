@@ -45,7 +45,7 @@ Checked on 2026-11-25 at crates.io (`/api/v1/crates/<name>`), registry.npmjs.org
 ## To verify
 
 - PDFium is a shared library that must ship per system. Which prebuilt binaries `pdfium-render` 0.9.6 expects, and their licence (BSD style and Apache 2.0 for PDFium, to be verified at pdfium.googlesource.com). Settled by #06.
-- The size of the Windows installer and the macOS dmg, claimed about 10 MB. Settled by #08.
+- The size of the macOS dmg. The Windows installer of 0.1.0 is 6.2 MB (#08, 2026-11-25), 1.0 shipped more than 100 MB.
 - `ollama-rs` 0.3.6 was last released on 2026-07-24. Whether it covers structured output, images and tool calls of the current Ollama, or whether a thin client on `reqwest` is better. Settled in stage 2.
 - The keychain prompt after every update on macOS, which hit 1.0 because the app is signed ad hoc. Whether an Apple Developer ID removes it is for the owner to decide (cost).
 

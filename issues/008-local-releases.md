@@ -5,11 +5,11 @@
 
 ## Done when
 
-- [ ] The version lives in one place and the scripts read it from there.
+- [x] The version lives in one place and the scripts read it from there.
 - [ ] The Windows script builds the installer, uploads it with `gh`, and the app installs and starts on the PC.
 - [ ] The macOS script builds the dmg for Apple silicon, signed ad hoc, uploads it to the same release, and the app opens on the Mac after the download.
 - [ ] The size of both installers stands in `decision-stack.md`.
-- [ ] No file under `.github/workflows/` exists.
+- [x] No file under `.github/workflows/` exists.
 
 ## Out of scope
 

@@ -41,10 +41,16 @@ Befehle:
 | `node scripts/fetch-pdfium.mjs` | lädt PDFium, die PDF-Bibliothek, für dieses System und prüft ihre Prüfsumme. Die Prüfung ruft es selbst auf |
 | `npm run tauri dev` | startet die App mit Neuladen bei Änderungen |
 | `npm run tauri build` | baut die App für dieses System |
+| `node scripts/release.mjs` | prüft, baut den Installer dieses Systems und nennt seine Größe |
+| `node scripts/release.mjs --upload` | dasselbe, danach lädt es den Installer in den Release-Entwurf der Version auf GitHub. Veröffentlicht wird der Entwurf von Hand |
 | `npm run corpus` | schreibt den erfundenen Testkorpus in `fixtures/synthetic/` neu |
 | `npm run measure` | misst die Leser am Testkorpus und, mit `CORPUS_PRIVATE`, an den eigenen Dokumenten |
 | `node scripts/check.mjs` | alle Prüfungen: Links, Anforderungen und Issues, Datenschutz, Rust (fmt, clippy, Tests), TypeScript (Typen, Lint, Tests) |
 | `node scripts/check.mjs --self-test` | zeigt, dass jede Prüfung bei einem eingebauten Fehler anschlägt |
+
+## Installieren
+
+Unter Windows installiert `Finanzarchiv 2_<Version>_x64-setup.exe` die App für den angemeldeten Benutzer nach `%LOCALAPPDATA%Finanzarchiv 2`, ohne Administratorrechte. Finanzarchiv 2 liegt neben Finanzarchiv 1.0 und hat einen eigenen Datenordner (`%APPDATA%de.mrx7904.finanzarchiv2`). Für den Mac baut `node scripts/release.mjs` auf dem Mac ein dmg, ohne Apple-Entwicklerkonto nur ad hoc signiert: Beim ersten Öffnen fragt macOS nach, unter Systemeinstellungen › Datenschutz und Sicherheit lässt es sich „Dennoch öffnen“.
 
 ## Datenschutz
 
