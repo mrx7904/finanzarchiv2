@@ -81,3 +81,71 @@ Issue: #08
 Code generates invoices, payslips and bank statements with known values into the repository. One command measures a reader on this corpus and, when it is set, on the owner's private corpus outside the repository.
 
 Issue: #09
+
+## Stage 2 Reading and review
+
+### FA-14 The kind of a document by code
+
+Code decides from the printed signals of the text whether a document is an invoice, a payslip, a receipt (Zahlungsbeleg), a bank statement or something else, and says "unknown" when the signals of two kinds are equally strong. The kind is stored with the signals it rests on.
+
+Issue: #10
+
+### FA-15 Every value with its source
+
+A value read from a document is stored with the reader that produced it, the page and the box of the line it stands on, and the time. The checks it passed or failed are stored beside it. A value the owner types is stored the same way, with the owner as reader.
+
+Issue: #11
+
+### FA-16 Invoices read by code
+
+Code reads the invoice number, the invoice date, the net, the rate and amount of VAT, the gross, the due date, the IBAN and the sender of an invoice from its labelled lines, as printed, and turns amounts and dates into `Cents` and dates in code.
+
+Issue: #11
+
+### FA-17 E-invoices from their XML
+
+An invoice that carries a ZUGFeRD, Factur-X or XRechnung XML is read from that XML, and its values count as exact.
+
+Issue: #12
+
+### FA-18 Payslips read by code
+
+Code reads the employer, the month, the Brutto, each deduction and the Netto of a payslip from its labelled lines.
+
+Issue: #13
+
+### FA-19 The local model reads what code cannot
+
+The local model on Ollama reads the fields code left empty, with a JSON schema for its answer, copying amounts and dates as printed and naming the line each value stands on. It is never asked how sure it is. Without a running Ollama a document waits for it and does not fail. Which model reads is chosen by measurement on the generated and the owner's corpus.
+
+Issue: #14
+
+### FA-20 Reading the page as an image
+
+A scan without text, and a decisive value that no reader found in the text, is read from the image of the page by a local vision model. Its values carry the image as their source.
+
+Issue: #15
+
+### FA-21 Checks decide what is filed by itself
+
+A document whose decisive values stand in its text, add up to the cent and agree between two independent readers, and that is no duplicate, is filed without the owner. Every such decision is stored with its rule, the values it saw and how to undo it, and the window shows "Warum?" and "Rückgängig". Everything else waits with its reasons.
+
+Issue: #16
+
+### FA-22 The review as questions
+
+What waits is shown in "Prüfen", grouped by reason, mostly as questions to answer with yes or no, with the page beside the values. A correction is stored as a value of the owner and the document goes on through the checks.
+
+Issue: #17
+
+### FA-23 Names by template
+
+Each kind of document is named by a template the owner can change, filled from its confirmed values when it is filed. A name typed by the owner is kept.
+
+Issue: #18
+
+### FA-24 A snapshot after a large import
+
+After an import of many documents the app writes a snapshot of the archive at once, not only at the next start.
+
+Issue: #19
