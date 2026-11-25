@@ -26,6 +26,25 @@ At most one stage is open. The next stage is cut into issues and begun only afte
 
 Order of work: #01 first. Then #02, #03 and #07 in parallel. Then #04, #05 and #06, then #08 and #09.
 
+## Stage 2 Reading and review
+
+| # | Title | Requirements | Depends on | Status |
+|---|---|---|---|---|
+| [#10](010-kind-by-code.md) | The kind of a document by code | FA-14 | none | open |
+| [#11](011-values-and-invoice-reader.md) | Values with their source, and invoices read by code | FA-15, FA-16 | #10 | open |
+| [#12](012-e-invoices.md) | E-invoices from their XML | FA-17 | #11 | open |
+| [#13](013-payslips-by-code.md) | Payslips read by code | FA-18 | #11 | open |
+| [#14](014-local-model.md) | The local model reads what code cannot | FA-19 | #11 | open |
+| [#15](015-reading-by-image.md) | Reading the page as an image | FA-20 | #14 | open |
+| [#16](016-checks-and-filing.md) | Checks decide what is filed by itself | FA-21 | #12, #13, #14 | open |
+| [#17](017-review-as-questions.md) | The review as questions | FA-22 | #16 | open |
+| [#18](018-names-by-template.md) | Names by template | FA-23 | #16 | open |
+| [#19](019-snapshot-after-import.md) | A snapshot after a large import | FA-24 | none | open |
+
+**Stage 2 is done when the owner's archive is read, at most 10 % of its documents wait for the owner, and a sample of 30 documents filed without the owner holds no wrong value.** Decided by the owner on 2026-11-25: documents that pass every check are filed automatically, and stage 2 starts while the Mac part of stage 1 is open.
+
+Order of work: #19 and #10 first, then #11, then #12, #13 and #14, then #15 and #16, then #17 and #18.
+
 ## Later stages
 
-Stages 2 to 6 of `spec/concept.md` are cut into issues when their turn comes, with what stage 1 taught.
+Stages 3 to 6 of `spec/concept.md` are cut into issues when their turn comes, with what stage 1 taught.

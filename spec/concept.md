@@ -33,7 +33,7 @@ It keeps
 - **The source stays.** Every value points to its original file and its place there.
 - **Code decides what it can verify, the owner decides the rest.** The model is never asked how sure it is.
 - **Exact numbers.** Amounts are exact to the cent.
-- **One open stage.** A stage is built, then the owner uses it on real documents and accepts it, then the next begins. Version 1.0 built 18 stages and almost none was accepted.
+- **One open stage.** A stage is built, then the owner uses it on real documents and accepts it, then the next begins. Version 1.0 built 18 stages and almost none was accepted. The owner may open the next stage while a part of the previous one waits for a machine (2026-11-25: stage 2 began with the Mac part of stage 1 open, everything else of stage 1 accepted on Windows).
 - **Measured, not believed.** Every reader is measured on a generated corpus in the repository and on the owner's private corpus outside it.
 
 ## What comes when
