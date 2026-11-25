@@ -6,11 +6,21 @@
 
 The owner, in their words: "dass die Topbar (wo auch minimieren, maximieren und schließen ist) von anfang an ein fester bestandteil der App sein soll für Seitentitel, buttons und sonstiges".
 
-- The window has no title strip of the system. The app's own top bar (`TopBar` inside `AppShell`) is the title bar: the page title at the left, the view's actions at the right, and the region by which the window is dragged. A double click on it maximizes, as on a title bar of the system.
+- The window has no title strip of the system. The app's own top bar (`TopBar` inside `AppShell`) is the title bar: the path of the page at the left (see "The path of the page"), the view's actions at the right, and the region by which the window is dragged. A double click on it maximizes, as on a title bar of the system.
 - **macOS:** the native traffic lights stay and lie over the left end of the bar. `titleBarStyle: "Overlay"` and `hiddenTitle: true` in `tauri.conf.json`, `trafficLightPosition` `{ x: 20, y: 23 }` to center them in the bar of 47 px (first 52 px, the owner asked for it about 10 % slimmer after trying it on 2026-11-25). The sidebar's top (or the bar, when a view has no sidebar) leaves `--traffic-lights-width` (80 px) free for them.
 - **Windows:** `decorations: false` in `tauri.windows.conf.json`, and the app draws minimize, maximize (restore when maximized) and close at the right end of the bar, 46 px wide like the caption buttons of Windows 11, close turning the red of Windows (`--window-close`).
 - **Linux and other systems:** keep the frame of the system for now, the bar is then a toolbar below it. Settled when Linux comes.
-- `AppShell` is the frame of every view from the start, the empty shell of #01 included. A view gives it a title, its actions and its sidebar, it never draws a header of its own.
+- `AppShell` is the frame of every view from the start, the empty shell of #01 included. A view gives it its path, its actions and its sidebar, it never draws a header of its own.
+
+## The path of the page
+
+**Decided:** 2026-11-25 by the owner, in their words: "Bei der Topbar sollte gerne (wo im Screenshot \"Dokumente\" steht, jweils der Pfad der geweiligen seite dabei sein. Sprich wenn ich mich in einem untermenu befinde, möchte ich sehen welche seiten davor sind und auch per klick auf diese kommen." Seen and approved by the owner in the dev app on Windows with paths of one, three and six pages.
+
+- `AppShell` takes a `path` (`{ label, onSelect? }[]`) instead of a title. The last segment is the page itself, set like the title before and marked `aria-current="page"`, not a button. Every segment before it is a button (keyboard reachable, focus ring) that leads back to its page. A quiet chevron separates them. The list is a `nav` named "Pfad". With one segment the bar shows a title, as before.
+- **The path stays on one line.** `PathNav` (`src/ui/Path.tsx`) shows every segment, and while the list is wider than the room the bar leaves it, it folds the middle segment farthest from the current page into "…", again on every change of the width. "…" opens the `Menu` of the design system with the folded pages. The first and the current segment always stay. The current page shortens with "…" only once nothing is left to fold, since a page that shortens never lets the list overflow.
+- **The path is never part of the drag region.** The bar and the free gap after the path carry `data-tauri-drag-region`, the path does not.
+- **No router yet.** The views of stage 2 build the path and give each earlier segment its `onSelect`. A routing package needs a decision of its own first.
+- `src/ui/path.test.tsx` checks that the last segment is not a button, that the others and the folded entries call their `onSelect`, and that folding keeps the first and the current segment.
 
 ## Why per system
 

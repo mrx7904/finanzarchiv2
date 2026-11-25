@@ -42,7 +42,7 @@ export function App() {
   const ready = loaded?.status === "ok" && loaded.data.archive.state === "ready";
   return (
     <AppShell
-      title={ready ? "Dokumente" : "Finanzarchiv"}
+      path={[{ label: ready ? "Dokumente" : "Finanzarchiv" }]}
       actions={
         Showcase && (
           <Button kind="plain" onClick={() => (window.location.hash = "gestaltung")}>

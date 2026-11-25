@@ -1,6 +1,6 @@
 // The frame of every view: the top bar is the title bar of the window, there is no strip of the system above it
 // (asked for by the owner on 2026-11-25: the bar is part of the app from the start, for the page title, its buttons
-// and whatever else a view needs). It carries the title at the left, the view's actions at the right, and is the
+// and whatever else a view needs). It carries the path of the page at the left (Path.tsx), the view's actions at the right, and is the
 // region by which the window is dragged and, by a double click, maximized. On macOS the native traffic lights lie
 // over its left end (the window's title bar style is "Overlay"), on Windows the app draws minimize, maximize and close
 // at its right end in the size and order of Windows 11.
@@ -10,11 +10,12 @@
 // macOS apps.
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "./motion";
+import { PathNav, type PathSegment } from "./Path";
 import { closeWindow, isWindowMaximized, minimizeWindow, toggleMaximizeWindow, windowSystem, type WindowSystem } from "./window";
 
 type AppShellProps = {
-  /** The page title in the bar. */
-  title: string;
+  /** The path of the page in the bar, its last segment the page itself. One segment reads as a title. */
+  path: PathSegment[];
   /** Buttons and other controls of the view, at the right end of the bar. */
   actions?: ReactNode;
   /** The sidebar's content. Without one the bar spans the window. */
@@ -26,7 +27,7 @@ type AppShellProps = {
   system?: WindowSystem;
 };
 
-export function AppShell({ title, actions, sidebar, appName, children, system = windowSystem() }: AppShellProps) {
+export function AppShell({ path, actions, sidebar, appName, children, system = windowSystem() }: AppShellProps) {
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-canvas font-sans text-body text-fg">
       {sidebar && (
@@ -41,16 +42,16 @@ export function AppShell({ title, actions, sidebar, appName, children, system = 
         </aside>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar title={title} actions={actions} system={system} insetForTrafficLights={!sidebar && system === "mac"} />
+        <TopBar path={path} actions={actions} system={system} insetForTrafficLights={!sidebar && system === "mac"} />
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </div>
     </div>
   );
 }
 
-type TopBarProps = { title: string; actions?: ReactNode; system: WindowSystem; insetForTrafficLights: boolean };
+type TopBarProps = { path: PathSegment[]; actions?: ReactNode; system: WindowSystem; insetForTrafficLights: boolean };
 
-export function TopBar({ title, actions, system, insetForTrafficLights }: TopBarProps) {
+export function TopBar({ path, actions, system, insetForTrafficLights }: TopBarProps) {
   const buttons = system === "windows";
   return (
     <header
@@ -61,10 +62,9 @@ export function TopBar({ title, actions, system, insetForTrafficLights }: TopBar
         buttons ? "pr-0" : "pr-4",
       )}
     >
-      {/* A drag region holds only on the element that carries it, so the title and the gap carry it too. */}
-      <h1 data-tauri-drag-region className="min-w-0 truncate font-title text-bar-title">
-        {title}
-      </h1>
+      {/* A drag region holds only on the element that carries it: the bar and the free gap carry it, the path does not,
+          so its segments stay buttons. */}
+      <PathNav path={path} />
       <div data-tauri-drag-region className="h-full min-w-4 flex-1" />
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       {buttons && <WindowButtons />}

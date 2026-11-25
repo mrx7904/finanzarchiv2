@@ -70,6 +70,7 @@ The owner's words were "clean und elegant" in 1.0 and a dislike of "zu bunt". Gr
 | `Dialog.tsx` and `components.css` | after the idea of Aceternity UI "Animated Modal": the backdrop fades in, the panel grows from .98. Its 3D tilt and bounce left out | Aceternity License (idea only) | idea |
 | `Button.tsx`: `Button`, `Spinner` | after the idea of Aceternity UI "Stateful Button" (the busy state) and RareUI "Loading Spinner" (a still track and a turning arc) | Aceternity License, RareUI licence below, both idea only | idea |
 | `AppShell.tsx`: `AppShell`, `TopBar`, the window buttons | none of the six sources has a window title bar. After the idea of the custom title bar of the Tauri guide (v2.tauri.app/learn/window-customization) and the caption buttons of Windows 11, see `decision-app-shell.md` | Tauri docs MIT, idea only | idea |
+| `Path.tsx`: `PathNav`, `collapsePath` | none of the six sources has a path for a title bar. After the idea of the breadcrumbs listed on 21st.dev and the path bar of the Finder, the folded pages in the `Menu` (Beautiful UI "Glide Menu"), see `decision-app-shell.md` | 21st.dev per component, idea only | idea |
 | `icons.tsx` | drawn for this app | none | own |
 
 The Beautiful UI files were read at `raw.githubusercontent.com/slev12397/beautiful-ui/main` on 2026-11-25. Its licence: MIT, Copyright (c) 2026 Shane Levine. Each adapted file names it in its header.
