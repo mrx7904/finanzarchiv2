@@ -130,24 +130,14 @@ fn vat(lines: &[Line]) -> Vec<Value> {
 /// The sender is the first line of the first page that is no label, no date and no amount: on a
 /// letter the name of the sender stands at the top. The model reads it where this guess is wrong.
 fn sender(lines: &[Line]) -> Option<Value> {
-    lines
-        .iter()
-        .filter(|line| line.page == 1)
-        .find(|line| {
-            let text = line.text.trim();
-            text.chars().filter(|c| c.is_alphabetic()).count() >= 3
-                && first_date(text).is_none()
-                && last_amount(text).is_none()
-                && !text.to_lowercase().starts_with("rechnung")
-        })
-        .map(|line| {
-            Value::on(
-                "sender",
-                line.text.trim(),
-                Normalized::Text(line.text.trim().to_owned()),
-                line,
-            )
-        })
+    super::head_line(lines, &["rechnung"]).map(|line| {
+        Value::on(
+            "sender",
+            line.text.trim(),
+            Normalized::Text(line.text.trim().to_owned()),
+            line,
+        )
+    })
 }
 
 fn iban_of(lines: &[Line]) -> Option<Value> {

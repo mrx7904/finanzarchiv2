@@ -276,17 +276,34 @@ fn archive_code(database: &Path) -> BTreeMap<String, Tally> {
             .or_default();
         documents_of_kind.total += 1;
         documents_of_kind.right += 1;
-        for field in [
-            "sender",
-            "invoice_number",
-            "invoice_date",
-            "net",
-            "vat_rate",
-            "vat",
-            "gross",
-            "due_date",
-            "iban",
-        ] {
+        let fields: &[&str] = if kind == kinds::Kind::Payslip {
+            &[
+                "employer",
+                "period",
+                "brutto",
+                "lohnsteuer",
+                "solidaritaetszuschlag",
+                "kirchensteuer",
+                "krankenversicherung",
+                "rentenversicherung",
+                "arbeitslosenversicherung",
+                "pflegeversicherung",
+                "netto",
+            ]
+        } else {
+            &[
+                "sender",
+                "invoice_number",
+                "invoice_date",
+                "net",
+                "vat_rate",
+                "vat",
+                "gross",
+                "due_date",
+                "iban",
+            ]
+        };
+        for &field in fields {
             let tally = tallies
                 .entry(format!("{}.{field} found", kind.code()))
                 .or_default();

@@ -38,43 +38,43 @@
       "total": 25
     },
     "payslip.arbeitslosenversicherung": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.brutto": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.employer": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.kirchensteuer": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.krankenversicherung": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.lohnsteuer": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.netto": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.period": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.pflegeversicherung": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "payslip.rentenversicherung": {
-      "right": 0,
+      "right": 12,
       "total": 12
     },
     "statement.closing": {

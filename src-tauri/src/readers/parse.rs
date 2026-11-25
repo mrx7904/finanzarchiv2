@@ -27,6 +27,14 @@ static IBAN: LazyLock<Regex> = LazyLock::new(|| {
 static PERCENT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\b(\d{1,2})(?:,\d+)?\s?%").unwrap_or_else(|_| unreachable!("a fixed pattern"))
 });
+static MONTH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b(januar|februar|märz|april|mai|juni|juli|august|september|oktober|november|dezember)\s+(\d{4})\b")
+        .unwrap_or_else(|_| unreachable!("a fixed pattern"))
+});
+static NUMERIC_MONTH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b(\d{1,2})\s?[/.]\s?(\d{4})\b")
+        .unwrap_or_else(|_| unreachable!("a fixed pattern"))
+});
 
 const MONTHS: [&str; 12] = [
     "januar",
@@ -43,10 +51,13 @@ const MONTHS: [&str; 12] = [
     "dezember",
 ];
 
-/// The amounts of a line as printed, left to right.
+/// The amounts of a line as printed, left to right. A figure followed by "%" is a rate and no
+/// amount, so "Krankenversicherung 300,00 7,30 %" gives 300,00 (lesson of 1.0: a rate read as
+/// the deduction).
 pub fn amounts(line: &str) -> Vec<(String, Cents)> {
     AMOUNT
         .find_iter(line)
+        .filter(|found| !line[found.end()..].trim_start().starts_with('%'))
         .filter_map(|found| {
             Cents::parse_de(found.as_str())
                 .ok()
@@ -92,6 +103,34 @@ pub fn first_date(line: &str) -> Option<(String, Date)> {
         .flatten()
         .min_by_key(|(at, _, _)| *at)
         .map(|(_, printed, date)| (printed, date))
+}
+
+/// The month a line names, as printed and as year and month: "März 2026", "03/2026", "03.2026", or
+/// the month of its first date ("Zeitraum 01.03.2026 - 31.03.2026").
+pub fn month_of(line: &str) -> Option<(String, i16, i8)> {
+    if let Some(found) = MONTH_YEAR.captures(line) {
+        let month = MONTHS
+            .iter()
+            .position(|name| found[1].to_lowercase() == *name)?;
+        let year: i16 = found[2].parse().ok()?;
+        return Some((found[0].to_owned(), year, i8::try_from(month + 1).ok()?));
+    }
+    if let Some((printed, date)) = first_date(line) {
+        return Some((printed, date.year(), date.month()));
+    }
+    NUMERIC_MONTH.captures_iter(line).find_map(|found| {
+        let whole = found.get(0)?;
+        // "01.03.2026" holds "03.2026": a month right after a digit or a point belongs to a date.
+        let before = line[..whole.start()].chars().next_back();
+        if before.is_some_and(|c| c.is_ascii_digit() || c == '.') {
+            return None;
+        }
+        let month: i8 = found[1].parse().ok()?;
+        let year: i16 = found[2].parse().ok()?;
+        (1..=12)
+            .contains(&month)
+            .then(|| (whole.as_str().to_owned(), year, month))
+    })
 }
 
 /// The first IBAN of a line whose check sum holds, as printed.
@@ -177,6 +216,41 @@ mod tests {
         );
         assert_eq!(last_amount("Kundennummer 12345"), None);
         assert_eq!(last_amount("Seite 1 von 2, 2026"), None);
+    }
+
+    #[test]
+    fn a_rate_is_never_an_amount() {
+        assert_eq!(
+            last_amount("Krankenversicherung 300,00 7,30 %").map(|(p, _)| p),
+            Some("300,00".into())
+        );
+        assert_eq!(
+            last_amount("Rentenversicherung 9,30% 372,00").map(|(p, _)| p),
+            Some("372,00".into())
+        );
+        assert_eq!(last_amount("Beitragssatz 14,60 %"), None);
+    }
+
+    #[test]
+    fn finds_the_month_a_line_names() {
+        assert_eq!(
+            month_of("Verdienstabrechnung März 2026"),
+            Some(("März 2026".into(), 2026, 3))
+        );
+        assert_eq!(
+            month_of("Abrechnungsmonat 03/2026"),
+            Some(("03/2026".into(), 2026, 3))
+        );
+        assert_eq!(
+            month_of("Zeitraum 01.11.2026 - 30.11.2026"),
+            Some(("01.11.2026".into(), 2026, 11))
+        );
+        assert_eq!(
+            month_of("Monat 11.2026"),
+            Some(("11.2026".into(), 2026, 11))
+        );
+        assert_eq!(month_of("Monat 13/2026"), None);
+        assert_eq!(month_of("Personalnummer 00042"), None);
     }
 
     #[test]
