@@ -22,3 +22,12 @@ Read on 2026-11-25 in the unpacked archive: PDFium is under the BSD style licenc
 ## Evidence
 
 On 2026-11-25 on Windows 11: the Rust tests refuse an empty file, a text file, a truncated PDF and a PDF encrypted with a user password, and store a generated PDF under its hash. In the release build a folder import through the system dialog (driven by UI Automation) took a PDF and a PNG from a folder with a subfolder and refused a damaged PDF and a text file, each with its reason. Not verified: dropping files on the window, and the library on the Mac.
+
+## Text, pages and previews (#06)
+
+**Decided:** 2026-11-25
+
+- The stage `text` of the intake reads every page of a PDF through PDFium: its size in points and its lines, each with its box in PDF points from the lower left corner (`pages`, `page_lines`, migration 0004). PDFium gives runs of text (`text().segments()`). Runs whose middle lies within the height of a line form one line, left to right, with a space where the gap is wider than a fifth of the line height (`pages::group_lines`).
+- `documents.text_state` says what the intake found: `text`, `scan` (a PDF without any text on any page, to be read as an image in stage 2) or `image` (PNG, JPEG, WebP).
+- Pages are rendered by PDFium, image files are scaled by `image` 0.25.10 (PNG, JPEG, WebP only, no default features). The window asks through `page_image`, which answers a PNG as a data URL, so the CSP needs no asset protocol. The width is rounded up to 160, 640 or 1280 pixels, and each image is kept in `Vorschau/<hash>-<page>-<width>.png` beside the archive. The name carries the hash of the original, so a cached image is never stale. The window asks for a page only once it is in view.
+- Evidence of 2026-11-25: a generated invoice gives its six lines in order, each amount with its line at the left margin, "Fällig" with its umlaut. A page with a drawing only is a scan. In the release build three invented documents (an invoice with text, a PDF with a drawing only, a PNG) ended as `text` with 7 lines, `scan` and `image`, the list showed the first page of each and the preview the chosen one, four images lay in `Vorschau/`.

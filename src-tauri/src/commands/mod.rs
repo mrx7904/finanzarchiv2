@@ -26,6 +26,8 @@ pub enum ErrorKind {
     Internal,
     /// The archive is damaged or missing, so nothing can be written.
     ArchiveNotReady,
+    /// What was asked for is not in the archive.
+    NotFound,
 }
 
 impl CommandError {
@@ -33,6 +35,13 @@ impl CommandError {
         Self {
             kind: ErrorKind::Internal,
             message: "Ein interner Fehler ist aufgetreten. Bitte starte Finanzarchiv neu.".into(),
+        }
+    }
+
+    pub(crate) fn not_found() -> Self {
+        Self {
+            kind: ErrorKind::NotFound,
+            message: "Das Dokument oder die Seite gibt es nicht.".into(),
         }
     }
 
@@ -121,6 +130,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             documents::set_intake_paused,
             documents::dismiss_failed,
             documents::list_documents,
+            documents::page_image,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

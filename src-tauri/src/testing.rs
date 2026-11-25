@@ -31,6 +31,26 @@ pub fn pdf(lines: &[&str]) -> Vec<u8> {
     save(document(lines))
 }
 
+/// A page with a drawn line and no text, as a scan looks to a text reader.
+pub fn pdf_without_text() -> Vec<u8> {
+    let mut doc = document(&[]);
+    let content = Content {
+        operations: vec![
+            Operation::new("m", vec![60.into(), 700.into()]),
+            Operation::new("l", vec![500.into(), 700.into()]),
+            Operation::new("S", vec![]),
+        ],
+    };
+    let page_id = doc.page_iter().next().unwrap();
+    let content_id = doc.add_object(Stream::new(dictionary! {}, content.encode().unwrap()));
+    doc.get_object_mut(page_id)
+        .unwrap()
+        .as_dict_mut()
+        .unwrap()
+        .set("Contents", content_id);
+    save(doc)
+}
+
 /// The same page, encrypted so that it opens only with `password`.
 pub fn protected_pdf(lines: &[&str], password: &str) -> Vec<u8> {
     let mut doc = document(lines);

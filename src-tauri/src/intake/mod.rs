@@ -14,6 +14,7 @@ use jiff::Timestamp;
 
 use crate::archive::Opened;
 use crate::documents::{self, Outcome, Refusal, Source};
+use crate::pages;
 use crate::pdf::Pdfium;
 pub use jobs::{Job, Stage};
 
@@ -51,10 +52,10 @@ pub fn process(
 ) -> Result<Stage, Stopped> {
     let mut stage = job.stage;
     while !stage.is_final() && !paused.load(Ordering::SeqCst) {
-        stage = if stage == Stage::Queued {
-            store(archive, pdfium, job, kill)?
-        } else {
-            advance(archive, job, stage, kill)?
+        stage = match stage {
+            Stage::Queued => store(archive, pdfium, job, kill)?,
+            Stage::Stored => read_text(archive, pdfium, job, kill)?,
+            _ => advance(archive, job, stage, kill)?,
         };
     }
     Ok(stage)
@@ -99,6 +100,73 @@ fn store(
         return Err(Stopped::Killed);
     }
     Ok(stage)
+}
+
+/// The stage `text`: the lines of every page with their place, or the mark that a PDF is a scan
+/// or the file an image. Reading runs beside the database, saving is one transaction with the stage.
+fn read_text(
+    archive: &Mutex<Opened>,
+    pdfium: Option<&Pdfium>,
+    job: &Job,
+    kill: &mut dyn FnMut(Point) -> bool,
+) -> Result<Stage, Stopped> {
+    let located = {
+        let guard = archive.lock().map_err(|_| Stopped::Database)?;
+        let Opened::Ready(ready) = &*guard else {
+            return Err(Stopped::NotReady);
+        };
+        let root = documents::archive_root(ready.path());
+        let document =
+            jobs::document_of(ready.connection(), job.id).map_err(|_| Stopped::Database)?;
+        match document {
+            Some(id) => documents::stored_of(ready.connection(), &root, id)
+                .map_err(|_| Stopped::Database)?
+                .map(|(path, file_type)| (id, path, file_type)),
+            None => None,
+        }
+    };
+    // A job without its document (it cannot happen after a store) goes on without text.
+    let Some((id, path, file_type)) = located else {
+        return advance(archive, job, Stage::Stored, kill);
+    };
+    let read = match (file_type, pdfium) {
+        (documents::FileType::Pdf, Some(pdfium)) => fs::read(&path)
+            .ok()
+            .and_then(|bytes| pages::read(pdfium, &bytes).ok())
+            .map(|read| {
+                let state = if pages::is_scan(&read) {
+                    "scan"
+                } else {
+                    "text"
+                };
+                (read, state)
+            }),
+        (documents::FileType::Pdf, None) => None,
+        _ => Some((Vec::new(), "image")),
+    };
+    if kill(Point::Prepared) {
+        return Err(Stopped::Killed);
+    }
+    let guard = archive.lock().map_err(|_| Stopped::Database)?;
+    let Opened::Ready(ready) = &*guard else {
+        return Err(Stopped::NotReady);
+    };
+    let tx = ready
+        .connection()
+        .unchecked_transaction()
+        .map_err(|_| Stopped::Database)?;
+    if let Some((read, state)) = read {
+        documents::save_pages(&tx, id, &read, state).map_err(|_| Stopped::Database)?;
+    }
+    jobs::set_stage(&tx, job.id, Stage::Text, Timestamp::now()).map_err(|_| Stopped::Database)?;
+    if kill(Point::BeforeCommit) {
+        return Err(Stopped::Killed);
+    }
+    tx.commit().map_err(|_| Stopped::Database)?;
+    if kill(Point::AfterCommit) {
+        return Err(Stopped::Killed);
+    }
+    Ok(Stage::Text)
 }
 
 fn advance(

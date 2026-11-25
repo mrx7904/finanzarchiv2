@@ -14,6 +14,7 @@ use super::CommandError;
 use crate::archive::Opened;
 use crate::documents::{self, Source};
 use crate::intake::{Intake, jobs};
+use crate::previews;
 
 const EXTENSIONS: &[&str] = &["pdf", "png", "jpg", "jpeg", "webp"];
 
@@ -62,6 +63,8 @@ pub struct DocumentRow {
     pub pages: Option<u32>,
     /// UTC, ISO 8601.
     pub imported_at: String,
+    /// text, scan or image, null while the intake has not read it.
+    pub text_state: Option<String>,
 }
 
 fn enqueue(intake: &Intake, paths: &[PathBuf], source: Source) -> Result<Queued, CommandError> {
@@ -186,6 +189,43 @@ pub fn dismiss_failed(intake: State<'_, Arc<Intake>>) -> Result<(), CommandError
     Ok(())
 }
 
+/// A page of a document as an image for the window, as a data URL. The width is rounded up to
+/// one of `previews::WIDTHS`.
+#[tauri::command]
+#[specta::specta]
+pub fn page_image(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    document: u32,
+    page: u32,
+    width: u32,
+) -> Result<String, CommandError> {
+    use base64::Engine;
+    let (original, file_type, cache) = {
+        let opened = archive.lock().map_err(|_| CommandError::internal())?;
+        let Opened::Ready(ready) = &*opened else {
+            return Err(CommandError::archive_not_ready());
+        };
+        let root = documents::archive_root(ready.path());
+        let stored = documents::stored_of(ready.connection(), &root, i64::from(document))
+            .map_err(|_| CommandError::internal())?
+            .ok_or_else(CommandError::not_found)?;
+        (stored.0, stored.1, previews::folder_of(ready.path()))
+    };
+    let png = previews::page_png(
+        &cache,
+        &original,
+        file_type,
+        crate::pdf::engine().ok(),
+        page,
+        width,
+    )
+    .map_err(|_| CommandError::not_found())?;
+    Ok(format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(png)
+    ))
+}
+
 /// The documents of the archive, newest first.
 #[tauri::command]
 #[specta::specta]
@@ -206,6 +246,7 @@ pub fn list_documents(
                 file_type: row.file_type,
                 pages: row.pages.and_then(|pages| u32::try_from(pages).ok()),
                 imported_at: row.imported_at,
+                text_state: row.text_state,
             })
         })
         .collect()

@@ -326,11 +326,13 @@ pub struct Listed {
     pub file_type: String,
     pub pages: Option<i64>,
     pub imported_at: String,
+    /// text, scan or image, None until the stage text ran.
+    pub text_state: Option<String>,
 }
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
     let mut statement = conn.prepare(
-        "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at
+        "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state
          FROM documents ORDER BY imported_at DESC, id DESC",
     )?;
     statement
@@ -342,9 +344,73 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
                 file_type: row.get(3)?,
                 pages: row.get(4)?,
                 imported_at: row.get(5)?,
+                text_state: row.get(6)?,
             })
         })?
         .collect()
+}
+
+/// Where the original of a document lies and what it is.
+pub fn stored_of(
+    conn: &Connection,
+    root: &Path,
+    id: i64,
+) -> rusqlite::Result<Option<(PathBuf, FileType)>> {
+    let row: Option<(String, String)> = conn
+        .query_row(
+            "SELECT sha256, file_type FROM documents WHERE id = ?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    Ok(row.and_then(|(sha256, code)| {
+        let file_type = [FileType::Pdf, FileType::Png, FileType::Jpeg, FileType::Webp]
+            .into_iter()
+            .find(|t| t.code() == code)?;
+        Some((stored_path(root, &sha256, file_type), file_type))
+    }))
+}
+
+/// Replaces the pages and lines of a document and sets its text state.
+pub fn save_pages(
+    conn: &Connection,
+    id: i64,
+    pages: &[crate::pages::PageText],
+    state: &str,
+) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM page_lines WHERE document_id = ?1", [id])?;
+    conn.execute("DELETE FROM pages WHERE document_id = ?1", [id])?;
+    let mut page_insert = conn.prepare(
+        "INSERT INTO pages (document_id, number, width, height) VALUES (?1, ?2, ?3, ?4)",
+    )?;
+    let mut line_insert = conn.prepare(
+        "INSERT INTO page_lines (document_id, page, line, text, left, bottom, right, top) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+    )?;
+    for page in pages {
+        page_insert.execute(rusqlite::params![
+            id,
+            page.number,
+            f64::from(page.width),
+            f64::from(page.height)
+        ])?;
+        for (index, line) in page.lines.iter().enumerate() {
+            line_insert.execute(rusqlite::params![
+                id,
+                page.number,
+                i64::try_from(index + 1).unwrap_or(i64::MAX),
+                line.text,
+                f64::from(line.left),
+                f64::from(line.bottom),
+                f64::from(line.right),
+                f64::from(line.top)
+            ])?;
+        }
+    }
+    conn.execute(
+        "UPDATE documents SET text_state = ?2 WHERE id = ?1",
+        rusqlite::params![id, state],
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]
