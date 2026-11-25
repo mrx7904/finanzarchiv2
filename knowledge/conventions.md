@@ -102,4 +102,4 @@ Every change keeps its documentation current in the same change: `README.md` (Ge
 - English, imperative mood, Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`), the issue referenced (for example `#03`).
 - One commit per coherent change. The message carries the evidence: what changed, the exact counts of the checks, deviations, and `UNVERIFIED` when the change could not be verified.
 - Author `mrx7904 <mrx7904@users.noreply.github.com>`, set in the local git config of this repository, because the repository is public.
-- Commit only after the owner confirmed the work is done, see the vault's `essentials.md`, section 6.
+- The owner gave standing approval on 2026-11-25: once the check and its self-test are green, commit, push the branch, open a pull request and merge it into `main` without asking. One branch and one pull request per issue. Force pushes, rewriting history and anything destructive still need the owner's yes. This answers the gate in the vault's `essentials.md`, section 6, in advance.
