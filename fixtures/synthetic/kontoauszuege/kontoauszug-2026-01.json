@@ -1,0 +1,42 @@
+{
+  "bookings": [
+    {
+      "cents": -17533,
+      "date": "09.01.2026",
+      "party": "Testhaus Energie AG",
+      "printed": "-175,33"
+    },
+    {
+      "cents": 250607,
+      "date": "12.01.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "2.506,07"
+    },
+    {
+      "cents": -9626,
+      "date": "23.01.2026",
+      "party": "Testhaus Energie AG",
+      "printed": "-96,26"
+    },
+    {
+      "cents": -30507,
+      "date": "25.01.2026",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "-305,07"
+    }
+  ],
+  "cents": {
+    "closing": 358282,
+    "opening": 165341
+  },
+  "fields": {
+    "closing": "3.582,82",
+    "iban": "DE54 8910 0936 4537 2693 31",
+    "opening": "1.653,41",
+    "period_from": "01.01.2026",
+    "period_to": "31.01.2026"
+  },
+  "kind": "statement",
+  "layout": "A",
+  "text_layer": true
+}

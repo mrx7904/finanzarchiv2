@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 230015,
+    "net": 193290,
+    "vat": 36725
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "26.09.2026",
+    "gross": "2.300,15",
+    "iban": "DE33 6472 4042 0338 0420 39",
+    "invoice_date": "12.09.2026",
+    "invoice_number": "R-2026-8643",
+    "net": "1.932,90",
+    "sender": "Modell Werkstatt e.K.",
+    "vat": "367,25",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

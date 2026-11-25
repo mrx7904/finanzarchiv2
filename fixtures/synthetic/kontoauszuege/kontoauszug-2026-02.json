@@ -1,0 +1,54 @@
+{
+  "bookings": [
+    {
+      "cents": -44164,
+      "date": "02.02.2026",
+      "party": "Testhaus Energie AG",
+      "printed": "441,64 S"
+    },
+    {
+      "cents": -13891,
+      "date": "04.02.2026",
+      "party": "Probe Handwerk GmbH",
+      "printed": "138,91 S"
+    },
+    {
+      "cents": -75403,
+      "date": "11.02.2026",
+      "party": "Muster Versicherung AG",
+      "printed": "754,03 S"
+    },
+    {
+      "cents": 343732,
+      "date": "17.02.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "3.437,32 H"
+    },
+    {
+      "cents": 331334,
+      "date": "17.02.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "3.313,34 H"
+    },
+    {
+      "cents": -23485,
+      "date": "19.02.2026",
+      "party": "Fiktiv Telekom GmbH",
+      "printed": "234,85 S"
+    }
+  ],
+  "cents": {
+    "closing": 876405,
+    "opening": 358282
+  },
+  "fields": {
+    "closing": "8.764,05 H",
+    "iban": "DE54 8910 0936 4537 2693 31",
+    "opening": "3.582,82 H",
+    "period_from": "01.02.2026",
+    "period_to": "28.02.2026"
+  },
+  "kind": "statement",
+  "layout": "B",
+  "text_layer": true
+}

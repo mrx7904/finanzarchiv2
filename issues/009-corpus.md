@@ -5,11 +5,11 @@
 
 ## Done when
 
-- [ ] The generator writes at least 30 invoices (with and without text layer, one e-invoice), 12 payslips and 6 bank statements in two layouts, with invented names and IBANs, and a file of the right values per document.
-- [ ] Generating twice with the same seed gives the same files, tested.
-- [ ] The measure command reports per field how many values a reader got right, as counts, and writes the result to `measurements/`.
-- [ ] With `CORPUS_PRIVATE` set the same command measures the owner's documents and writes only to the ignored folder.
-- [ ] The privacy step of the check passes over `fixtures/synthetic/`.
+- [x] The generator writes at least 30 invoices (with and without text layer, one e-invoice), 12 payslips and 6 bank statements in two layouts, with invented names and IBANs, and a file of the right values per document.
+- [x] Generating twice with the same seed gives the same files, tested.
+- [x] The measure command reports per field how many values a reader got right, as counts, and writes the result to `measurements/`.
+- [x] With `CORPUS_PRIVATE` set the same command measures the owner's documents and writes only to the ignored folder.
+- [x] The privacy step of the check passes over `fixtures/synthetic/`.
 
 ## Out of scope
 

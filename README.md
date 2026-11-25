@@ -41,6 +41,8 @@ Befehle:
 | `node scripts/fetch-pdfium.mjs` | lädt PDFium, die PDF-Bibliothek, für dieses System und prüft ihre Prüfsumme. Die Prüfung ruft es selbst auf |
 | `npm run tauri dev` | startet die App mit Neuladen bei Änderungen |
 | `npm run tauri build` | baut die App für dieses System |
+| `npm run corpus` | schreibt den erfundenen Testkorpus in `fixtures/synthetic/` neu |
+| `npm run measure` | misst die Leser am Testkorpus und, mit `CORPUS_PRIVATE`, an den eigenen Dokumenten |
 | `node scripts/check.mjs` | alle Prüfungen: Links, Anforderungen und Issues, Datenschutz, Rust (fmt, clippy, Tests), TypeScript (Typen, Lint, Tests) |
 | `node scripts/check.mjs --self-test` | zeigt, dass jede Prüfung bei einem eingebauten Fehler anschlägt |
 

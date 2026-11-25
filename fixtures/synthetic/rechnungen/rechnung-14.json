@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 69982,
+    "net": 58808,
+    "vat": 11174
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "05.03.2026",
+    "gross": "699,82",
+    "iban": "DE03 6155 9989 2801 3118 97",
+    "invoice_date": "19.02.2026",
+    "invoice_number": "R-2026-7291",
+    "net": "588,08",
+    "sender": "Demo Online-Shop GmbH",
+    "vat": "111,74",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

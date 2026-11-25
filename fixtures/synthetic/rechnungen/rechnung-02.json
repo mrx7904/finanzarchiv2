@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 205211,
+    "net": 172446,
+    "vat": 32765
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "27.06.2026",
+    "gross": "2.052,11",
+    "iban": "DE27 2343 7358 7652 8602 55",
+    "invoice_date": "13.06.2026",
+    "invoice_number": "R-2026-8989",
+    "net": "1.724,46",
+    "sender": "Exempel Fitness GmbH",
+    "vat": "327,65",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

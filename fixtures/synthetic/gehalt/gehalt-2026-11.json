@@ -1,0 +1,20 @@
+{
+  "cents": {
+    "brutto": 580624,
+    "netto": 365306
+  },
+  "fields": {
+    "arbeitslosenversicherung": "75,48",
+    "brutto": "5.806,24",
+    "employer": "Beispiel Arbeitgeber GmbH",
+    "kirchensteuer": "68,75",
+    "krankenversicherung": "505,14",
+    "lohnsteuer": "859,32",
+    "netto": "3.653,06",
+    "period": "November 2026",
+    "pflegeversicherung": "104,51",
+    "rentenversicherung": "539,98"
+  },
+  "kind": "payslip",
+  "text_layer": true
+}

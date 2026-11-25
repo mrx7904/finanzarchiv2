@@ -11,7 +11,9 @@
     "lint": "oxlint --deny-warnings src scripts",
     "test": "vitest run",
     "tauri": "tauri",
-    "bindings": "cargo test --manifest-path src-tauri/Cargo.toml --lib write_bindings -- --ignored"
+    "bindings": "cargo test --manifest-path src-tauri/Cargo.toml --lib write_bindings -- --ignored",
+    "corpus": "cargo run --manifest-path src-tauri/Cargo.toml --example corpus -- --seed 2026 --out fixtures/synthetic",
+    "measure": "cargo run --release --manifest-path src-tauri/Cargo.toml --example measure -- --corpus fixtures/synthetic"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.5",
