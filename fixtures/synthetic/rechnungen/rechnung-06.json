@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 118152,
+    "net": 110422,
+    "vat": 7730
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "03.12.2026",
+    "gross": "1.181,52",
+    "iban": "DE29 7320 8445 0026 3503 10",
+    "invoice_date": "19.11.2026",
+    "invoice_number": "R-2026-5787",
+    "net": "1.104,22",
+    "sender": "Testhaus Energie AG",
+    "vat": "77,30",
+    "vat_rate": "7"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

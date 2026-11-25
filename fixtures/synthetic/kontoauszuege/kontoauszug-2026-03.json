@@ -1,0 +1,48 @@
+{
+  "bookings": [
+    {
+      "cents": 34319,
+      "date": "05.03.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "343,19"
+    },
+    {
+      "cents": -65408,
+      "date": "17.03.2026",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "-654,08"
+    },
+    {
+      "cents": 378867,
+      "date": "19.03.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "3.788,67"
+    },
+    {
+      "cents": -34420,
+      "date": "22.03.2026",
+      "party": "Erfunden Möbel KG",
+      "printed": "-344,20"
+    },
+    {
+      "cents": -15233,
+      "date": "28.03.2026",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "-152,33"
+    }
+  ],
+  "cents": {
+    "closing": 1174530,
+    "opening": 876405
+  },
+  "fields": {
+    "closing": "11.745,30",
+    "iban": "DE54 8910 0936 4537 2693 31",
+    "opening": "8.764,05",
+    "period_from": "01.03.2026",
+    "period_to": "31.03.2026"
+  },
+  "kind": "statement",
+  "layout": "A",
+  "text_layer": true
+}

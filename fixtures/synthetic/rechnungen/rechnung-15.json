@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 121685,
+    "net": 102256,
+    "vat": 19429
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "24.06.2026",
+    "gross": "1.216,85",
+    "iban": "DE41 5315 4415 5327 5319 45",
+    "invoice_date": "10.06.2026",
+    "invoice_number": "R-2026-2035",
+    "net": "1.022,56",
+    "sender": "Fiktiv Telekom GmbH",
+    "vat": "194,29",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

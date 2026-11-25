@@ -1,0 +1,142 @@
+{
+  "corpus": "synthetic",
+  "fields": {
+    "invoice (scan).due_date": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).gross": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).iban": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).invoice_date": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).invoice_number": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).net": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).sender": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).vat": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice (scan).vat_rate": {
+      "right": 0,
+      "total": 5
+    },
+    "invoice.due_date": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.gross": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.iban": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.invoice_date": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.invoice_number": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.net": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.sender": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.vat": {
+      "right": 25,
+      "total": 25
+    },
+    "invoice.vat_rate": {
+      "right": 25,
+      "total": 25
+    },
+    "payslip.arbeitslosenversicherung": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.brutto": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.employer": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.kirchensteuer": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.krankenversicherung": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.lohnsteuer": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.netto": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.period": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.pflegeversicherung": {
+      "right": 12,
+      "total": 12
+    },
+    "payslip.rentenversicherung": {
+      "right": 12,
+      "total": 12
+    },
+    "statement.booking": {
+      "right": 32,
+      "total": 32
+    },
+    "statement.closing": {
+      "right": 6,
+      "total": 6
+    },
+    "statement.iban": {
+      "right": 6,
+      "total": 6
+    },
+    "statement.opening": {
+      "right": 6,
+      "total": 6
+    },
+    "statement.period_from": {
+      "right": 6,
+      "total": 6
+    },
+    "statement.period_to": {
+      "right": 6,
+      "total": 6
+    }
+  },
+  "reader": "text-layer"
+}

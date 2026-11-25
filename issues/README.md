@@ -18,7 +18,7 @@ At most one stage is open. The next stage is cut into issues and begun only afte
 | [#06](006-pdf-text-and-pages.md) | Text and pages of a PDF in the core | FA-10 | #05 | in progress |
 | [#07](007-design-system.md) | The design system, chosen by the owner | FA-11 | #01 | done |
 | [#08](008-local-releases.md) | Releases built on the owner's machines | FA-12 | #01, #06 | open |
-| [#09](009-corpus.md) | A generated corpus and a measure command | FA-13 | #06 | open |
+| [#09](009-corpus.md) | A generated corpus and a measure command | FA-13 | #06 | done |
 
 **Stage 1 is done when the owner installs 2.0 on the Windows PC and on the Mac from a release, drops 20 real PDFs, sees each in the list with its first page, quits in the middle of the import, and after the next start finds every file once.**
 

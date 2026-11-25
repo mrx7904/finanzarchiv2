@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 128725,
+    "net": 108172,
+    "vat": 20553
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "18.03.2026",
+    "gross": "1.287,25",
+    "iban": "DE92 4888 3293 4052 4291 76",
+    "invoice_date": "04.03.2026",
+    "invoice_number": "R-2026-1841",
+    "net": "1.081,72",
+    "sender": "Erfunden Möbel KG",
+    "vat": "205,53",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

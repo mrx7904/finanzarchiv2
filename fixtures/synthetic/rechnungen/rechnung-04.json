@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 233956,
+    "net": 196602,
+    "vat": 37354
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "20.05.2026",
+    "gross": "2.339,56",
+    "iban": "DE87 7821 8703 5425 3822 57",
+    "invoice_date": "06.05.2026",
+    "invoice_number": "R-2026-7801",
+    "net": "1.966,02",
+    "sender": "Muster Versicherung AG",
+    "vat": "373,54",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

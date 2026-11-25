@@ -1,0 +1,42 @@
+{
+  "bookings": [
+    {
+      "cents": -6723,
+      "date": "02.06.2026",
+      "party": "Probe Handwerk GmbH",
+      "printed": "67,23 S"
+    },
+    {
+      "cents": -12126,
+      "date": "19.06.2026",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "121,26 S"
+    },
+    {
+      "cents": 162411,
+      "date": "25.06.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "1.624,11 H"
+    },
+    {
+      "cents": -11661,
+      "date": "25.06.2026",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "116,61 S"
+    }
+  ],
+  "cents": {
+    "closing": 894020,
+    "opening": 762119
+  },
+  "fields": {
+    "closing": "8.940,20 H",
+    "iban": "DE54 8910 0936 4537 2693 31",
+    "opening": "7.621,19 H",
+    "period_from": "01.06.2026",
+    "period_to": "30.06.2026"
+  },
+  "kind": "statement",
+  "layout": "B",
+  "text_layer": true
+}
