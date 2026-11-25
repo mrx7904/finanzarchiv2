@@ -5,10 +5,10 @@
 
 ## Done when
 
-- [ ] Brutto, Lohnsteuer, Solidaritätszuschlag, Kirchensteuer, the four insurances and Netto (or Auszahlungsbetrag) are read from their labelled lines, the deducted amount and never the rate (lesson of 1.0).
-- [ ] The month comes from the period line, the employer from the head of the page.
-- [ ] `npm run measure -- --reader code` reads every field of the 12 generated payslips right.
-- [ ] Measured once on the owner's payslips, counts only, in the commit.
+- [x] Brutto, Lohnsteuer, Solidaritätszuschlag, Kirchensteuer, the four insurances and Netto (or Auszahlungsbetrag) are read from their labelled lines, the deducted amount and never the rate (lesson of 1.0).
+- [x] The month comes from the period line, the employer from the head of the page.
+- [x] `npm run measure -- --reader code` reads every field of the 12 generated payslips right.
+- [x] Measured once on the owner's payslips, counts only, in the commit.
 
 ## Out of scope
 

@@ -18,13 +18,13 @@
 ## Values with their source, the code reader of invoices (#11)
 
 - A value is a row of `field_values` (migration 0006): document, field, the value as printed, the normalized value (whole cents, an ISO date, a percent, text), the reader, the page and the box of its line, the time. The reader is never empty, the table refuses it. Checks get `field_checks`. The values of the owner are rows with the reader `owner` and are never replaced by a reader.
-- Readers implement one trait (`readers::Reader`, `name` and `read`) and get the kind, the lines of every page with their boxes and the XML of an e-invoice. A reader is named with the version of the readers (`code:2`); reading again replaces the values of every version of the same reader. `readers::for_kind` names the readers of a kind. The stage `read` of the intake runs them and replaces only their own earlier values, in one transaction with the stage.
-- `READERS_VERSION` (now 2) is stored per document (`documents.read_version`). At start the app reads again every document an older version read (`readers::read_outdated`), so a better reader reaches the documents already filed.
+- Readers implement one trait (`readers::Reader`, `name` and `read`) and get the kind, the lines of every page with their boxes and the XML of an e-invoice. A reader is named with the version of the readers (`code:3`); reading again replaces the values of every version of the same reader. `readers::for_kind` names the readers of a kind. The stage `read` of the intake runs them and replaces only their own earlier values, in one transaction with the stage.
+- `READERS_VERSION` (now 3) is stored per document (`documents.read_version`). At start the app reads again every document an older version read (`readers::read_outdated`), so a better reader reaches the documents already filed.
 - The code reader of invoices (`readers::invoice`) reads number, invoice date, due date, net, VAT rate and amount, gross, IBAN and sender from labelled lines. Labels are lower case and count only at the start of a word. The amount of a labelled line is its last one, a date its first one, an IBAN only with a valid check sum. The weak labels of the gross ("gesamt", "summe", "total") skip a line that names the net or the tax. The sender is the first line of page 1 that is neither a label, a date nor an amount. Amounts go through `Cents::parse_de`, dates through code, never a model.
 
 ### Measured on 2026-11-25
 
-- Generated corpus, `npm run measure -- --reader code`: every field of the 25 invoices with text right, 25 of 25 each (`measurements/synthetic-code.json`). Payslips and statements are 0 until #13 and stage 3.
+- Generated corpus, `npm run measure -- --reader code`: every field of the 25 invoices with text right, 25 of 25 each (`measurements/synthetic-code.json`). Statements are 0 until stage 3, payslips see #13.
 - The owner's 18 invoices, counts of fields found (not checked against a truth, the owner has confirmed none yet): sender 18, gross 15, invoice number 11, VAT 10, invoice date 8, IBAN 6, net 4, VAT rate 2, due date 1. The labels were widened after a count of the words beside dates and amounts in these invoices: "Rechnung vom" before most dates, "Zahlbetrag", "Gesamtpreis", "Gesamtsumme" and "Offener Betrag" beside the gross, and "Geburtsdatum" on 9 dental invoices, which is why "Datum" counts only at the start of a word. What code does not find is read by the model in #14.
 
 ## E-invoices from their XML (#12)
@@ -43,3 +43,15 @@
 
 - Generated corpus, `npm run measure -- --reader e-invoice`: the e-invoice of the corpus (`rechnung-30`, its XML now with due date and IBAN) has every field right, 9 of 9 (`measurements/synthetic-e-invoice.json`).
 - The owner's 132 PDFs (a copy of the files, `--files`, counts only): none carries an XML. The reader waits for the first e-invoice, the code reader keeps reading the owner's invoices.
+
+## Payslips by code (#13)
+
+- The code reader of payslips (`readers::payslip`, named `code` like the one of invoices, one of them runs per kind) reads the employer, the month, the Brutto, Lohnsteuer, Solidaritätszuschlag, Kirchensteuer, the four insurances and the Netto from labelled lines, the stronger label first ("Gesamtbrutto" before "Brutto", "Auszahlungsbetrag" before "Netto").
+- A deduction is the amount deducted, never its rate (lesson of 1.0). For every reader a figure followed by "%" is a rate and no amount (`parse::amounts`), so "Krankenversicherung 7,30 % 348,00" and "Rentenversicherung 372,00 9,30 %" both give the amount. A line of a deduction that also names the employer's share ("Arbeitgeber", "AG-Anteil"), a Brutto as its base ("KV-Brutto") or a total of the year ("Jahres…", "kumuliert") is skipped.
+- The month comes from the first line that names the period ("Verdienstabrechnung", "Entgeltabrechnung", "Abrechnungsmonat", "Zeitraum" and others) and a month: "März 2026", "03/2026", "11.2026" or the month of its first date. It is stored as `YYYY-MM`, the printed form stays beside it. The employer is the first line of page 1 that is neither the title, a date nor an amount.
+- `READERS_VERSION` went to 3 with this reader, so every document is read again once at the next start.
+
+### Measured on 2026-11-25
+
+- Generated corpus, `npm run measure -- --reader code`: every field of the 12 payslips right, 12 of 12 each, and the 25 invoices still 25 of 25 each (`measurements/synthetic-code.json`).
+- The owner's archive (a copy of the database, `--archive`, counts only): no payslip among the 132 documents, so there is nothing to count yet. The counts of the 18 invoices are unchanged by the rule on rates (sender 18, gross 15, number 11, VAT 10, date 8, IBAN 6, net 4, rate 2, due date 1).

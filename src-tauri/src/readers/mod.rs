@@ -5,6 +5,7 @@
 pub mod e_invoice;
 pub mod invoice;
 pub mod parse;
+pub mod payslip;
 
 use jiff::Timestamp;
 use jiff::civil::Date;
@@ -13,7 +14,7 @@ use rusqlite::{Connection, params};
 use crate::money::Cents;
 
 /// Raised when a reader reads differently, so older documents are read again at the next start.
-pub const READERS_VERSION: i64 = 2;
+pub const READERS_VERSION: i64 = 3;
 
 /// A line of a page with its place, as the stage `text` stored it.
 #[derive(Debug, Clone, PartialEq)]
@@ -163,6 +164,19 @@ pub fn save(
     Ok(())
 }
 
+/// The first line of page 1 that is no date, no amount and does not start with one of the given
+/// words: on a letter the name of the sender stands at the top.
+pub(crate) fn head_line<'a>(lines: &'a [Line], refused_starts: &[&str]) -> Option<&'a Line> {
+    lines.iter().filter(|line| line.page == 1).find(|line| {
+        let text = line.text.trim();
+        let lower = text.to_lowercase();
+        text.chars().filter(|c| c.is_alphabetic()).count() >= 3
+            && parse::first_date(text).is_none()
+            && parse::last_amount(text).is_none()
+            && !refused_starts.iter().any(|start| lower.starts_with(start))
+    })
+}
+
 /// The name of a reader without its version: `code` of `code:2`.
 fn family(reader: &str) -> &str {
     reader.split_once(':').map_or(reader, |(family, _)| family)
@@ -180,6 +194,7 @@ pub fn for_kind(kind: crate::kinds::Kind) -> Vec<Box<dyn Reader>> {
                 Box::new(invoice::InvoiceCode),
             ]
         }
+        crate::kinds::Kind::Payslip => vec![Box::new(payslip::PayslipCode)],
         _ => Vec::new(),
     }
 }
