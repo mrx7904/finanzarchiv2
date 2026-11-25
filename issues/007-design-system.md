@@ -11,6 +11,7 @@
 - [x] Button, field, list row, dialog, menu, empty state and the quick search exist as components, each piece taken from a source with its header comment. `src/ui/`.
 - [x] Every motion stops under reduced motion, checked by a test. `src/ui/motion.test.ts`.
 - [x] The top bar of the app is the title bar of the window, from the start, with the page title, the view's actions and the window buttons (added by the owner on 2026-11-25). `src/ui/AppShell.tsx`, `knowledge/decision-app-shell.md`, `src/window.test.ts`. Seen on Windows in the dev app and tried by the owner, the Mac follows with #08.
+- [x] The top bar shows the path of the page, each earlier page a button back, the middle folding into "…" when it does not fit (added by the owner on 2026-11-25). `src/ui/Path.tsx`, `src/ui/path.test.tsx`. Approved by the owner in the dev app.
 
 ## Out of scope
 

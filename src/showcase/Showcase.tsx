@@ -1,7 +1,8 @@
 // The showcase of #07: the pieces of the design system at real size in a window that looks like the app, a sidebar,
 // a list, a preview, a form, a menu, a dialog and the quick search. The owner picked the look Graphit from four
 // variants here (knowledge/decision-ui-libraries.md). Everything stands in the AppShell, whose top bar is the title
-// bar of the window. The foot of the sidebar switches light and dark and the bar of Windows or macOS. Only in the dev
+// bar of the window. The foot of the sidebar switches light and dark, a path of one, three or six pages, and the bar
+// of Windows or macOS. Only in the dev
 // build (App.tsx).
 import { useCallback, useState } from "react";
 import {
@@ -29,6 +30,13 @@ import { categories, documents, formatCents, type SampleDocument } from "./sampl
 
 type Theme = "system" | "light" | "dark";
 
+// Paths of invented pages, one, three and six deep, so the owner sees the path in the bar fit and fold.
+const trails: Record<"1" | "3" | "6", string[]> = {
+  "1": ["Dokumente"],
+  "3": ["Dokumente", "Rechnungen", "Stadtwerke Beispielstadt"],
+  "6": ["Dokumente", "Rechnungen", "2026", "November", "Stadtwerke Beispielstadt", "Rechnung SW-2026-0413"],
+};
+
 const views: { id: string; label: string; icon: IconName; count?: number }[][] = [
   [
     { id: "start", label: "Start", icon: "home" },
@@ -44,6 +52,8 @@ const views: { id: string; label: string; icon: IconName; count?: number }[][] =
 
 export function Showcase() {
   const [theme, setTheme] = useState<Theme>("system");
+  const [depth, setDepth] = useState<"1" | "3" | "6">("3");
+  const [trail, setTrail] = useState<string[]>(trails["3"]);
   const [system, setSystem] = useState<WindowSystem>(windowSystem() === "mac" ? "mac" : "windows");
   const [view, setView] = useState("dokumente");
   const [filter, setFilter] = useState<"offen" | "erledigt">("offen");
@@ -68,7 +78,7 @@ export function Showcase() {
       {system === "mac" && windowSystem() !== "mac" && <DrawnTrafficLights />}
       <AppShell
         system={system}
-        title="Dokumente"
+        path={trail.map((label, index) => ({ label, onSelect: () => setTrail(trail.slice(0, index + 1)) }))}
         appName={
           <>
             <span data-tauri-drag-region className="flex size-6 items-center justify-center rounded-[6px] bg-accent text-on-accent">
@@ -133,6 +143,14 @@ export function Showcase() {
             <div className="flex flex-col gap-2 border-t border-line pt-3 text-small text-fg-muted">
               <span>Vorschau</span>
               <Segments value={theme} onChange={setTheme} options={[{ value: "system", label: "System" }, { value: "light", label: "Hell" }, { value: "dark", label: "Dunkel" }]} />
+              <Segments
+                value={depth}
+                onChange={(value) => {
+                  setDepth(value);
+                  setTrail(trails[value]);
+                }}
+                options={[{ value: "1", label: "Pfad 1" }, { value: "3", label: "3" }, { value: "6", label: "6" }]}
+              />
               <Segments value={system} onChange={setSystem} options={[{ value: "windows", label: "Windows" }, { value: "mac", label: "macOS" }]} />
             </div>
           </div>
