@@ -7,6 +7,8 @@ export function stageLabel(stage: string): string {
       return "wartet";
     case "failed":
       return "nicht angenommen";
+    case "model":
+      return "wartet auf das Modell";
     case "waiting":
       return "wartet auf dich";
     case "filed":

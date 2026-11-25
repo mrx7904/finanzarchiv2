@@ -10,6 +10,7 @@ describe("the intake", () => {
     expect(stageLabel("stored")).toBe("in Arbeit");
     expect(stageLabel("checked")).toBe("in Arbeit");
     expect(stageLabel("failed")).toBe("nicht angenommen");
+    expect(stageLabel("model")).toBe("wartet auf das Modell");
   });
 
   it("says what runs, what came today and what was refused", () => {

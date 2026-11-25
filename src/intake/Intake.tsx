@@ -35,9 +35,12 @@ export function Intake() {
       {overview.running.length > 0 ? (
         <ul className="flex flex-col gap-0.5 text-small">
           {overview.running.map((job) => (
-            <li key={job.id} className="flex justify-between gap-3">
-              <span className="truncate">{job.name}</span>
-              <span className="shrink-0 text-fg-muted">{overview.paused ? "angehalten" : stageLabel(job.stage)}</span>
+            <li key={job.id} className="flex flex-col">
+              <span className="flex justify-between gap-3">
+                <span className="truncate">{job.name}</span>
+                <span className="shrink-0 text-fg-muted">{overview.paused ? "angehalten" : stageLabel(job.stage)}</span>
+              </span>
+              {job.error ? <span className="text-fg-muted">{job.error}</span> : null}
             </li>
           ))}
         </ul>

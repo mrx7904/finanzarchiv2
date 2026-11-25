@@ -117,18 +117,18 @@ export type JobRow = JobRow_Serialize | JobRow_Deserialize;
 export type JobRow_Deserialize = {
 	id: number,
 	name: string,
-	/**  The stage as its code: queued, stored, text, classified, read, checked, failed. */
+	/**  The stage as its code: queued, stored, text, classified, read, model, checked, failed. */
 	stage: string,
-	/**  Why a failed file was not taken, as a German sentence. */
+	/**  Why a failed file was not taken, or why a job waits for the model, as a German sentence. */
 	error?: string | null,
 };
 
 export type JobRow_Serialize = {
 	id: number,
 	name: string,
-	/**  The stage as its code: queued, stored, text, classified, read, checked, failed. */
+	/**  The stage as its code: queued, stored, text, classified, read, model, checked, failed. */
 	stage: string,
-	/**  Why a failed file was not taken, as a German sentence. */
+	/**  Why a failed file was not taken, or why a job waits for the model, as a German sentence. */
 	error: string | null,
 };
 

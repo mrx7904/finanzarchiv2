@@ -7,14 +7,15 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
-use std::time::Duration;
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use jiff::Timestamp;
 
 use crate::archive::Opened;
 use crate::documents::{self, Outcome, Refusal, Source};
 use crate::kinds;
+use crate::ollama::LocalModel;
 use crate::pages;
 use crate::pdf::Pdfium;
 use crate::readers;
@@ -48,6 +49,7 @@ pub enum Stopped {
 pub fn process(
     archive: &Mutex<Opened>,
     pdfium: Option<&Pdfium>,
+    model: Option<&dyn LocalModel>,
     job: &Job,
     paused: &AtomicBool,
     kill: &mut dyn FnMut(Point) -> bool,
@@ -59,6 +61,13 @@ pub fn process(
             Stage::Stored => read_text(archive, pdfium, job, kill)?,
             Stage::Text => classify(archive, job, kill)?,
             Stage::Classified => read_values(archive, job, kill)?,
+            Stage::Read | Stage::Model => {
+                let next = read_by_model(archive, model, job, kill)?;
+                if next == Stage::Model {
+                    return Ok(next);
+                }
+                next
+            }
             _ => advance(archive, job, stage, kill)?,
         };
     }
@@ -267,6 +276,107 @@ fn advance(
     Ok(next)
 }
 
+/// The fields the model is asked for: those of the kind no reader found. Read under the lock.
+fn missing_fields(
+    conn: &rusqlite::Connection,
+    document: i64,
+) -> rusqlite::Result<(kinds::Kind, Vec<readers::model::Field>, Vec<readers::Line>)> {
+    let kind: String = conn.query_row(
+        "SELECT kind FROM documents WHERE id = ?1",
+        [document],
+        |row| row.get(0),
+    )?;
+    let kind = kinds::Kind::from_code(&kind);
+    let found: HashSet<String> = conn
+        .prepare("SELECT DISTINCT field FROM field_values WHERE document_id = ?1 AND reader NOT LIKE 'model:%'")?
+        .query_map([document], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let fields: Vec<readers::model::Field> = readers::model::fields_of(kind)
+        .iter()
+        .copied()
+        .filter(|(name, _, _)| !found.contains(*name))
+        .collect();
+    let lines = if fields.is_empty() {
+        Vec::new()
+    } else {
+        readers::lines_of(conn, document)?
+    };
+    Ok((kind, fields, lines))
+}
+
+/// The stage after `read`: the local model reads the fields code left empty. Asking runs beside
+/// the database. Without an answer the job waits in the stage `model` with the reason and is asked
+/// again later. A document without missing fields, or an app without a model, goes on at once.
+fn read_by_model(
+    archive: &Mutex<Opened>,
+    model: Option<&dyn LocalModel>,
+    job: &Job,
+    kill: &mut dyn FnMut(Point) -> bool,
+) -> Result<Stage, Stopped> {
+    let asked = {
+        let guard = archive.lock().map_err(|_| Stopped::Database)?;
+        let Opened::Ready(ready) = &*guard else {
+            return Err(Stopped::NotReady);
+        };
+        match jobs::document_of(ready.connection(), job.id).map_err(|_| Stopped::Database)? {
+            Some(id) => Some((
+                id,
+                missing_fields(ready.connection(), id).map_err(|_| Stopped::Database)?,
+            )),
+            None => None,
+        }
+    };
+    let (Some(model), Some((id, (kind, fields, lines)))) = (model, asked) else {
+        return advance(archive, job, Stage::Read, kill);
+    };
+    if fields.is_empty() || lines.is_empty() {
+        return advance(archive, job, Stage::Read, kill);
+    }
+    let answer = readers::model::ask(model, kind, &fields, &lines);
+    if kill(Point::Prepared) {
+        return Err(Stopped::Killed);
+    }
+    let guard = archive.lock().map_err(|_| Stopped::Database)?;
+    let Opened::Ready(ready) = &*guard else {
+        return Err(Stopped::NotReady);
+    };
+    let tx = ready
+        .connection()
+        .unchecked_transaction()
+        .map_err(|_| Stopped::Database)?;
+    let now = Timestamp::now();
+    let read = match answer {
+        Err(error) if error.should_wait() => {
+            jobs::wait_for_model(&tx, job.id, &error.to_string(), now)
+                .map_err(|_| Stopped::Database)?;
+            tx.commit().map_err(|_| Stopped::Database)?;
+            return Ok(Stage::Model);
+        }
+        // An answer the model spoiled is a finding, the document goes on without its values.
+        Err(error) => readers::model::Read {
+            values: Vec::new(),
+            findings: vec![readers::model::Finding {
+                field: "",
+                detail: error.to_string(),
+            }],
+        },
+        Ok(read) => read,
+    };
+    readers::model::save(&tx, id, &model.name(), &read, now).map_err(|_| Stopped::Database)?;
+    jobs::set_stage(&tx, job.id, Stage::Checked, now).map_err(|_| Stopped::Database)?;
+    if kill(Point::BeforeCommit) {
+        return Err(Stopped::Killed);
+    }
+    tx.commit().map_err(|_| Stopped::Database)?;
+    if kill(Point::AfterCommit) {
+        return Err(Stopped::Killed);
+    }
+    Ok(Stage::Checked)
+}
+
+/// How long the jobs in the stage `model` rest after Ollama gave no answer.
+pub const MODEL_REST: Duration = Duration::from_secs(30);
+
 /// The queue of the running app: its workers, the pause and who hears about changes.
 pub struct Intake {
     archive: Arc<Mutex<Opened>>,
@@ -274,6 +384,8 @@ pub struct Intake {
     claimed: Mutex<HashSet<i64>>,
     wake: (Mutex<()>, Condvar),
     on_change: Box<dyn Fn() + Send + Sync>,
+    model: OnceLock<Arc<dyn LocalModel>>,
+    model_rests_until: Mutex<Option<Instant>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -288,7 +400,28 @@ impl Intake {
             claimed: Mutex::new(HashSet::new()),
             wake: (Mutex::new(()), Condvar::new()),
             on_change,
+            model: OnceLock::new(),
+            model_rests_until: Mutex::new(None),
         })
+    }
+
+    /// The local model the workers ask for the fields code left empty. Set once, before `start`.
+    pub fn set_model(&self, model: Arc<dyn LocalModel>) {
+        let _ = self.model.set(model);
+    }
+
+    fn rest_model(&self) {
+        if let Ok(mut until) = self.model_rests_until.lock() {
+            *until = Some(Instant::now() + MODEL_REST);
+        }
+    }
+
+    fn model_rests(&self) -> bool {
+        self.model_rests_until
+            .lock()
+            .ok()
+            .and_then(|until| *until)
+            .is_some_and(|until| Instant::now() < until)
     }
 
     pub fn archive(&self) -> &Mutex<Opened> {
@@ -332,7 +465,18 @@ impl Intake {
             match self.claim() {
                 Some(job) if !self.is_paused() => {
                     // A stop for the database or a closed archive leaves the job where it was.
-                    let _ = process(&self.archive, pdfium, &job, &self.paused, &mut |_| false);
+                    let model = self.model.get().map(|model| model.as_ref());
+                    let ended = process(
+                        &self.archive,
+                        pdfium,
+                        model,
+                        &job,
+                        &self.paused,
+                        &mut |_| false,
+                    );
+                    if ended == Ok(Stage::Model) {
+                        self.rest_model();
+                    }
                     if let Ok(mut claimed) = self.claimed.lock() {
                         claimed.remove(&job.id);
                     }
@@ -358,7 +502,7 @@ impl Intake {
         let Opened::Ready(ready) = &*guard else {
             return;
         };
-        if jobs::count_open(ready.connection()).ok() != Some(0) {
+        if jobs::count_busy(ready.connection()).ok() != Some(0) {
             return;
         }
         if crate::archive::snapshots::after_import(
@@ -381,8 +525,12 @@ impl Intake {
             };
             jobs::open_jobs(ready.connection()).ok()?
         };
+        let rests = self.model_rests();
         let mut claimed = self.claimed.lock().ok()?;
-        let job = open.into_iter().find(|job| !claimed.contains(&job.id))?;
+        let job = open
+            .into_iter()
+            .filter(|job| !(rests && job.stage == Stage::Model))
+            .find(|job| !claimed.contains(&job.id))?;
         claimed.insert(job.id);
         Some(job)
     }

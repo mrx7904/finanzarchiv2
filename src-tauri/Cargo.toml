@@ -30,6 +30,7 @@ image = { version = "=0.25.10", default-features = false, features = ["png", "jp
 base64 = "=0.23.1"
 regex = "=1.13.2"
 quick-xml = "=0.42.0"
+ureq = { version = "=3.5.2", default-features = false, features = ["json"] }
 
 [dev-dependencies]
 lopdf = "=0.47.0"

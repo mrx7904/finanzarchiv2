@@ -184,3 +184,52 @@ pub const E_INVOICE_XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>
 "#;
+
+// The fake Ollama of the tests of #14.
+use std::io::{BufRead, BufReader, Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::mpsc;
+
+/// A fake Ollama: answers each connection with the given response and sends the request it read.
+pub fn fake_server(response: String) -> (String, mpsc::Receiver<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+    let (sender, requests) = mpsc::channel();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { break };
+            let request = read_request(&mut stream);
+            let _ = stream.write_all(response.as_bytes());
+            if sender.send(request).is_err() {
+                break;
+            }
+        }
+    });
+    (address, requests)
+}
+
+fn read_request(stream: &mut TcpStream) -> String {
+    let mut reader = BufReader::new(stream.try_clone().unwrap());
+    let mut head = String::new();
+    let mut length = 0;
+    loop {
+        let mut line = String::new();
+        if reader.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+            break;
+        }
+        if let Some(value) = line.to_lowercase().strip_prefix("content-length:") {
+            length = value.trim().parse().unwrap_or(0);
+        }
+        head.push_str(&line);
+    }
+    let mut body = vec![0; length];
+    let _ = reader.read_exact(&mut body);
+    format!("{head}\r\n{}", String::from_utf8_lossy(&body))
+}
+
+pub fn http_response(status: &str, extra: &str, body: &str) -> String {
+    format!(
+        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n{extra}\r\n{body}",
+        body.len()
+    )
+}

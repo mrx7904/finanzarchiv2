@@ -32,7 +32,7 @@ Checked on 2026-11-25 at crates.io (`/api/v1/crates/<name>`), registry.npmjs.org
 | Hash | `sha2` | 0.11.2 |
 | PDF | `pdfium-render` (PDFium, the engine of Chrome) | 0.9.6 |
 | Folder watching | `notify` | 9.0.0 |
-| Model client | `ollama-rs` or plain `reqwest` | 0.3.6, 0.13.5 |
+| Model client | `ureq` without TLS, a thin client of the Ollama API (see "The model client of #14") | 3.5.2 |
 | Mail (stage 4) | `async-imap`, `mail-parser`, `oauth2` | 0.12.0, 1.0.2, 5.0.0 |
 | Credentials | `keyring` | 4.2.0 |
 | CSV, XML | `csv`, `quick-xml` (e-invoices) | 1.4.0, 0.42.0 |
@@ -46,7 +46,7 @@ Checked on 2026-11-25 at crates.io (`/api/v1/crates/<name>`), registry.npmjs.org
 
 - PDFium is a shared library that must ship per system. Which prebuilt binaries `pdfium-render` 0.9.6 expects, and their licence (BSD style and Apache 2.0 for PDFium, to be verified at pdfium.googlesource.com). Settled by #06.
 - The size of the macOS dmg. The Windows installer of 0.1.0 is 6.2 MB (#08, 2026-11-25), 1.0 shipped more than 100 MB.
-- `ollama-rs` 0.3.6 was last released on 2026-07-24. Whether it covers structured output, images and tool calls of the current Ollama, or whether a thin client on `reqwest` is better. Settled in stage 2.
+- Settled by #14: the model client, see "The model client of #14".
 - The keychain prompt after every update on macOS, which hit 1.0 because the app is signed ad hoc. Whether an Apple Developer ID removes it is for the owner to decide (cost).
 
 ## End to end tests
@@ -88,3 +88,12 @@ As soon as the core used a type of the Tauri runtime, the test binary of the lib
 - **Electron again.** Works and is known, but the owner wants Rust, and the installers stay above 100 MB.
 - **Leptos or Dioxus in the webview.** One language, but no React pieces of the six sources.
 - **Slint or egui.** Smallest, but charts, the PDF preview and the look would all be written by hand.
+
+## The model client of #14
+
+**Decided:** 2026-11-25 · applies to `src-tauri/src/ollama.rs`
+
+- Checked on 2026-11-25 at the primary source: the current Ollama is 0.40.18 (github.com/ollama/ollama, released 2026-11-24, the owner runs 0.40.16). Its `docs/api.md` (last changed 2026-10-06) names for `/api/chat`: `format` (`json` or a JSON schema, structured output), `keep_alive` (default `5m`, `0` unloads at once), `think` (a boolean or a level `low` to `max`) and `images` (base64).
+- `ollama-rs` 0.3.6 covers `format`, `keep_alive` and `think`, but only async, so it brings `tokio` into the workers, which are plain threads, and `reqwest` with TLS by default. A thin client on `ureq` 3.5.2 (synchronous, `default-features = false`, only `json`) needs about 150 lines and calls exactly two paths (`/api/chat`, `/api/generate` to unload), plus `/api/ps` for the measurement.
+- The client is built without TLS, so it cannot reach an `https` host. It follows no redirect (`max_redirects(0)`) and uses no proxy (`proxy(None)`), so the only host it reaches is the one in `OLLAMA_HOST`. `0.0.0.0` in `OLLAMA_HOST`, the address Ollama is told to listen on, is reached as `127.0.0.1`.
+- The trait `LocalModel` (`name`, `ask`) stands between the readers and Ollama.

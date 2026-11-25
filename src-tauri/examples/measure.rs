@@ -9,11 +9,14 @@
 //! PDFium reads, the floor for every reader of stage 2), `kind`, `code` and `e-invoice` (the XML an
 //! invoice carries). `--archive <db>` counts on a copy of the owner's database, `--files <folder>`
 //! counts the e-invoices among the PDFs of a copy of the owner's files. Both write to `private/`.
+//! `--reader model --model <name>` asks the local model at `OLLAMA_HOST` for every field, within
+//! 14 minutes, and unloads it afterwards.
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use finanzarchiv2_lib::ollama::{self, LocalModel};
 use finanzarchiv2_lib::pdf::{self, Pdfium};
 use finanzarchiv2_lib::readers::{self, Normalized};
 use finanzarchiv2_lib::{documents, kinds, pages};
@@ -417,6 +420,225 @@ fn files_e_invoice(pdfium: &Pdfium, dir: &Path) -> BTreeMap<String, Tally> {
     tallies
 }
 
+/// One measurement of a model must end within the GPU budget the owner gave (15 minutes).
+const MODEL_BUDGET: std::time::Duration = std::time::Duration::from_secs(14 * 60);
+
+/// What a run of the model gave beside the tallies.
+#[derive(Default)]
+struct ModelRun {
+    tallies: BTreeMap<String, Tally>,
+    documents: u32,
+    seconds: f64,
+    findings: u32,
+    stopped: Option<String>,
+}
+
+impl ModelRun {
+    /// Asks the model for every field of the kind. `None` ends the run: the budget is spent or
+    /// Ollama does not answer.
+    fn ask(
+        &mut self,
+        model: &ollama::Ollama,
+        started: std::time::Instant,
+        kind: kinds::Kind,
+        lines: &[readers::Line],
+    ) -> Option<Vec<readers::Value>> {
+        if started.elapsed() > MODEL_BUDGET {
+            self.stopped = Some("Zeitbudget erreicht".into());
+            return None;
+        }
+        let asked = std::time::Instant::now();
+        let read = readers::model::ask(model, kind, readers::model::fields_of(kind), lines);
+        self.seconds += asked.elapsed().as_secs_f64();
+        self.documents += 1;
+        match read {
+            Ok(read) => {
+                self.findings += u32::try_from(read.findings.len()).unwrap_or(u32::MAX);
+                Some(read.values)
+            }
+            Err(error) if error.should_wait() => {
+                self.stopped = Some(error.to_string());
+                None
+            }
+            Err(_) => {
+                self.findings += 1;
+                Some(Vec::new())
+            }
+        }
+    }
+
+    fn result(&self, name: &str, model: &ollama::Ollama, gpu: Option<u64>) -> Value {
+        let mut result = report(name, &self.tallies);
+        let per_document = if self.documents == 0 {
+            0.0
+        } else {
+            self.seconds / f64::from(self.documents)
+        };
+        let memory = gpu.map_or_else(
+            || "?".to_owned(),
+            |bytes| format!("{:.1} GB", bytes as f64 / 1e9),
+        );
+        println!(
+            "  {} Dokumente, {per_document:.1} s je Dokument, {} Befunde, GPU {memory}",
+            self.documents, self.findings
+        );
+        result["reader"] = json!("model");
+        result["model"] = json!(model.name());
+        result["documents"] = json!(self.documents);
+        result["seconds_per_document"] = json!((per_document * 10.0).round() / 10.0);
+        result["findings"] = json!(self.findings);
+        result["gpu_bytes"] = json!(gpu);
+        result["stopped"] = json!(self.stopped);
+        result
+    }
+}
+
+/// The reader `model` on the generated corpus: every field of each document with text, right when
+/// it equals the truth as printed.
+fn measure_model(
+    pdfium: &Pdfium,
+    model: &ollama::Ollama,
+    corpus: &Path,
+) -> (ModelRun, Option<u64>) {
+    let started = std::time::Instant::now();
+    let mut run = ModelRun::default();
+    let mut gpu = None;
+    for (pdf, truth) in documents(corpus) {
+        let kind = kinds::Kind::from_code(truth["kind"].as_str().unwrap_or("unknown"));
+        if !truth["text_layer"].as_bool().unwrap_or(true)
+            || readers::model::fields_of(kind).is_empty()
+        {
+            continue;
+        }
+        let Some(found) = run.ask(model, started, kind, &reader_lines(pdfium, &pdf)) else {
+            break;
+        };
+        gpu = gpu.or_else(|| model.loaded_bytes());
+        let Some(fields) = truth["fields"].as_object() else {
+            continue;
+        };
+        for (field, expected) in fields {
+            let Some(expected) = expected.as_str() else {
+                continue;
+            };
+            let tally = run
+                .tallies
+                .entry(format!("{}.{field}", kind.code()))
+                .or_default();
+            tally.total += 1;
+            if found
+                .iter()
+                .any(|value| value.field == field && as_truth(value) == fold(expected))
+            {
+                tally.right += 1;
+            }
+        }
+    }
+    (run, gpu)
+}
+
+/// The reader `model` on a copy of the owner's database: how often it finds each field, and how
+/// often it agrees with code where both found one. Counts only.
+fn archive_model(model: &ollama::Ollama, database: &Path) -> (ModelRun, Option<u64>) {
+    let started = std::time::Instant::now();
+    let mut run = ModelRun::default();
+    let mut gpu = None;
+    let Ok(conn) =
+        rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+    else {
+        return (run, gpu);
+    };
+    let ids: Vec<i64> = conn
+        .prepare("SELECT id FROM documents ORDER BY id")
+        .and_then(|mut statement| statement.query_map([], |row| row.get(0))?.collect())
+        .unwrap_or_default();
+    for id in ids {
+        let texts = documents::lines_of(&conn, id).unwrap_or_default();
+        let kind = kinds::classify(texts.iter().map(String::as_str)).kind;
+        if readers::model::fields_of(kind).is_empty() {
+            continue;
+        }
+        let input = readers::Input {
+            kind,
+            lines: readers::lines_of(&conn, id).unwrap_or_default(),
+            e_invoice: None,
+        };
+        let by_code: Vec<readers::Value> = readers::for_kind(kind)
+            .iter()
+            .flat_map(|reader| reader.read(&input))
+            .collect();
+        let Some(by_model) = run.ask(model, started, kind, &input.lines) else {
+            break;
+        };
+        gpu = gpu.or_else(|| model.loaded_bytes());
+        for (field, _, _) in readers::model::fields_of(kind) {
+            let mine = by_model.iter().find(|value| value.field == *field);
+            let code = by_code.iter().find(|value| value.field == *field);
+            let found = run
+                .tallies
+                .entry(format!("{}.{field} found", kind.code()))
+                .or_default();
+            found.total += 1;
+            found.right += u32::from(mine.is_some());
+            if let (Some(mine), Some(code)) = (mine, code) {
+                let agrees = run
+                    .tallies
+                    .entry(format!("{}.{field} agrees with code", kind.code()))
+                    .or_default();
+                agrees.total += 1;
+                agrees.right += u32::from(mine.value == code.value);
+            }
+        }
+    }
+    (run, gpu)
+}
+
+/// A model name as part of a file name.
+fn file_part(model: &str) -> String {
+    model
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect()
+}
+
+/// Runs the model on the corpus or the archive copy, writes the result and unloads the model.
+fn run_model(pdfium: &Pdfium, model_name: &str, corpus: &Path, archive: Option<&str>, out: &Path) {
+    let model = match ollama::Ollama::from_env(model_name) {
+        Ok(model) => model,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+    };
+    let (name, path, (run, gpu)) = match archive {
+        Some(database) => (
+            "archive",
+            out.join("private")
+                .join(format!("archive-model-{}.json", file_part(model_name))),
+            archive_model(&model, Path::new(database)),
+        ),
+        None => (
+            "synthetic",
+            out.join(format!("synthetic-model-{}.json", file_part(model_name))),
+            measure_model(pdfium, &model, corpus),
+        ),
+    };
+    if model.unload().is_err() {
+        eprintln!("Das Modell ließ sich nicht entladen, bitte ollama stop {model_name}");
+    }
+    let result = run.result(name, &model, gpu);
+    if let Some(reason) = &run.stopped {
+        eprintln!("Abgebrochen: {reason}");
+    }
+    write(&path, &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -456,6 +678,11 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if reader == "model" {
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        run_model(pdfium, &model, &corpus, value("--archive").as_deref(), &out);
+        return;
+    }
     if let Some(files) = value("--files") {
         let mut result = report("files", &files_e_invoice(pdfium, Path::new(&files)));
         result["reader"] = json!("e-invoice");
