@@ -12,7 +12,7 @@ At most one stage is open. The next stage is cut into issues and begun only afte
 |---|---|---|---|---|
 | [#01](001-shell-and-check.md) | The shell on Windows and macOS, and the check | FA-01, FA-02, FA-03 | none | in progress |
 | [#02](002-database-and-money.md) | The archive database and exact money | FA-04, FA-05 | #01 | done |
-| [#03](003-typed-boundary.md) | A typed boundary between core and UI | FA-06 | #01 | open |
+| [#03](003-typed-boundary.md) | A typed boundary between core and UI | FA-06 | #01 | done |
 | [#04](004-document-store.md) | Unchanged originals under their hash, in by drop and dialog | FA-07, FA-08 | #02, #03 | open |
 | [#05](005-intake-queue.md) | One intake queue that survives a restart | FA-09 | #04 | open |
 | [#06](006-pdf-text-and-pages.md) | Text and pages of a PDF in the core | FA-10 | #05 | open |
