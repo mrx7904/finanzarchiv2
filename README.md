@@ -6,7 +6,7 @@ Finanzarchiv 2.0 ist der Neuanfang von Finanzarchiv 1.0 (Electron) auf Basis von
 
 ## Stand
 
-Erste Stufe „Fundament“ in Arbeit. Die leere App öffnet ihr Fenster unter Windows, der Mac steht noch aus. Die Gestaltung ist gewählt: „Graphit“, ruhig und ohne Farbakzent, gleich auf Windows und Mac. Im Entwicklungsbuild zeigt „Gestaltung ansehen“ alle Bausteine in Hell und Dunkel. Archiv, Import und Lesen folgen in den nächsten Issues:
+Erste Stufe „Fundament“ in Arbeit. Die App öffnet ihr Fenster unter Windows, der Mac steht noch aus. Dateien und Ordner kommen per Dialog oder durch Ziehen ins Fenster in den „Eingang“, eine Warteschlange, die einen Absturz oder Neustart übersteht. Die Originale liegen unverändert im Archiv, beschädigte oder passwortgeschützte PDFs werden mit Grund abgelehnt. Die Gestaltung ist gewählt: „Graphit“, ruhig und ohne Farbakzent, gleich auf Windows und Mac. Im Entwicklungsbuild zeigt „Gestaltung ansehen“ alle Bausteine in Hell und Dunkel. Lesen und Prüfen folgen in Stufe 2:
 
 - Konzept: [`spec/concept.md`](spec/concept.md)
 - Anforderungen: [`spec/requirements.md`](spec/requirements.md)

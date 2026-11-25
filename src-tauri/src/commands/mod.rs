@@ -3,7 +3,7 @@
 
 pub mod documents;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use specta::Type;
@@ -24,6 +24,8 @@ pub struct CommandError {
 pub enum ErrorKind {
     /// A fault of the app itself. Restarting it is the owner's way out.
     Internal,
+    /// The archive is damaged or missing, so nothing can be written.
+    ArchiveNotReady,
 }
 
 impl CommandError {
@@ -31,6 +33,13 @@ impl CommandError {
         Self {
             kind: ErrorKind::Internal,
             message: "Ein interner Fehler ist aufgetreten. Bitte starte Finanzarchiv neu.".into(),
+        }
+    }
+
+    pub(crate) fn archive_not_ready() -> Self {
+        Self {
+            kind: ErrorKind::ArchiveNotReady,
+            message: "Das Archiv ist nicht bereit, deshalb wurde nichts importiert.".into(),
         }
     }
 }
@@ -92,7 +101,7 @@ impl From<&Opened> for ArchiveStatus {
 #[specta::specta]
 pub fn app_status(
     app: tauri::AppHandle,
-    archive: State<'_, Mutex<Opened>>,
+    archive: State<'_, Arc<Mutex<Opened>>>,
 ) -> Result<AppStatus, CommandError> {
     let opened = archive.lock().map_err(|_| CommandError::internal())?;
     Ok(AppStatus {
@@ -108,9 +117,12 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             app_status,
             documents::import_files,
             documents::import_folder,
+            documents::intake_overview,
+            documents::set_intake_paused,
+            documents::dismiss_failed,
             documents::list_documents,
         ])
-        .events(tauri_specta::collect_events![documents::ImportFinished])
+        .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
 

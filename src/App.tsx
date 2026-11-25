@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { commands } from "./bindings";
 import { Documents } from "./documents/Documents";
+import { Intake } from "./intake/Intake";
 import { Button } from "./ui";
 
 // The showcase of the design system (#07), only in the dev build: the branch is removed from the release.
@@ -50,6 +51,7 @@ export function App() {
           </Button>
         )}
       </header>
+      {ready ? <Intake /> : null}
       {ready ? <Documents /> : null}
     </main>
   );

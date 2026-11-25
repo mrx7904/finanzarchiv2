@@ -3,6 +3,7 @@
 pub mod archive;
 pub mod commands;
 pub mod documents;
+pub mod intake;
 pub mod money;
 pub mod pdf;
 #[cfg(test)]
@@ -10,12 +11,13 @@ mod testing;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use tauri::{DragDropEvent, Manager, WindowEvent};
 use tauri_specta::Event;
 
-use commands::documents::ImportFinished;
+use commands::documents::IntakeChanged;
+use intake::Intake;
 
 /// Starts the app and returns how it ended, so `main` needs no `expect`.
 pub fn run() -> ExitCode {
@@ -25,17 +27,36 @@ pub fn run() -> ExitCode {
         .invoke_handler(commands.invoke_handler())
         .setup(move |app| {
             commands.mount_events(app);
-            if pdf::init(&pdfium_folders(app.handle())).is_err() {
+            let pdfium = pdf::init(&pdfium_folders(app.handle())).ok();
+            if pdfium.is_none() {
                 eprintln!("PDFium fehlt, PDFs werden nicht angenommen");
             }
             let path = app.path().app_data_dir()?.join(archive::FILE_NAME);
             let opened = archive::open(&path, jiff::Timestamp::now())?;
-            app.manage(Mutex::new(opened));
+            let workers = match &opened {
+                archive::Opened::Ready(ready) => intake::jobs::workers(ready.connection()),
+                _ => 0,
+            };
+            let archive = Arc::new(Mutex::new(opened));
+            let handle = app.handle().clone();
+            let intake = Intake::new(
+                Arc::clone(&archive),
+                Box::new(move || {
+                    // The window reloads what it shows. A closed window misses nothing it needs.
+                    let _ = IntakeChanged.emit(&handle);
+                }),
+            );
+            if workers > 0 {
+                intake.start(workers, pdfium);
+            }
+            app.manage(archive);
+            app.manage(intake);
             Ok(())
         })
         .on_window_event(|window, event| {
             if let WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event {
-                import_dropped(window.app_handle().clone(), paths.clone());
+                let intake = window.app_handle().state::<Arc<Intake>>();
+                commands::documents::enqueue_dropped(&intake, paths);
             }
         })
         .run(tauri::generate_context!());
@@ -47,18 +68,6 @@ pub fn run() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-/// Dropped files are imported beside the window's thread, and the window hears the result.
-fn import_dropped(app: tauri::AppHandle, paths: Vec<PathBuf>) {
-    std::thread::spawn(move || {
-        let state = app.state::<Mutex<archive::Opened>>();
-        let summary = commands::documents::import(&state, &paths, documents::Source::Drop);
-        let finished = ImportFinished { summary };
-        if finished.emit(&app).is_err() {
-            eprintln!("Das Ergebnis eines Imports erreichte das Fenster nicht");
-        }
-    });
 }
 
 /// The library ships as a resource of the app. A debug build also finds it where
