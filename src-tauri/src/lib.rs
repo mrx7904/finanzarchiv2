@@ -9,6 +9,7 @@ pub mod money;
 pub mod pages;
 pub mod pdf;
 pub mod previews;
+pub mod readers;
 #[cfg(test)]
 mod testing;
 
@@ -40,6 +41,9 @@ pub fn run() -> ExitCode {
                 archive::Opened::Ready(ready) => {
                     if documents::classify_missing(ready.connection()).is_err() {
                         eprintln!("Die Art älterer Dokumente ließ sich nicht bestimmen");
+                    }
+                    if readers::read_outdated(ready.connection(), jiff::Timestamp::now()).is_err() {
+                        eprintln!("Ältere Dokumente ließen sich nicht neu lesen");
                     }
                     intake::jobs::workers(ready.connection())
                 }

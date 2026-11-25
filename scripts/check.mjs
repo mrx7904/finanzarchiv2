@@ -124,10 +124,34 @@ function checkTraceability(root) {
 
 // ---------- step: privacy (FA-03) ----------
 
+/** Only a string with a valid check sum can be an account. The two public examples of the IBAN
+ * standard (ISO 13616) are allowed, tests read them. */
+function ibanIsValid(text) {
+  const compact = text.replace(/\s/g, "");
+  const moved = compact.slice(4) + compact.slice(0, 4);
+  let rest = 0;
+  for (const char of moved) {
+    const digits = /[0-9]/.test(char) ? char : String(char.charCodeAt(0) - 55);
+    for (const digit of digits) rest = (rest * 10 + Number(digit)) % 97;
+  }
+  return rest === 1;
+}
+const PUBLIC_EXAMPLE_IBANS = new Set([["DE89", "3704", "0044", "0532", "0130", "00"].join(""), ["GB82", "WEST", "1234", "5698", "7654", "32"].join("")]);
+/** A valid IBAN for the self-test, made at run time so no file of the repository holds one. */
+function probeIban() {
+  // An invented bank code and account, nobody's account.
+  const bban = "12345678" + "0000004711";
+  for (let check = 2; check < 99; check++) {
+    const candidate = "DE" + String(check).padStart(2, "0") + bban;
+    if (ibanIsValid(candidate)) return candidate;
+  }
+  return "";
+}
+
 const ALLOWED_MAIL = /@(users\.noreply\.github\.com|example\.(com|org|net))$|^noreply@anthropic\.com$/i;
 const IMAGE_NAME = /@\d+x\.(png|jpe?g|webp|gif|svg)$/i;
 const PATTERNS = [
-  { what: "an IBAN", regex: /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b/g, allowed: (file) => file.startsWith("fixtures/synthetic/") },
+  { what: "an IBAN", regex: /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b/g, allowed: (file, hit) => file.startsWith("fixtures/synthetic/") || !ibanIsValid(hit) || PUBLIC_EXAMPLE_IBANS.has(hit.replace(/\s/g, "")) },
   // An image name such as "128x128@2x.png" has the shape of an address and is none.
   { what: "a mail address", regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, allowed: (_file, hit) => ALLOWED_MAIL.test(hit) || IMAGE_NAME.test(hit) },
   { what: "a path into a home folder", regex: /\b[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s"'`]+|\/(?:Users|home)\/[A-Za-z0-9._-]+/g, allowed: () => false },
@@ -249,7 +273,7 @@ function selfTest() {
     write("issues/001-one.md", "# #01 One\n\n**Requirements**: FA-01 · **Depends on**: none\n");
     write("issues/README.md", "| [#01](001-one.md) | One |\n");
     write("README.md", "[ok](spec/requirements.md)\n");
-    write("fixtures/synthetic/statement.csv", ["DE89", "3704", "0044", "0532", "0130", "00"].join(" ") + "\n");
+    write("fixtures/synthetic/statement.csv", probeIban() + "\n");
     let files = walk(dir, dir);
     expect("links pass on a clean tree", checkLinks(dir, files), false);
     expect("traceability passes on a clean tree", checkTraceability(dir), false);
@@ -257,7 +281,7 @@ function selfTest() {
 
     write("docs/broken.md", "[gone](nothing-here.md)\n");
     write("issues/002-two.md", "# #02 Two\n\n**Requirements**: FA-09 · **Depends on**: none\n");
-    write("notes.txt", ["DE89", "3704", "0044", "0532", "0130", "00"].join("") + " " + ["owner", "mailbox.de"].join("@") + " " + ["C:", "Users", "someone", "file"].join("\\") + "\n");
+    write("notes.txt", probeIban() + " " + ["owner", "mailbox.de"].join("@") + " " + ["C:", "Users", "someone", "file"].join("\\") + "\n");
     files = walk(dir, dir);
     expect("links fail on a broken link", checkLinks(dir, files), true);
     expect("traceability fails on an unknown requirement", checkTraceability(dir), true);

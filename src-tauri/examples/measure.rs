@@ -14,6 +14,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use finanzarchiv2_lib::pdf::{self, Pdfium};
+use finanzarchiv2_lib::readers::{self, Normalized};
 use finanzarchiv2_lib::{documents, kinds, pages};
 use serde_json::{Value, json};
 
@@ -168,6 +169,133 @@ fn archive_kinds(database: &Path) -> BTreeMap<String, Tally> {
     tallies
 }
 
+/// The lines of a PDF as the readers get them, with page and box.
+fn reader_lines(pdfium: &Pdfium, pdf: &Path) -> Vec<readers::Line> {
+    fs::read(pdf)
+        .ok()
+        .and_then(|bytes| pages::read(pdfium, &bytes).ok())
+        .map(|read| {
+            read.iter()
+                .flat_map(|page| {
+                    page.lines.iter().map(|line| readers::Line {
+                        page: page.number,
+                        text: line.text.clone(),
+                        left: f64::from(line.left),
+                        bottom: f64::from(line.bottom),
+                        right: f64::from(line.right),
+                        top: f64::from(line.top),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What a reader found for a field, in the form the truth file prints it.
+fn as_truth(value: &readers::Value) -> String {
+    match &value.value {
+        Normalized::Percent(rate) => rate.to_string(),
+        _ => fold(&value.printed),
+    }
+}
+
+/// The reader `code`: every field of the documents with text, right when it equals the truth as printed.
+fn measure_code(pdfium: &Pdfium, corpus: &Path) -> BTreeMap<String, Tally> {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    for (pdf, truth) in documents(corpus) {
+        if !truth["text_layer"].as_bool().unwrap_or(true) {
+            continue;
+        }
+        let kind = kinds::Kind::from_code(truth["kind"].as_str().unwrap_or("unknown"));
+        let input = readers::Input {
+            kind,
+            lines: reader_lines(pdfium, &pdf),
+        };
+        let found: Vec<readers::Value> = readers::for_kind(kind)
+            .iter()
+            .flat_map(|reader| reader.read(&input))
+            .collect();
+        let Some(fields) = truth["fields"].as_object() else {
+            continue;
+        };
+        for (field, expected) in fields {
+            let Some(expected) = expected.as_str() else {
+                continue;
+            };
+            let tally = tallies
+                .entry(format!("{}.{field}", kind.code()))
+                .or_default();
+            tally.total += 1;
+            if found
+                .iter()
+                .any(|value| value.field == field && as_truth(value) == fold(expected))
+            {
+                tally.right += 1;
+            }
+        }
+    }
+    tallies
+}
+
+/// How many documents of each kind in an archive copy the code readers give each field. Counts only.
+fn archive_code(database: &Path) -> BTreeMap<String, Tally> {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    let Ok(conn) =
+        rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+    else {
+        return tallies;
+    };
+    let documents: Vec<(i64, String)> = conn
+        .prepare("SELECT id, kind FROM documents ORDER BY id")
+        .and_then(|mut statement| {
+            statement
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect()
+        })
+        .unwrap_or_default();
+    for (id, _) in documents {
+        let lines = documents::lines_of(&conn, id).unwrap_or_default();
+        let kind = kinds::classify(lines.iter().map(String::as_str)).kind;
+        let readers = readers::for_kind(kind);
+        if readers.is_empty() {
+            continue;
+        }
+        let input = readers::Input {
+            kind,
+            lines: readers::lines_of(&conn, id).unwrap_or_default(),
+        };
+        let found: Vec<readers::Value> = readers
+            .iter()
+            .flat_map(|reader| reader.read(&input))
+            .collect();
+        let documents_of_kind = tallies
+            .entry(format!("{}.documents", kind.code()))
+            .or_default();
+        documents_of_kind.total += 1;
+        documents_of_kind.right += 1;
+        for field in [
+            "sender",
+            "invoice_number",
+            "invoice_date",
+            "net",
+            "vat_rate",
+            "vat",
+            "gross",
+            "due_date",
+            "iban",
+        ] {
+            let tally = tallies
+                .entry(format!("{}.{field} found", kind.code()))
+                .or_default();
+            tally.total += 1;
+            if found.iter().any(|value| value.field == field) {
+                tally.right += 1;
+            }
+        }
+    }
+    tallies
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -208,13 +336,22 @@ fn main() {
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
     if let Some(database) = value("--archive") {
-        let mut result = report("archive", &archive_kinds(Path::new(&database)));
-        result["reader"] = json!("kind");
-        write(&out.join("private").join("archive-kind.json"), &result);
+        let tallies = if reader == "code" {
+            archive_code(Path::new(&database))
+        } else {
+            archive_kinds(Path::new(&database))
+        };
+        let mut result = report("archive", &tallies);
+        result["reader"] = json!(reader);
+        write(
+            &out.join("private").join(format!("archive-{reader}.json")),
+            &result,
+        );
         return;
     }
     let run = |corpus: &Path| match reader.as_str() {
         "kind" => measure_kind(pdfium, corpus),
+        "code" => measure_code(pdfium, corpus),
         _ => measure(pdfium, corpus),
     };
     let mut result = report("synthetic", &run(&corpus));

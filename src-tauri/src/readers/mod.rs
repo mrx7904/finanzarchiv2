@@ -1,0 +1,301 @@
+//! Readers turn the text of a document into values with their source (FA-15, #11). Code, the
+//! e-invoice XML, the local model and the page image are readers side by side, measured alike
+//! (knowledge/decision-reading.md).
+
+pub mod invoice;
+pub mod parse;
+
+use jiff::Timestamp;
+use jiff::civil::Date;
+use rusqlite::{Connection, params};
+
+use crate::money::Cents;
+
+/// Raised when a reader reads differently, so older documents are read again at the next start.
+pub const READERS_VERSION: i64 = 1;
+
+/// A line of a page with its place, as the stage `text` stored it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Line {
+    pub page: u32,
+    pub text: String,
+    pub left: f64,
+    pub bottom: f64,
+    pub right: f64,
+    pub top: f64,
+}
+
+/// What a reader gets: the kind and the lines of every page, top to bottom.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Input {
+    pub kind: crate::kinds::Kind,
+    pub lines: Vec<Line>,
+}
+
+/// A value in its normalized form. Amounts are cents, dates are dates, the rest is text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Normalized {
+    Cents(Cents),
+    Date(Date),
+    Percent(u32),
+    Text(String),
+}
+
+impl Normalized {
+    /// The form stored in `field_values.value`.
+    pub fn stored(&self) -> String {
+        match self {
+            Self::Cents(cents) => cents.value().to_string(),
+            Self::Date(date) => date.to_string(),
+            Self::Percent(percent) => percent.to_string(),
+            Self::Text(text) => text.clone(),
+        }
+    }
+}
+
+/// One value a reader found, as printed and normalized, with the line it stands on.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Value {
+    pub field: &'static str,
+    pub printed: String,
+    pub value: Normalized,
+    pub line: Option<Line>,
+}
+
+impl Value {
+    pub fn on(
+        field: &'static str,
+        printed: impl Into<String>,
+        value: Normalized,
+        line: &Line,
+    ) -> Self {
+        Self {
+            field,
+            printed: printed.into(),
+            value,
+            line: Some(line.clone()),
+        }
+    }
+}
+
+pub trait Reader {
+    /// The name stored with each value, for example `code:1`.
+    fn name(&self) -> String;
+    fn read(&self, input: &Input) -> Vec<Value>;
+}
+
+/// The lines of a document with their boxes, page after page.
+pub fn lines_of(conn: &Connection, document: i64) -> rusqlite::Result<Vec<Line>> {
+    let mut statement = conn.prepare(
+        "SELECT page, text, left, bottom, right, top FROM page_lines WHERE document_id = ?1 ORDER BY page, line",
+    )?;
+    let lines = statement.query_map([document], |row| {
+        Ok(Line {
+            page: row.get(0)?,
+            text: row.get(1)?,
+            left: row.get(2)?,
+            bottom: row.get(3)?,
+            right: row.get(4)?,
+            top: row.get(5)?,
+        })
+    })?;
+    lines.collect()
+}
+
+/// Replaces what the given readers read of a document. Values of other readers, the owner's above
+/// all, stay.
+pub fn save(
+    conn: &Connection,
+    document: i64,
+    readers: &[String],
+    values: &[(String, Value)],
+    now: Timestamp,
+) -> rusqlite::Result<()> {
+    for reader in readers {
+        conn.execute(
+            "DELETE FROM field_values WHERE document_id = ?1 AND reader = ?2",
+            params![document, reader],
+        )?;
+    }
+    let mut insert = conn.prepare(
+        "INSERT INTO field_values (document_id, field, printed, value, reader, page, left, bottom, right, top, read_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+    )?;
+    for (reader, value) in values {
+        let line = value.line.as_ref();
+        insert.execute(params![
+            document,
+            value.field,
+            value.printed,
+            value.value.stored(),
+            reader,
+            line.map(|l| l.page),
+            line.map(|l| l.left),
+            line.map(|l| l.bottom),
+            line.map(|l| l.right),
+            line.map(|l| l.top),
+            now.to_string()
+        ])?;
+    }
+    Ok(())
+}
+
+/// The readers that fit a kind of document.
+pub fn for_kind(kind: crate::kinds::Kind) -> Vec<Box<dyn Reader>> {
+    match kind {
+        crate::kinds::Kind::Invoice | crate::kinds::Kind::Receipt => {
+            vec![Box::new(invoice::InvoiceCode)]
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// Runs the readers of the kind and stores their values with the version of the readers.
+pub fn read_document(
+    conn: &Connection,
+    document: i64,
+    kind: crate::kinds::Kind,
+    now: Timestamp,
+) -> rusqlite::Result<usize> {
+    let input = Input {
+        kind,
+        lines: lines_of(conn, document)?,
+    };
+    let readers = for_kind(kind);
+    let names: Vec<String> = readers.iter().map(|reader| reader.name()).collect();
+    let values: Vec<(String, Value)> = readers
+        .iter()
+        .flat_map(|reader| {
+            reader
+                .read(&input)
+                .into_iter()
+                .map(move |value| (reader.name(), value))
+        })
+        .collect();
+    save(conn, document, &names, &values, now)?;
+    conn.execute(
+        "UPDATE documents SET read_version = ?2 WHERE id = ?1",
+        params![document, READERS_VERSION],
+    )?;
+    Ok(values.len())
+}
+
+/// Reads again every document an older version of the readers read. Returns how many.
+pub fn read_outdated(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
+    let documents: Vec<(i64, String)> = conn
+        .prepare("SELECT id, kind FROM documents WHERE text_state IS NOT NULL AND kind_signals IS NOT NULL AND read_version < ?1")?
+        .query_map([READERS_VERSION], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let tx = conn.unchecked_transaction()?;
+    for (id, kind) in &documents {
+        read_document(&tx, *id, crate::kinds::Kind::from_code(kind), now)?;
+    }
+    tx.commit()?;
+    Ok(documents.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::archive::{self, Opened};
+    use crate::documents::{self, Outcome, Source};
+    use crate::testing;
+
+    fn ready(dir: &std::path::Path) -> archive::Archive {
+        match archive::open(&dir.join(archive::FILE_NAME), testing::t0()).unwrap() {
+            Opened::Ready(ready) => ready,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    fn invoice(ready: &archive::Archive, root: &std::path::Path) -> i64 {
+        let bytes = testing::pdf(&[
+            "Beispiel Stadtwerke GmbH",
+            "Rechnungsnummer R-7",
+            "Umsatzsteuer 19 % 1,90",
+            "Rechnungsbetrag 11,90",
+        ]);
+        let Outcome::Added { id } = documents::import_bytes(
+            ready.connection(),
+            root,
+            Some(testing::pdfium()),
+            &bytes,
+            "r.pdf",
+            Source::Dialog,
+            testing::t0(),
+        ) else {
+            panic!("not added")
+        };
+        let read = crate::pages::read(testing::pdfium(), &bytes).unwrap();
+        documents::save_pages(ready.connection(), id, &read, "text").unwrap();
+        id
+    }
+
+    #[test]
+    fn a_value_without_a_reader_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let ready = ready(dir.path());
+        let id = invoice(&ready, &dir.path().join("Archiv"));
+        let refused = ready.connection().execute(
+            "INSERT INTO field_values (document_id, field, printed, value, reader, read_at) VALUES (?1, 'gross', '1,00', '100', '', 'x')",
+            [id],
+        );
+        assert!(refused.is_err(), "an empty reader must be refused");
+    }
+
+    #[test]
+    fn reading_stores_each_value_with_its_line_and_keeps_the_owners() {
+        let dir = tempfile::tempdir().unwrap();
+        let ready = ready(dir.path());
+        let id = invoice(&ready, &dir.path().join("Archiv"));
+        let conn = ready.connection();
+        conn.execute(
+            "INSERT INTO field_values (document_id, field, printed, value, reader, read_at) VALUES (?1, 'gross', '11,90', '1190', 'owner', 'x')",
+            [id],
+        )
+        .unwrap();
+        assert!(read_document(conn, id, crate::kinds::Kind::Invoice, testing::t0()).unwrap() >= 4);
+        assert!(
+            read_document(conn, id, crate::kinds::Kind::Invoice, testing::t0()).unwrap() >= 4,
+            "reading again replaces, never doubles"
+        );
+        let (printed, page, top): (String, i64, f64) = conn
+            .query_row("SELECT printed, page, top FROM field_values WHERE document_id = ?1 AND field = 'gross' AND reader LIKE 'code:%'", [id], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .unwrap();
+        assert_eq!((printed.as_str(), page), ("11,90", 1));
+        assert!(top > 0.0);
+        let owners: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM field_values WHERE reader = 'owner'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(owners, 1, "the owner's value stays");
+        let doubled: i64 = conn
+            .query_row("SELECT count(*) FROM field_values WHERE document_id = ?1 AND field = 'gross' AND reader LIKE 'code:%'", [id], |row| row.get(0))
+            .unwrap();
+        assert_eq!(doubled, 1);
+    }
+
+    #[test]
+    fn documents_of_an_older_reader_are_read_again_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let ready = ready(dir.path());
+        let id = invoice(&ready, &dir.path().join("Archiv"));
+        let conn = ready.connection();
+        documents::set_kind(conn, id, crate::kinds::Kind::Invoice, &["rechnungsnummer"]).unwrap();
+        assert_eq!(read_outdated(conn, testing::t0()).unwrap(), 1);
+        assert_eq!(read_outdated(conn, testing::t0()).unwrap(), 0);
+        let values: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM field_values WHERE document_id = ?1",
+                [id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(values >= 4);
+    }
+}
