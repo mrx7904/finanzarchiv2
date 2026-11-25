@@ -5,9 +5,10 @@
 //! With `CORPUS_PRIVATE` set, the owner's documents in that folder are measured too, and their
 //! result goes only to `measurements/private/`, which git ignores. A result holds counts, never a value.
 //!
-//! The one reader so far is `text-layer`: a field counts as right when its printed value stands in
-//! a line of the text PDFium reads. It is the floor for every reader of stage 2: a value that is not
-//! in the text layer must come from the image.
+//! Readers: `text-layer` (a field counts as right when its printed value stands in a line of the text
+//! PDFium reads, the floor for every reader of stage 2), `kind`, `code` and `e-invoice` (the XML an
+//! invoice carries). `--archive <db>` counts on a copy of the owner's database, `--files <folder>`
+//! counts the e-invoices among the PDFs of a copy of the owner's files. Both write to `private/`.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -210,6 +211,7 @@ fn measure_code(pdfium: &Pdfium, corpus: &Path) -> BTreeMap<String, Tally> {
         let input = readers::Input {
             kind,
             lines: reader_lines(pdfium, &pdf),
+            e_invoice: None,
         };
         let found: Vec<readers::Value> = readers::for_kind(kind)
             .iter()
@@ -263,6 +265,7 @@ fn archive_code(database: &Path) -> BTreeMap<String, Tally> {
         let input = readers::Input {
             kind,
             lines: readers::lines_of(&conn, id).unwrap_or_default(),
+            e_invoice: None,
         };
         let found: Vec<readers::Value> = readers
             .iter()
@@ -289,6 +292,107 @@ fn archive_code(database: &Path) -> BTreeMap<String, Tally> {
                 .or_default();
             tally.total += 1;
             if found.iter().any(|value| value.field == field) {
+                tally.right += 1;
+            }
+        }
+    }
+    tallies
+}
+
+/// A value of the e-invoice in the form the truth file prints it.
+fn e_invoice_as_truth(value: &readers::Value) -> String {
+    match &value.value {
+        Normalized::Cents(cents) => cents.to_string().trim_end_matches(" €").to_owned(),
+        Normalized::Date(date) => date.strftime("%d.%m.%Y").to_string(),
+        Normalized::Percent(rate) => rate.to_string(),
+        Normalized::Text(text) => fold(text),
+    }
+}
+
+fn compact(text: &str) -> String {
+    text.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+/// The reader `e-invoice`: every field of the invoices that carry an XML, right when it equals the
+/// truth. The other invoices are not counted, they have nothing for this reader.
+fn measure_e_invoice(pdfium: &Pdfium, corpus: &Path) -> BTreeMap<String, Tally> {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    for (pdf, truth) in documents(corpus) {
+        if !truth["e_invoice"].as_bool().unwrap_or(false) {
+            continue;
+        }
+        let found = fs::read(&pdf)
+            .ok()
+            .and_then(|bytes| readers::e_invoice::attachment(pdfium, &bytes))
+            .map(|(_, xml)| readers::e_invoice::read_xml(&xml).values)
+            .unwrap_or_default();
+        let Some(fields) = truth["fields"].as_object() else {
+            continue;
+        };
+        for (field, expected) in fields {
+            let Some(expected) = expected.as_str() else {
+                continue;
+            };
+            let tally = tallies.entry(format!("invoice.{field}")).or_default();
+            tally.total += 1;
+            if found.iter().any(|value| {
+                value.field == field
+                    && compact(&e_invoice_as_truth(value)) == compact(&fold(expected))
+            }) {
+                tally.right += 1;
+            }
+        }
+    }
+    tallies
+}
+
+/// How many PDFs below a folder carry an XML, how many of those are a readable e-invoice, and how
+/// often each field was found. Counts only, for a copy of the owner's files.
+fn files_e_invoice(pdfium: &Pdfium, dir: &Path) -> BTreeMap<String, Tally> {
+    fn pdfs(dir: &Path, found: &mut Vec<PathBuf>) {
+        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pdfs(&path, found);
+            } else if path
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"))
+            {
+                found.push(path);
+            }
+        }
+    }
+    let mut paths = Vec::new();
+    pdfs(dir, &mut paths);
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    for path in paths {
+        let attachment = fs::read(&path)
+            .ok()
+            .and_then(|bytes| readers::e_invoice::attachment(pdfium, &bytes));
+        let with_xml = tallies.entry("pdf.with xml".into()).or_default();
+        with_xml.total += 1;
+        let Some((_, xml)) = attachment else { continue };
+        with_xml.right += 1;
+        let read = readers::e_invoice::read_xml(&xml);
+        let readable = tallies.entry("xml.readable".into()).or_default();
+        readable.total += 1;
+        if read.problem.is_none() {
+            readable.right += 1;
+        }
+        for field in [
+            "sender",
+            "invoice_number",
+            "invoice_date",
+            "net",
+            "vat_rate",
+            "vat",
+            "gross",
+            "due_date",
+            "iban",
+        ] {
+            let tally = tallies.entry(format!("xml.{field} found")).or_default();
+            tally.total += 1;
+            if read.values.iter().any(|value| value.field == field) {
                 tally.right += 1;
             }
         }
@@ -335,6 +439,12 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if let Some(files) = value("--files") {
+        let mut result = report("files", &files_e_invoice(pdfium, Path::new(&files)));
+        result["reader"] = json!("e-invoice");
+        write(&out.join("private").join("files-e-invoice.json"), &result);
+        return;
+    }
     if let Some(database) = value("--archive") {
         let tallies = if reader == "code" {
             archive_code(Path::new(&database))
@@ -352,6 +462,7 @@ fn main() {
     let run = |corpus: &Path| match reader.as_str() {
         "kind" => measure_kind(pdfium, corpus),
         "code" => measure_code(pdfium, corpus),
+        "e-invoice" => measure_e_invoice(pdfium, corpus),
         _ => measure(pdfium, corpus),
     };
     let mut result = report("synthetic", &run(&corpus));

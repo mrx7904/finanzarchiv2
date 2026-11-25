@@ -582,3 +582,73 @@ fn measure_workers() {
         );
     }
 }
+
+#[test]
+fn an_e_invoice_is_read_from_its_xml_and_a_broken_one_falls_back() {
+    let dir = tempfile::tempdir().unwrap();
+    let archive = open(&dir.path().join(archive::FILE_NAME));
+    let source = tempfile::tempdir().unwrap();
+    let printed = [
+        "Beispiel Stadtwerke GmbH",
+        "Rechnungsnummer R-2026-0042",
+        "Umsatzsteuer 19 % 234,57",
+        "Rechnungsbetrag 1.469,13",
+    ];
+    let exact = source.path().join("e-rechnung.pdf");
+    std::fs::write(
+        &exact,
+        testing::pdf_with_xml(&printed, "factur-x.xml", testing::E_INVOICE_XML),
+    )
+    .unwrap();
+    let broken = source.path().join("kaputt.pdf");
+    let cut = &testing::E_INVOICE_XML[..testing::E_INVOICE_XML.len() / 2];
+    std::fs::write(
+        &broken,
+        testing::pdf_with_xml(&printed[1..], "factur-x.xml", cut),
+    )
+    .unwrap();
+    with_ready(&archive, |conn| {
+        jobs::enqueue(conn, &[exact, broken], Source::Dialog, testing::t0()).unwrap()
+    });
+    drain(&archive, &mut |_| false).unwrap();
+
+    let gross = |name: &str, reader: &str| -> Option<(String, Option<String>)> {
+        with_ready(&archive, |conn| {
+            conn.query_row(
+                "SELECT v.value, v.element FROM field_values v JOIN documents d ON d.id = v.document_id
+                 WHERE d.original_name = ?1 AND v.field = 'gross' AND v.reader LIKE ?2",
+                rusqlite::params![name, format!("{reader}:%")],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .ok()
+        })
+    };
+    let (value, element) = gross("e-rechnung.pdf", "e-invoice").expect("read from the XML");
+    assert_eq!(value, "146913");
+    assert!(element.unwrap().ends_with("/GrandTotalAmount"));
+    assert!(
+        gross("e-rechnung.pdf", "code").is_some(),
+        "the code reader reads beside it"
+    );
+    assert_eq!(gross("kaputt.pdf", "e-invoice"), None);
+    assert_eq!(
+        gross("kaputt.pdf", "code").map(|(value, _)| value),
+        Some("146913".into()),
+        "a broken XML falls back to the other readers"
+    );
+    let check = |name: &str| -> (i64, Option<String>) {
+        with_ready(&archive, |conn| {
+            conn.query_row(
+                "SELECT c.passed, c.detail FROM field_checks c JOIN documents d ON d.id = c.document_id
+                 WHERE d.original_name = ?1 AND c.check_id = 'e-invoice:readable'",
+                [name],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap()
+        })
+    };
+    assert_eq!(check("e-rechnung.pdf"), (1, None));
+    let (passed, detail) = check("kaputt.pdf");
+    assert_eq!(passed, 0);
+    assert!(detail.unwrap().contains("E-Rechnung"), "it says so");
+}

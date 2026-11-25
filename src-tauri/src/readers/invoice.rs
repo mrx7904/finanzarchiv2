@@ -205,6 +205,7 @@ mod tests {
         Input {
             kind: Kind::Invoice,
             lines,
+            e_invoice: None,
         }
     }
 

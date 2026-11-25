@@ -42,6 +42,14 @@ pub fn run() -> ExitCode {
                     if documents::classify_missing(ready.connection()).is_err() {
                         eprintln!("Die Art älterer Dokumente ließ sich nicht bestimmen");
                     }
+                    if let Some(pdfium) = pdfium {
+                        let root = documents::archive_root(ready.path());
+                        if readers::e_invoice::extract_missing(ready.connection(), &root, pdfium)
+                            .is_err()
+                        {
+                            eprintln!("E-Rechnungen älterer Dokumente ließen sich nicht suchen");
+                        }
+                    }
                     if readers::read_outdated(ready.connection(), jiff::Timestamp::now()).is_err() {
                         eprintln!("Ältere Dokumente ließen sich nicht neu lesen");
                     }

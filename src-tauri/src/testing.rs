@@ -31,6 +31,29 @@ pub fn pdf(lines: &[&str]) -> Vec<u8> {
     save(document(lines))
 }
 
+/// A PDF with the lines and an attached XML, as a ZUGFeRD or Factur-X invoice carries its data.
+pub fn pdf_with_xml(lines: &[&str], name: &str, xml: &str) -> Vec<u8> {
+    let mut doc = document(lines);
+    let file = doc.add_object(Stream::new(
+        dictionary! { "Type" => "EmbeddedFile", "Subtype" => "text#2Fxml" },
+        xml.as_bytes().to_vec(),
+    ));
+    let spec = doc.add_object(dictionary! {
+        "Type" => "Filespec",
+        "F" => Object::string_literal(name),
+        "UF" => Object::string_literal(name),
+        "AFRelationship" => "Data",
+        "EF" => dictionary! { "F" => file },
+    });
+    let names = dictionary! {
+        "EmbeddedFiles" => dictionary! { "Names" => vec![Object::string_literal(name), spec.into()] },
+    };
+    let catalog = doc.catalog_mut().unwrap();
+    catalog.set("Names", names);
+    catalog.set("AF", vec![spec.into()]);
+    save(doc)
+}
+
 /// A page with a drawn line and no text, as a scan looks to a text reader.
 pub fn pdf_without_text() -> Vec<u8> {
     let mut doc = document(&[]);
@@ -127,3 +150,37 @@ fn save(mut doc: Document) -> Vec<u8> {
     doc.save_to(&mut bytes).unwrap();
     bytes
 }
+
+/// An invented invoice in the form of the reference messages, with one tax and a second total
+/// of the tax in another currency.
+pub const E_INVOICE_XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocument>
+<ram:ID>R-2026-0042</ram:ID>
+<ram:IssueDateTime><udt:DateTimeString format="102">20261120</udt:DateTimeString></ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+<ram:IncludedSupplyChainTradeLineItem>
+  <ram:SpecifiedTradeProduct><ram:Name>Leistung</ram:Name></ram:SpecifiedTradeProduct>
+</ram:IncludedSupplyChainTradeLineItem>
+<ram:ApplicableHeaderTradeAgreement>
+  <ram:SellerTradeParty><ram:Name>Beispiel Stadtwerke &amp; Co. GmbH</ram:Name></ram:SellerTradeParty>
+  <ram:BuyerTradeParty><ram:Name>Erika Musterfrau</ram:Name></ram:BuyerTradeParty>
+</ram:ApplicableHeaderTradeAgreement>
+<ram:ApplicableHeaderTradeSettlement>
+  <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+  <ram:SpecifiedTradeSettlementPaymentMeans>
+    <ram:PayeePartyCreditorFinancialAccount><ram:IBANID>DE89370400440532013000</ram:IBANID></ram:PayeePartyCreditorFinancialAccount>
+  </ram:SpecifiedTradeSettlementPaymentMeans>
+  <ram:ApplicableTradeTax><ram:CalculatedAmount>234.57</ram:CalculatedAmount><ram:RateApplicablePercent>19.00</ram:RateApplicablePercent></ram:ApplicableTradeTax>
+  <ram:SpecifiedTradePaymentTerms><ram:DueDateDateTime><udt:DateTimeString format="102">20261204</udt:DateTimeString></ram:DueDateDateTime></ram:SpecifiedTradePaymentTerms>
+  <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    <ram:TaxBasisTotalAmount>1234.56</ram:TaxBasisTotalAmount>
+    <ram:TaxTotalAmount currencyID="CHF">220.00</ram:TaxTotalAmount>
+    <ram:TaxTotalAmount currencyID="EUR">234.57</ram:TaxTotalAmount>
+    <ram:GrandTotalAmount>1469.13</ram:GrandTotalAmount>
+  </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+</ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>
+"#;
