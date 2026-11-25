@@ -4,6 +4,7 @@ node_modules/
 dist/
 /src-tauri/target/
 /src-tauri/gen/
+mutants.out*/
 *.log
 
 # Machine settings and secrets, see knowledge/conventions.md

@@ -25,6 +25,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | implement or modify anything | [`knowledge/conventions.md`](./knowledge/conventions.md) |
 | need the stack, a version or the split between core and UI | [`knowledge/decision-stack.md`](./knowledge/decision-stack.md) |
 | touch the schema, money, documents, bookings, links or the provenance of a value | [`knowledge/decision-data-model.md`](./knowledge/decision-data-model.md) |
+| touch the database file, a migration, the start check, snapshots or `Cents` | [`knowledge/decision-archive-file.md`](./knowledge/decision-archive-file.md) |
 | build, package or release, or think about CI | [`knowledge/decision-local-builds.md`](./knowledge/decision-local-builds.md) |
 | add a file, a fixture, a test document or anything else to the repository | [`knowledge/decision-public-repository.md`](./knowledge/decision-public-repository.md) |
 | touch the look, motion or a UI library | [`knowledge/decision-ui-libraries.md`](./knowledge/decision-ui-libraries.md) |
