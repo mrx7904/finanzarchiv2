@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 10179,
+    "net": 9513,
+    "vat": 666
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "08.03.2026",
+    "gross": "101,79",
+    "iban": "DE33 7309 0708 7419 1562 91",
+    "invoice_date": "22.02.2026",
+    "invoice_number": "R-2026-3132",
+    "net": "95,13",
+    "sender": "Beispiel Stadtwerke GmbH",
+    "vat": "6,66",
+    "vat_rate": "7"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

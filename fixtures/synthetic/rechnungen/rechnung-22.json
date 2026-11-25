@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 76143,
+    "net": 63986,
+    "vat": 12157
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "01.03.2026",
+    "gross": "761,43",
+    "iban": "DE86 7577 5793 0922 4407 40",
+    "invoice_date": "15.02.2026",
+    "invoice_number": "R-2026-2893",
+    "net": "639,86",
+    "sender": "Probe Handwerk GmbH",
+    "vat": "121,57",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}

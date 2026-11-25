@@ -75,16 +75,15 @@ pub fn run() -> ExitCode {
 /// The library ships as a resource of the app. A debug build also finds it where
 /// `scripts/fetch-pdfium.mjs` unpacked it.
 fn pdfium_folders(app: &tauri::AppHandle) -> Vec<PathBuf> {
-    let mut folders: Vec<PathBuf> = app
+    let bundled = app
         .path()
         .resource_dir()
         .map(|dir| dir.join("pdfium"))
-        .into_iter()
-        .collect();
+        .into_iter();
     // Only in a debug build, so a release carries no path of the build machine.
     #[cfg(debug_assertions)]
-    folders.push(pdf::platform_folder(
+    let bundled = bundled.chain(std::iter::once(pdf::platform_folder(
         &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pdfium"),
-    ));
-    folders
+    )));
+    bundled.collect()
 }

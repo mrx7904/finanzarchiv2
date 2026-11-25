@@ -1,0 +1,60 @@
+{
+  "bookings": [
+    {
+      "cents": -58352,
+      "date": "08.04.2026",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "583,52 S"
+    },
+    {
+      "cents": -76625,
+      "date": "08.04.2026",
+      "party": "Exempel Fitness GmbH",
+      "printed": "766,25 S"
+    },
+    {
+      "cents": -47702,
+      "date": "10.04.2026",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "477,02 S"
+    },
+    {
+      "cents": -82450,
+      "date": "11.04.2026",
+      "party": "Exempel Fitness GmbH",
+      "printed": "824,50 S"
+    },
+    {
+      "cents": -61222,
+      "date": "17.04.2026",
+      "party": "Probe Handwerk GmbH",
+      "printed": "612,22 S"
+    },
+    {
+      "cents": 110511,
+      "date": "20.04.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "1.105,11 H"
+    },
+    {
+      "cents": -18082,
+      "date": "28.04.2026",
+      "party": "Probe Handwerk GmbH",
+      "printed": "180,82 S"
+    }
+  ],
+  "cents": {
+    "closing": 940608,
+    "opening": 1174530
+  },
+  "fields": {
+    "closing": "9.406,08 H",
+    "iban": "DE54 8910 0936 4537 2693 31",
+    "opening": "11.745,30 H",
+    "period_from": "01.04.2026",
+    "period_to": "30.04.2026"
+  },
+  "kind": "statement",
+  "layout": "B",
+  "text_layer": true
+}

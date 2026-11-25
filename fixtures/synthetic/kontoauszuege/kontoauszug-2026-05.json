@@ -1,0 +1,54 @@
+{
+  "bookings": [
+    {
+      "cents": -81487,
+      "date": "04.05.2026",
+      "party": "Platzhalter Verlag GmbH",
+      "printed": "-814,87"
+    },
+    {
+      "cents": -69683,
+      "date": "09.05.2026",
+      "party": "Testhaus Energie AG",
+      "printed": "-696,83"
+    },
+    {
+      "cents": 38889,
+      "date": "17.05.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "388,89"
+    },
+    {
+      "cents": 29668,
+      "date": "22.05.2026",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "296,68"
+    },
+    {
+      "cents": -53104,
+      "date": "22.05.2026",
+      "party": "Muster Versicherung AG",
+      "printed": "-531,04"
+    },
+    {
+      "cents": -42772,
+      "date": "26.05.2026",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "-427,72"
+    }
+  ],
+  "cents": {
+    "closing": 762119,
+    "opening": 940608
+  },
+  "fields": {
+    "closing": "7.621,19",
+    "iban": "DE54 8910 0936 4537 2693 31",
+    "opening": "9.406,08",
+    "period_from": "01.05.2026",
+    "period_to": "31.05.2026"
+  },
+  "kind": "statement",
+  "layout": "A",
+  "text_layer": true
+}

@@ -1,6 +1,5 @@
 [package]
 name = "finanzarchiv2"
-version = "0.1.0"
 description = "Finanzarchiv 2.0, der Kern"
 edition = "2024"
 rust-version = "1.100"
@@ -41,3 +40,11 @@ unsafe_code = "forbid"
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"
+
+# The generated corpus and the measure command of #09. Examples, so they are never part of the app.
+[[example]]
+name = "corpus"
+test = true
+
+[[example]]
+name = "measure"

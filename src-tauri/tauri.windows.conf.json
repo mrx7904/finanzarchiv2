@@ -18,6 +18,9 @@
       "pdfium/win-x64/bin/pdfium.dll": "pdfium/pdfium.dll",
       "pdfium/win-x64/LICENSE": "pdfium/LICENSE",
       "pdfium/win-x64/licenses/": "pdfium/licenses/"
-    }
+    },
+    "targets": [
+      "nsis"
+    ]
   }
 }

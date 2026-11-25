@@ -1,0 +1,21 @@
+{
+  "cents": {
+    "gross": 110570,
+    "net": 92916,
+    "vat": 17654
+  },
+  "e_invoice": false,
+  "fields": {
+    "due_date": "04.02.2026",
+    "gross": "1.105,70",
+    "iban": "DE59 3313 9078 4951 5157 13",
+    "invoice_date": "21.01.2026",
+    "invoice_number": "R-2026-5336",
+    "net": "929,16",
+    "sender": "Platzhalter Verlag GmbH",
+    "vat": "176,54",
+    "vat_rate": "19"
+  },
+  "kind": "invoice",
+  "text_layer": true
+}
