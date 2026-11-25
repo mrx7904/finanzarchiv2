@@ -4,6 +4,7 @@ node_modules/
 dist/
 /src-tauri/target/
 /src-tauri/gen/
+/src-tauri/pdfium/
 mutants.out*/
 *.log
 
