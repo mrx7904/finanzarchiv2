@@ -35,7 +35,7 @@ Order of work: #01 first. Then #02, #03 and #07 in parallel. Then #04, #05 and #
 | [#12](012-e-invoices.md) | E-invoices from their XML | FA-17 | #11 | done |
 | [#13](013-payslips-by-code.md) | Payslips read by code | FA-18 | #11 | done |
 | [#14](014-local-model.md) | The local model reads what code cannot | FA-19 | #11 | done |
-| [#15](015-reading-by-image.md) | Reading the page as an image | FA-20 | #14 | open |
+| [#15](015-reading-by-image.md) | Reading the page as an image | FA-20 | #14 | done |
 | [#16](016-checks-and-filing.md) | Checks decide what is filed by itself | FA-21 | #12, #13, #14 | open |
 | [#17](017-review-as-questions.md) | The review as questions | FA-22 | #16 | open |
 | [#18](018-names-by-template.md) | Names by template | FA-23 | #16 | open |

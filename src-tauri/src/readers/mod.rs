@@ -3,6 +3,7 @@
 //! (knowledge/decision-reading.md).
 
 pub mod e_invoice;
+pub mod image;
 pub mod invoice;
 pub mod model;
 pub mod parse;
@@ -67,6 +68,8 @@ pub struct Value {
     pub value: Normalized,
     pub line: Option<Line>,
     pub element: Option<String>,
+    /// The page a value was read from as an image, when it has no line (#15).
+    pub page: Option<u32>,
 }
 
 impl Value {
@@ -83,6 +86,7 @@ impl Value {
             value,
             line: None,
             element: Some(element.into()),
+            page: None,
         }
     }
 
@@ -98,6 +102,7 @@ impl Value {
             value,
             line: Some(line.clone()),
             element: None,
+            page: None,
         }
     }
 }
@@ -153,7 +158,7 @@ pub fn save(
             value.printed,
             value.value.stored(),
             reader,
-            line.map(|l| l.page),
+            line.map(|l| l.page).or(value.page),
             line.map(|l| l.left),
             line.map(|l| l.bottom),
             line.map(|l| l.right),

@@ -105,7 +105,7 @@ pub fn configured(conn: &rusqlite::Connection) -> String {
 /// At most this many lines go to the model, the head of a long document.
 pub const MAX_LINES: usize = 400;
 
-const SYSTEM: &str = "Du liest Werte aus dem Text eines Dokuments. Kopiere jeden Wert genau so, \
+pub(crate) const SYSTEM_TEXT: &str = "Du liest Werte aus dem Text eines Dokuments. Kopiere jeden Wert genau so, \
 wie er im Text steht, Zeichen für Zeichen, Beträge mit Punkt und Komma wie gedruckt, Daten wie gedruckt. \
 Gib zu jedem Wert die Nummer der Zeile an, in der er steht. Steht ein Wert nicht im Text, gib einen leeren \
 Text und die Zeile 0 an. Rechne nichts aus, ergänze nichts und erfinde nichts.";
@@ -174,7 +174,7 @@ fn fold(text: &str) -> String {
 }
 
 /// The value code reads from what the model copied, in the form of the field.
-fn normalize(form: Form, printed: &str) -> Option<(String, Normalized)> {
+pub(crate) fn normalize(form: Form, printed: &str) -> Option<(String, Normalized)> {
     match form {
         Form::Text => Some((printed.to_owned(), Normalized::Text(printed.to_owned()))),
         Form::Date => first_date(printed).map(|(printed, date)| (printed, Normalized::Date(date))),
@@ -294,7 +294,7 @@ pub fn ask(
     let schema = schema(fields);
     let prompt = prompt(kind, fields, lines);
     let answer = model.ask(&Question {
-        system: SYSTEM,
+        system: SYSTEM_TEXT,
         prompt: &prompt,
         schema: &schema,
         images: &[],

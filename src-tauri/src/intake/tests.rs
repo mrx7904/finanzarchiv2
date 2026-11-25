@@ -766,3 +766,71 @@ fn without_ollama_a_job_waits_with_its_reason_and_goes_on_when_it_answers() {
     });
     assert_eq!(error, None, "the reason is gone");
 }
+
+#[test]
+fn a_scan_gets_its_kind_and_values_from_the_page_image() {
+    let dir = tempfile::tempdir().unwrap();
+    let archive = open(&dir.path().join(archive::FILE_NAME));
+    let source = tempfile::tempdir().unwrap();
+    let scan = source.path().join("scan.pdf");
+    std::fs::write(&scan, testing::pdf_without_text()).unwrap();
+    with_ready(&archive, |conn| {
+        jobs::enqueue(conn, &[scan], Source::Dialog, testing::t0()).unwrap()
+    });
+    let answer = serde_json::json!({
+        "message": { "role": "assistant", "content": serde_json::json!({
+            "kind": "invoice",
+            "gross": { "printed": "11,90", "page": 1 },
+            "sender": { "printed": "Beispiel Werkstatt", "page": 1 },
+        }).to_string() },
+        "done": true,
+    })
+    .to_string();
+    let (address, requests) = testing::fake_server(testing::http_response("200 OK", "", &answer));
+    let model =
+        crate::ollama::Ollama::new(&address, "beispiel:1b", Duration::from_secs(5)).unwrap();
+    let job = with_ready(&archive, |conn| jobs::open_jobs(conn).unwrap()).remove(0);
+    let paused = AtomicBool::new(false);
+    let stage = process(
+        &archive,
+        Some(testing::pdfium()),
+        Some(&model),
+        &job,
+        &paused,
+        &mut |_| false,
+    )
+    .unwrap();
+    assert_eq!(stage, Stage::Filed);
+    let asked = requests.recv().unwrap();
+    let body: serde_json::Value =
+        serde_json::from_str(asked.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+    assert!(
+        body["messages"][1]["images"][0]
+            .as_str()
+            .is_some_and(|png| png.len() > 100),
+        "the page went as an image"
+    );
+    assert!(
+        requests.try_recv().is_err(),
+        "one question, no text to ask about"
+    );
+    let (kind, signals): (String, String) = with_ready(&archive, |conn| {
+        conn.query_row("SELECT kind, kind_signals FROM documents", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .unwrap()
+    });
+    assert_eq!(
+        (kind.as_str(), signals.as_str()),
+        ("invoice", r#"["image"]"#)
+    );
+    let (value, page): (String, i64) = with_ready(&archive, |conn| {
+        conn.query_row(
+            "SELECT value, page FROM field_values WHERE field = 'gross' AND reader = 'image:beispiel:1b'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap()
+    });
+    assert_eq!((value.as_str(), page), ("1190", 1));
+}
