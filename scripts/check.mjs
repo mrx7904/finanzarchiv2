@@ -6,8 +6,9 @@
  *   node scripts/check.mjs --self-test  proves that each step can fail
  *
  * Steps: relative Markdown links, traceability between spec/requirements.md and issues/,
- * no personal data in a tracked file (FA-03), and the Rust and TypeScript steps once
- * Cargo.toml or package.json exist (#01). Nothing here needs GitHub Actions.
+ * no personal data in a tracked file (FA-03), then cargo fmt, clippy and test in src-tauri/
+ * and typecheck, lint and test of the UI (#01). The self-test plants one fault per step.
+ * Nothing here needs GitHub Actions.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -124,9 +125,11 @@ function checkTraceability(root) {
 // ---------- step: privacy (FA-03) ----------
 
 const ALLOWED_MAIL = /@(users\.noreply\.github\.com|example\.(com|org|net))$|^noreply@anthropic\.com$/i;
+const IMAGE_NAME = /@\d+x\.(png|jpe?g|webp|gif|svg)$/i;
 const PATTERNS = [
   { what: "an IBAN", regex: /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b/g, allowed: (file) => file.startsWith("fixtures/synthetic/") },
-  { what: "a mail address", regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, allowed: (_file, hit) => ALLOWED_MAIL.test(hit) },
+  // An image name such as "128x128@2x.png" has the shape of an address and is none.
+  { what: "a mail address", regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, allowed: (_file, hit) => ALLOWED_MAIL.test(hit) || IMAGE_NAME.test(hit) },
   { what: "a path into a home folder", regex: /\b[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s"'`]+|\/(?:Users|home)\/[A-Za-z0-9._-]+/g, allowed: () => false },
 ];
 
@@ -147,24 +150,64 @@ function checkPrivacy(root, files) {
 
 // ---------- step: Rust and TypeScript (#01) ----------
 
-function run(command, args, cwd) {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit", shell: process.platform === "win32" });
-  return result.status === 0 ? [] : [`${command} ${args.join(" ")} failed`];
+const LIB_RS = "src-tauri/src/lib.rs";
+const TS_PROBE = "src/check-probe.ts";
+
+/**
+ * Each step with the fault that must make it fail. A probe is appended to a file or written as a
+ * new one, and the self-test restores the tree afterwards.
+ */
+const CODE_STEPS = [
+  {
+    name: "cargo fmt", needs: "src-tauri/Cargo.toml", cwd: "src-tauri", command: "cargo", args: ["fmt", "--check"],
+    probe: { file: LIB_RS, append: "\nfn   badly_formatted( ){}\n" },
+  },
+  {
+    name: "cargo clippy", needs: "src-tauri/Cargo.toml", cwd: "src-tauri", command: "cargo", args: ["clippy", "--all-targets", "--", "-D", "warnings"],
+    probe: { file: LIB_RS, append: "\npub fn check_probe() -> u8 {\n    let value: Option<u8> = None;\n    value.unwrap()\n}\n" },
+  },
+  {
+    name: "cargo test", needs: "src-tauri/Cargo.toml", cwd: "src-tauri", command: "cargo", args: ["test"],
+    probe: { file: LIB_RS, append: "\n#[cfg(test)]\nmod check_probe {\n    #[test]\n    fn fails() {\n        assert_eq!(1 + 1, 3);\n    }\n}\n" },
+  },
+  {
+    name: "typecheck", needs: "package.json", cwd: ".", command: "npm", args: ["run", "typecheck"],
+    probe: { file: TS_PROBE, write: 'export const probe: number = "text";\n' },
+  },
+  {
+    name: "lint", needs: "package.json", cwd: ".", command: "npm", args: ["run", "lint"],
+    probe: { file: TS_PROBE, write: "export function probe(): void {\n  debugger;\n}\n" },
+  },
+  {
+    name: "test", needs: "package.json", cwd: ".", command: "npm", args: ["test"],
+    probe: { file: "src/check-probe.test.ts", write: 'import { expect, it } from "vitest";\n\nit("fails", () => {\n  expect(1 + 1).toBe(3);\n});\n' },
+  },
+];
+
+function runStep(root, step, quiet = false) {
+  const result = spawnSync(step.command, step.args, {
+    cwd: path.join(root, step.cwd),
+    stdio: quiet ? "ignore" : "inherit",
+    shell: process.platform === "win32",
+  });
+  return result.status === 0 ? [] : [`${step.name} failed`];
 }
 
-function checkCode(root) {
-  const errors = [];
-  const cargo = ["Cargo.toml", "src-tauri/Cargo.toml"].find((f) => existsSync(path.join(root, f)));
-  if (cargo) {
-    const dir = path.join(root, path.dirname(cargo));
-    errors.push(...run("cargo", ["fmt", "--check"], dir));
-    errors.push(...run("cargo", ["clippy", "--all-targets", "--", "-D", "warnings"], dir));
-    errors.push(...run("cargo", ["test"], dir));
+function presentSteps(root) {
+  return CODE_STEPS.filter((step) => existsSync(path.join(root, step.needs)));
+}
+
+/** Runs one step with its probe in place and gives the tree back as it was. */
+function failsWithProbe(root, step) {
+  const file = path.join(root, step.probe.file);
+  const before = existsSync(file) ? readFileSync(file) : null;
+  try {
+    writeFileSync(file, step.probe.append ? Buffer.concat([before ?? Buffer.alloc(0), Buffer.from(step.probe.append)]) : step.probe.write);
+    return runStep(root, step, true).length > 0;
+  } finally {
+    if (before === null) rmSync(file, { force: true });
+    else writeFileSync(file, before);
   }
-  if (existsSync(path.join(root, "package.json"))) {
-    for (const script of ["typecheck", "lint", "test"]) errors.push(...run("npm", ["run", script], root));
-  }
-  return { errors, present: Boolean(cargo) || existsSync(path.join(root, "package.json")) };
 }
 
 // ---------- main ----------
@@ -176,12 +219,10 @@ function check(root) {
     ["traceability", checkTraceability(root)],
     ["privacy", checkPrivacy(root, files)],
   ];
-  const code = checkCode(root);
-  steps.push(["rust and typescript", code.errors]);
+  for (const step of presentSteps(root)) steps.push([step.name, runStep(root, step)]);
   let failed = 0;
   for (const [name, errors] of steps) {
-    const state = name === "rust and typescript" && !code.present ? "not present yet (#01)" : errors.length === 0 ? "ok" : `${errors.length} error(s)`;
-    console.log(`${name}: ${state}`);
+    console.log(`${name}: ${errors.length === 0 ? "ok" : `${errors.length} error(s)`}`);
     for (const error of errors) console.log(`  ${error}`);
     failed += errors.length;
   }
@@ -221,8 +262,12 @@ function selfTest() {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+  // A step that fails on the clean tree would fail on its probe too and prove nothing, so both are asked.
+  for (const step of presentSteps(ROOT)) {
+    results.push([`${step.name} passes on the clean tree`, runStep(ROOT, step, true).length === 0]);
+    results.push([`${step.name} fails on its probe`, failsWithProbe(ROOT, step)]);
+  }
   for (const [name, ok] of results) console.log(`${ok ? "ok  " : "FAIL"} ${name}`);
-  console.log("rust and typescript: their self-test comes with #01");
   const failed = results.filter(([, ok]) => !ok).length;
   console.log(`${results.length} self-tests, ${failed} failed`);
   return failed;
