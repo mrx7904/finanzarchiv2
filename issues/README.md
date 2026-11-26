@@ -69,7 +69,7 @@ Order of work: #20 first, then #21, #22 and #25, then #23 and #24, then #26.
 |---|---|---|---|---|
 | [#27](027-watched-folders.md) | Watched folders and the inbox folder | FA-32 | #05 | done |
 | [#28](028-downloads-folder.md) | The downloads folder | FA-33 | #27, #14 | done |
-| [#29](029-gmail-read-only.md) | Gmail, read-only | FA-34 | #05 | open |
+| [#29](029-gmail-read-only.md) | Gmail, read-only | FA-34 | #05 | done |
 | [#30](030-microsoft-365.md) | Microsoft 365 with OAuth in the system browser | FA-34 | #29 | deferred (the owner reads Gmail only, 2026-11-26) |
 | [#31](031-invoices-from-mail.md) | Invoices from mail | FA-35 | #29, #14 | open |
 | [#32](032-paypal-and-amazon.md) | PayPal and Amazon | FA-36 | #31, #24 | open |

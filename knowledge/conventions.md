@@ -39,6 +39,7 @@ A new connection gets its row here, with host and purpose, in the change that ad
 | Host | Purpose | What it receives | Since |
 |---|---|---|---|
 | `OLLAMA_HOST`, default `127.0.0.1:11434` | the local model reads the fields code left empty (`src-tauri/src/ollama.rs`, #14) | the text and, from #15, the page images of documents, so it runs on a machine of the owner, never a hosted service. The client has no TLS, follows no redirect and uses no proxy, `ollama::tests` prove a redirect to another host is never followed | 2026-11-25 (#14) |
+| `imap.gmail.com:993` | reading the owner's Gmail, never changing it (`src-tauri/src/mail/`, #29) | the address and the app password at the login, then only reading commands: `mail::guard` holds back every writing one before the socket, `mail::tests` prove it against a fake server. Nothing of the archive goes there | 2026-11-26 (#29) |
 
 ### Rust (core, `src-tauri/`)
 

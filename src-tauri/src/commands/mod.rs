@@ -3,6 +3,7 @@
 
 pub mod documents;
 pub mod folders;
+pub mod mail;
 pub mod money;
 pub mod names;
 pub mod review;
@@ -170,6 +171,10 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             folders::downloads_state,
             folders::set_downloads,
             folders::recheck_downloads,
+            mail::list_mailboxes,
+            mail::add_mailbox,
+            mail::test_mailbox,
+            mail::remove_mailbox,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

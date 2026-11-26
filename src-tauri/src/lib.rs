@@ -10,6 +10,7 @@ pub mod folders;
 pub mod intake;
 pub mod kinds;
 pub mod links;
+pub mod mail;
 pub mod money;
 pub mod moves;
 pub mod naming;

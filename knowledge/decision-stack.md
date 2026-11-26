@@ -33,8 +33,9 @@ Checked on 2026-11-25 at crates.io (`/api/v1/crates/<name>`), registry.npmjs.org
 | PDF | `pdfium-render` (PDFium, the engine of Chrome) | 0.9.6 |
 | Folder watching | `notify` | 9.0.0 |
 | Model client | `ureq` without TLS, a thin client of the Ollama API (see "The model client of #14") | 3.5.2 |
-| Mail (stage 4) | `async-imap`, `mail-parser`, `oauth2` | 0.12.0, 1.0.2, 5.0.0 |
-| Credentials | `keyring` | 4.2.0 |
+| Mail (#29) | `async-imap` with `runtime-tokio`, `tokio-rustls` with `ring`, `webpki-roots`, `futures-util` (see `decision-mail.md`) | 0.12.0, 0.26.6, 1.0.12, 0.3.34 |
+| Mail, later | `mail-parser` (#31), `oauth2` (#30, deferred) | 1.0.2, 5.0.0 |
+| Credentials | `keyring`, mode `v1` (Windows Credential Manager, macOS keychain) | 4.2.0 |
 | CSV, XML | `csv`, `quick-xml` (e-invoices) | 1.4.0, 0.42.0 |
 | Tests in Rust | `proptest`, `insta`, `cargo-mutants` | 1.12.0, 1.49.0, 27.1.0 |
 | UI | `react`, `vite`, `tailwindcss`, `typescript` | 19.3.1, 8.3.8, 4.3.5, 7.0.2 |

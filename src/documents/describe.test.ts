@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downloadsLine, formatDay, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
+import { downloadsLine, formatDay, mailboxLine, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
 
 describe("the list of documents", () => {
   it("names every kind in German", () => {
@@ -46,5 +46,13 @@ describe("the downloads of #28", () => {
     expect(downloadsLine({ on: false, taken: 0, leftOut: 0, lying: 0 })).toMatch(/^Aus./);
     expect(downloadsLine({ on: true, taken: 3, leftOut: 12, lying: 40 })).toBe("Ein: 3 übernommen, 12 ausgelassen, 40 lagen schon da.");
     expect(downloadsLine({ on: true, taken: 1, leftOut: 0, lying: 0 })).toBe("Ein: 1 übernommen, 0 ausgelassen.");
+  });
+});
+
+describe("the mailboxes of #29", () => {
+  it("says why a login failed, or when it worked", () => {
+    expect(mailboxLine({ checkedAt: "2026-11-26T10:00:00Z", problem: "Gmail hat die Anmeldung abgelehnt." })).toBe("Gmail hat die Anmeldung abgelehnt.");
+    expect(mailboxLine({ checkedAt: "2026-11-26T10:00:00Z", problem: null })).toBe(`Nur lesend angemeldet, zuletzt am ${formatDay("2026-11-26T10:00:00Z")}.`);
+    expect(mailboxLine({ checkedAt: null, problem: null })).toBe("Noch nicht geprüft.");
   });
 });
