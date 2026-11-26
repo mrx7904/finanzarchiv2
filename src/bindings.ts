@@ -29,6 +29,12 @@ export const commands = {
 	documentChecks: (document: number, options?: InvokeOptions) => typedError<DocumentChecks_Serialize, CommandError>(__TAURI_INVOKE("document_checks", { document }, options)),
 	/**  "Rückgängig": the document that was filed by itself waits for the owner again. */
 	undoFiling: (document: number, options?: InvokeOptions) => typedError<DocumentChecks_Serialize, CommandError>(__TAURI_INVOKE("undo_filing", { document }, options)),
+	/**  The groups of "Prüfen" with their counts. */
+	reviewGroups: (options?: InvokeOptions) => typedError<ReviewGroup[], CommandError>(__TAURI_INVOKE("review_groups", undefined, options)),
+	/**  The questions of a group. */
+	reviewQuestions: (key: string, options?: InvokeOptions) => typedError<ReviewQuestion_Serialize[], CommandError>(__TAURI_INVOKE("review_questions", { key }, options)),
+	/**  Takes the owner's answer and returns the document's new state, `filed` or `waiting`. */
+	answerQuestion: (document: number, key: string, answer: ReviewAnswer, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("answer_question", { document, key, answer }, options)),
 };
 
 /** Events */
@@ -138,7 +144,9 @@ export type ErrorKind =
 /**  The archive is damaged or missing, so nothing can be written. */
 "archiveNotReady" | 
 /**  What was asked for is not in the archive. */
-"notFound";
+"notFound" | 
+/**  The owner's answer was not taken, the message says why (#17). */
+"refused";
 
 /**  Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched. */
 export type IntakeChanged = null;
@@ -191,6 +199,69 @@ export type JobRow_Serialize = {
 /**  How many files an import put into the queue. */
 export type Queued = {
 	files: number,
+};
+
+/**  What the owner answered. */
+export type ReviewAnswer = { answer: "yes" } | { answer: "no" } | { answer: "reading"; index: number } | { answer: "typed"; text: string } | { answer: "kind"; kind: string };
+
+/**  A group of waiting documents with the same first reason. */
+export type ReviewGroup = {
+	/**  The reason, for example `check:agree gross`. */
+	key: string,
+	label: string,
+	count: number,
+};
+
+/**  A question about a waiting document. */
+export type ReviewQuestion = ReviewQuestion_Serialize | ReviewQuestion_Deserialize;
+
+/**  A question about a waiting document. */
+export type ReviewQuestion_Deserialize = {
+	document: number,
+	name: string,
+	key: string,
+	field?: string | null,
+	text: string,
+	readings: ReviewReading_Deserialize[],
+	page: number,
+};
+
+/**  A question about a waiting document. */
+export type ReviewQuestion_Serialize = {
+	document: number,
+	name: string,
+	key: string,
+	field: string | null,
+	text: string,
+	readings: ReviewReading_Serialize[],
+	page: number,
+};
+
+/**  One reading of the field a question is about. */
+export type ReviewReading = ReviewReading_Serialize | ReviewReading_Deserialize;
+
+/**  One reading of the field a question is about. */
+export type ReviewReading_Deserialize = {
+	/**  Who read it, in German: Code, Modell, Bild, E-Rechnung, du. */
+	reader: string,
+	printed: string,
+	/**  The value as the owner reads it, an amount as "1.234,56 €". */
+	shown: string,
+	page?: number | null,
+	/**  The line on the page as fractions of its width and height from the top left: left, top, width, height. */
+	mark?: (number | null)[] | null,
+};
+
+/**  One reading of the field a question is about. */
+export type ReviewReading_Serialize = {
+	/**  Who read it, in German: Code, Modell, Bild, E-Rechnung, du. */
+	reader: string,
+	printed: string,
+	/**  The value as the owner reads it, an amount as "1.234,56 €". */
+	shown: string,
+	page: number | null,
+	/**  The line on the page as fractions of its width and height from the top left: left, top, width, height. */
+	mark: (number | null)[] | null,
 };
 
 export type SnapshotInfo = {

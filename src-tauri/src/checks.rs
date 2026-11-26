@@ -17,6 +17,20 @@ pub const RULE_CHECKED: &str = "file.checks-passed:1";
 /// are read in stage 3.
 pub const RULE_STATEMENT: &str = "file.statement:1";
 
+/// The rule that files a document after the owner answered for what a check could not see (#17).
+pub const RULE_OWNER: &str = "file.owner-answered:1";
+
+/// The field under which the owner accepts a check that failed, `accept:check:sum` for example.
+pub const ACCEPT: &str = "accept:";
+
+/// Whether the owner accepted the failed check (a value of the owner under `accept:<check>`).
+fn accepted(values: &BTreeMap<String, Vec<Seen>>, check: &str) -> bool {
+    values.get(&format!("{ACCEPT}{check}")).is_some_and(|seen| {
+        seen.iter()
+            .any(|seen| seen.family == "owner" && seen.value == "1")
+    })
+}
+
 /// The ids of the checks. Every result of #16 is stored under one of them, the field beside it.
 pub const KIND: &str = "check:kind";
 pub const PRESENT: &str = "check:present";
@@ -187,6 +201,8 @@ fn decisive_checks(field: &'static str, seen: Option<&Vec<Seen>>) -> Vec<Outcome
         families.dedup();
         families
     };
+    // The owner's value stands above every reading, the readings beside it no longer count.
+    let differing = differing.filter(|_| first.family != "owner");
     outcomes.push(match differing {
         Some(other) => Outcome::of(
             AGREE,
@@ -460,9 +476,18 @@ pub fn judge(conn: &Connection, document: i64) -> rusqlite::Result<Verdict> {
             ));
         }
     }
+    // What the owner answered in "Prüfen" (#17) stands above a check that cannot see it.
+    for outcome in outcomes.iter_mut().filter(|outcome| !outcome.passed) {
+        if accepted(&values, outcome.check) {
+            outcome.passed = true;
+            outcome.detail = format!("Von dir bestätigt: {}", outcome.detail);
+        }
+    }
     let passed = outcomes.iter().all(|outcome| outcome.passed);
     let rule = passed.then_some(if kind == Kind::Statement {
         RULE_STATEMENT
+    } else if values.keys().any(|field| field.starts_with(ACCEPT)) {
+        RULE_OWNER
     } else {
         RULE_CHECKED
     });

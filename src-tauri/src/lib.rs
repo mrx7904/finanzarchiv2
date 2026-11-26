@@ -12,6 +12,7 @@ pub mod pages;
 pub mod pdf;
 pub mod previews;
 pub mod readers;
+pub mod review;
 #[cfg(test)]
 mod testing;
 
