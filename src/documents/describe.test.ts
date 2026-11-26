@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDay, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
+import { downloadsLine, formatDay, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
 
 describe("the list of documents", () => {
   it("names every kind in German", () => {
@@ -38,5 +38,13 @@ describe("the filing of #16", () => {
     expect(filingLine("filed", "file.checks-passed:1", "2026-11-26T08:00:00Z")).toBe("Von selbst abgelegt am 26.11.2026, alle Prüfungen bestanden.");
     expect(filingLine("filed", "file.statement:1", "2026-11-26T08:00:00Z")).toBe("Als Kontoauszug abgelegt am 26.11.2026.");
     expect(filingLine("waiting", null, null)).toBe("Wartet auf dich, weil:");
+  });
+});
+
+describe("the downloads of #28", () => {
+  it("says what they gave", () => {
+    expect(downloadsLine({ on: false, taken: 0, leftOut: 0, lying: 0 })).toMatch(/^Aus./);
+    expect(downloadsLine({ on: true, taken: 3, leftOut: 12, lying: 40 })).toBe("Ein: 3 übernommen, 12 ausgelassen, 40 lagen schon da.");
+    expect(downloadsLine({ on: true, taken: 1, leftOut: 0, lying: 0 })).toBe("Ein: 1 übernommen, 0 ausgelassen.");
   });
 });

@@ -81,6 +81,7 @@ export function Documents() {
                 <PageImage key={selected.id} document={selected.id} width={640} label={`Erste Seite von ${selected.name}`} className="rounded-control" />
                 <DocumentName document={selected.id} name={selected.name} originalName={selected.originalName} byOwner={selected.nameByOwner} onChanged={() => void reload()} />
                 <p className="text-small text-fg-muted">{textStateLabel(selected.textState, selected.pages)}</p>
+                {selected.arrival ? <p className="text-small text-fg-muted">{selected.arrival}</p> : null}
                 <Filing key={`${selected.id}-${selected.state}`} document={selected.id} onChanged={() => void reload()} />
               </>
             ) : (

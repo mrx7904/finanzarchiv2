@@ -26,6 +26,8 @@ pub struct Folder {
     pub is_inbox: bool,
     pub recursive: bool,
     pub problem: Option<String>,
+    /// The downloads of the system: only what looks like a document of money is taken (#28).
+    pub is_downloads: bool,
 }
 
 /// Why a change of the folders was not taken. German, for the owner.
@@ -48,7 +50,7 @@ impl From<rusqlite::Error> for FolderError {
 }
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Folder>> {
-    conn.prepare("SELECT id, path, is_inbox, recursive, problem FROM watched_folders ORDER BY is_inbox DESC, path")?
+    conn.prepare("SELECT id, path, is_inbox, recursive, problem, is_downloads FROM watched_folders ORDER BY is_inbox DESC, is_downloads DESC, path")?
         .query_map([], |row| {
             Ok(Folder {
                 id: row.get(0)?,
@@ -56,6 +58,7 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Folder>> {
                 is_inbox: row.get(2)?,
                 recursive: row.get(3)?,
                 problem: row.get(4)?,
+                is_downloads: row.get(5)?,
             })
         })?
         .collect()
@@ -275,15 +278,24 @@ pub struct Watcher {
     archive: Arc<Mutex<Opened>>,
     intake: Arc<Intake>,
     pending: Mutex<HashMap<PathBuf, Pending>>,
+    pdfium: Option<&'static crate::pdf::Pdfium>,
+    model: Option<Arc<dyn crate::ollama::LocalModel>>,
     system: Mutex<Option<notify::RecommendedWatcher>>,
 }
 
 impl Watcher {
-    pub fn new(archive: Arc<Mutex<Opened>>, intake: Arc<Intake>) -> Arc<Self> {
+    pub fn new(
+        archive: Arc<Mutex<Opened>>,
+        intake: Arc<Intake>,
+        pdfium: Option<&'static crate::pdf::Pdfium>,
+        model: Option<Arc<dyn crate::ollama::LocalModel>>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             archive,
             intake,
             pending: Mutex::new(HashMap::new()),
+            pdfium,
+            model,
             system: Mutex::new(None),
         })
     }
@@ -374,18 +386,36 @@ impl Watcher {
             return 0;
         }
         let folders = self.folders();
+        // The downloads are looked at first, outside the lock: reading a PDF or asking the model takes time.
+        let verdicts: Vec<(PathBuf, Option<crate::downloads::Verdict>)> = settled
+            .into_iter()
+            .map(|path| {
+                let verdict = folder_of(&folders, &path)
+                    .filter(|folder| folder.is_downloads)
+                    .map(|_| crate::downloads::select(self.pdfium, self.model.as_deref(), &path));
+                (path, verdict)
+            })
+            .collect();
         let mut taken = Vec::new();
         if let Ok(guard) = self.archive.lock()
             && let Opened::Ready(ready) = &*guard
         {
-            for path in settled {
+            for (path, verdict) in verdicts {
                 let Some(folder) = folder_of(&folders, &path) else {
                     continue;
                 };
                 // A file handed in before and unchanged since is not handed again.
                 if new_files_contains(ready.connection(), folder, &path) {
                     let _ = mark_seen(ready.connection(), folder.id, &path, Timestamp::now());
-                    taken.push(path);
+                    if let Some(verdict) = &verdict {
+                        let _ = ready.connection().execute(
+                            "UPDATE seen_files SET verdict = ?3 WHERE folder_id = ?1 AND path = ?2",
+                            params![folder.id, path.to_string_lossy(), verdict.reason],
+                        );
+                    }
+                    if verdict.is_none_or(|verdict| verdict.take) {
+                        taken.push(path);
+                    }
                 }
             }
         }

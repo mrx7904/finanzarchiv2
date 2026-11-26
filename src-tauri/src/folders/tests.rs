@@ -123,7 +123,7 @@ fn a_new_file_is_taken_once_its_size_stood_still_and_never_again() {
         add(conn, &archive_dir, &folder, testing::t0()).unwrap()
     });
     let intake = Intake::new(Arc::clone(&archive), Box::new(|| {}));
-    let watcher = Watcher::new(Arc::clone(&archive), Arc::clone(&intake));
+    let watcher = Watcher::new(Arc::clone(&archive), Arc::clone(&intake), None, None);
     watcher.refresh();
     assert_eq!(watcher.tick(), 0, "the first look only notes its size");
     std::thread::sleep(SETTLE + Duration::from_millis(300));
@@ -131,7 +131,7 @@ fn a_new_file_is_taken_once_its_size_stood_still_and_never_again() {
     assert_eq!(jobs(&archive), ["alt.pdf"]);
 
     // The app starts again: the folder is read again, the file is known.
-    let again = Watcher::new(Arc::clone(&archive), Arc::clone(&intake));
+    let again = Watcher::new(Arc::clone(&archive), Arc::clone(&intake), None, None);
     again.refresh();
     assert_eq!(
         again.tick(),

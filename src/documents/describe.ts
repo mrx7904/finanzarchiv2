@@ -57,3 +57,11 @@ export function filingLine(state: string, rule: string | null, decidedAt: string
   if (state === "held") return "Von dir zurückgehalten, es wird nicht von selbst abgelegt.";
   return "Noch nicht geprüft.";
 }
+
+/** What the downloads gave (#28): off, or how many files were taken and left out. */
+export function downloadsLine(state: { on: boolean; taken: number; leftOut: number; lying: number }): string {
+  if (!state.on) return "Aus. Eingeschaltet nimmt das Archiv aus den Downloads nur, was wie eine Rechnung, Gehaltsabrechnung, Quittung oder ein Kontoauszug aussieht.";
+  const parts = [`${state.taken} übernommen`, `${state.leftOut} ausgelassen`];
+  if (state.lying > 0) parts.push(`${state.lying} lagen schon da`);
+  return `Ein: ${parts.join(", ")}.`;
+}

@@ -72,6 +72,11 @@ export const commands = {
 	 *  open no other path.
 	 */
 	openFolder: (folder: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("open_folder", { folder }, options)),
+	downloadsState: (options?: InvokeOptions) => typedError<DownloadsState, CommandError>(__TAURI_INVOKE("downloads_state", undefined, options)),
+	/**  "Downloads beobachten": on watches the downloads of the system and leaves what lies there. */
+	setDownloads: (on: boolean, options?: InvokeOptions) => typedError<DownloadsState, CommandError>(__TAURI_INVOKE("set_downloads", { on }, options)),
+	/**  "Vorhandene prüfen": the files that lay in the downloads are looked at with the same rule. */
+	recheckDownloads: (options?: InvokeOptions) => typedError<DownloadsState, CommandError>(__TAURI_INVOKE("recheck_downloads", undefined, options)),
 };
 
 /** Events */
@@ -290,6 +295,8 @@ export type DocumentRow_Deserialize = {
 	originalName: string,
 	/**  Whether the owner typed the name. */
 	nameByOwner: boolean,
+	/**  Why the downloads folder took it (#28), null for every other way in. */
+	arrival?: string | null,
 };
 
 export type DocumentRow_Serialize = {
@@ -308,6 +315,17 @@ export type DocumentRow_Serialize = {
 	originalName: string,
 	/**  Whether the owner typed the name. */
 	nameByOwner: boolean,
+	/**  Why the downloads folder took it (#28), null for every other way in. */
+	arrival: string | null,
+};
+
+/**  The downloads as "Ordner" shows them: switched on or not, and what they gave. */
+export type DownloadsState = {
+	on: boolean,
+	taken: number,
+	leftOut: number,
+	/**  Files that lay there when the downloads were switched on, not looked at yet. */
+	lying: number,
 };
 
 export type ErrorKind = 

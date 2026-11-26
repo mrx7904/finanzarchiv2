@@ -5,6 +5,7 @@ pub mod archive;
 pub mod checks;
 pub mod commands;
 pub mod documents;
+pub mod downloads;
 pub mod folders;
 pub mod intake;
 pub mod kinds;
@@ -106,7 +107,12 @@ pub fn run() -> ExitCode {
             {
                 eprintln!("Der Eingangsordner ließ sich nicht anlegen");
             }
-            let watcher = folders::Watcher::new(Arc::clone(&archive), Arc::clone(&intake));
+            let watcher = folders::Watcher::new(
+                Arc::clone(&archive),
+                Arc::clone(&intake),
+                pdfium,
+                intake.model(),
+            );
             if workers > 0 {
                 watcher.start();
             }
