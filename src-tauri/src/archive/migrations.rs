@@ -1,7 +1,7 @@
 //! The schema as numbered SQL files, embedded in the binary and applied in order.
 //! A file is never edited after it was committed, a change is a new file.
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 
 /// Every migration, numbered from 1 without gaps. `PRAGMA user_version` holds the last applied one.
 pub const MIGRATIONS: &[(u32, &str)] = &[
@@ -19,6 +19,7 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
         11,
         include_str!("../../migrations/0011_accounts_and_bookings.sql"),
     ),
+    (12, include_str!("../../migrations/0012_csv_statements.sql")),
 ];
 
 #[derive(Debug, thiserror::Error)]
@@ -43,17 +44,43 @@ pub fn pending(conn: &Connection) -> rusqlite::Result<Vec<(u32, &'static str)>> 
 }
 
 /// Applies each pending migration in a transaction of its own, so a failed one leaves nothing half done.
+/// The foreign keys are off while the migrations run, so a migration can build a table anew that
+/// others refer to (as SQLite recommends for a changed CHECK), and every migration must leave them
+/// whole before it commits (`PRAGMA foreign_key_check`).
 pub fn apply(conn: &mut Connection, migrations: &[(u32, &str)]) -> Result<(), MigrationError> {
-    for &(number, sql) in migrations {
-        let run = |conn: &mut Connection| -> rusqlite::Result<()> {
-            let tx = conn.transaction()?;
-            tx.execute_batch(sql)?;
-            tx.pragma_update(None, "user_version", number)?;
-            tx.commit()
-        };
-        run(conn).map_err(|source| MigrationError { number, source })?;
-    }
-    Ok(())
+    let first = migrations.first().map_or(0, |(number, _)| *number);
+    conn.pragma_update(None, "foreign_keys", "OFF")
+        .map_err(|source| MigrationError {
+            number: first,
+            source,
+        })?;
+    let result = (|| {
+        for &(number, sql) in migrations {
+            let run = |conn: &mut Connection| -> rusqlite::Result<()> {
+                let tx = conn.transaction()?;
+                tx.execute_batch(sql)?;
+                let broken: Option<String> = tx
+                    .query_row("PRAGMA foreign_key_check", [], |row| row.get(0))
+                    .optional()?;
+                if let Some(table) = broken {
+                    return Err(rusqlite::Error::SqliteFailure(
+                        rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT_FOREIGNKEY),
+                        Some(format!("foreign key broken in {table}")),
+                    ));
+                }
+                tx.pragma_update(None, "user_version", number)?;
+                tx.commit()
+            };
+            run(conn).map_err(|source| MigrationError { number, source })?;
+        }
+        Ok(())
+    })();
+    conn.pragma_update(None, "foreign_keys", "ON")
+        .map_err(|source| MigrationError {
+            number: first,
+            source,
+        })?;
+    result
 }
 
 #[cfg(test)]

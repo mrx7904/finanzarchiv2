@@ -3,6 +3,7 @@
 //! layouts are named by their form, never by a bank (knowledge/decision-statements.md).
 
 pub mod layout_a;
+pub mod layout_b;
 
 use jiff::Timestamp;
 use jiff::civil::Date;
@@ -57,7 +58,7 @@ impl Statement {
 
 /// Reads the lines with every layout that recognizes them.
 pub fn read(lines: &[Line]) -> Option<Statement> {
-    layout_a::read(lines)
+    layout_a::read(lines).or_else(|| layout_b::read(lines))
 }
 
 /// The values of a statement for the checks and the name: bank, IBAN, number, period, balances.
@@ -165,6 +166,7 @@ pub fn store(
         )
         .optional()?;
     if let Some(earlier) = earlier {
+        release(conn, earlier)?;
         conn.execute("DELETE FROM bookings WHERE statement_id = ?1", [earlier])?;
         conn.execute("DELETE FROM statements WHERE id = ?1", [earlier])?;
     }
@@ -214,11 +216,80 @@ pub fn store(
             booking.line.top
         ])?;
     }
+    join_twins(conn, account, id, statement.layout == layout_b::NAME)?;
     Ok(Some(id))
+}
+
+/// The bookings another statement replaced by one of this statement count again, before this
+/// statement's bookings go.
+fn release(conn: &Connection, statement: i64) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE bookings SET replaced_by = NULL WHERE replaced_by IN (SELECT id FROM bookings WHERE statement_id = ?1)",
+        [statement],
+    )?;
+    Ok(())
+}
+
+/// CSV before PDF (#21): a booking of another statement of the same account with the same day and
+/// amount is the same booking when it is the only such one of the day on both sides. The CSV's
+/// booking counts, the PDF's is kept as replaced by it. Returns how many were joined.
+fn join_twins(
+    conn: &Connection,
+    account: i64,
+    statement: i64,
+    csv: bool,
+) -> rusqlite::Result<usize> {
+    let mine: Vec<(i64, String, i64)> = conn
+        .prepare("SELECT id, day, amount_cents FROM bookings WHERE statement_id = ?1 AND replaced_by IS NULL")?
+        .query_map([statement], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut joined = 0;
+    for (id, day, amount) in &mine {
+        if mine
+            .iter()
+            .filter(|(_, d, a)| d == day && a == amount)
+            .count()
+            != 1
+        {
+            continue;
+        }
+        let others: Vec<(i64, String)> = conn
+            .prepare(
+                "SELECT b.id, s.layout FROM bookings b JOIN statements s ON s.id = b.statement_id
+                 WHERE b.account_id = ?1 AND b.statement_id <> ?2 AND b.day = ?3 AND b.amount_cents = ?4 AND b.replaced_by IS NULL",
+            )?
+            .query_map(params![account, statement, day, amount], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        let [(other, layout)] = others.as_slice() else {
+            continue;
+        };
+        let other_csv = layout == layout_b::NAME;
+        let (replaced, by) = match (csv, other_csv) {
+            (true, false) => (*other, *id),
+            (false, true) => (*id, *other),
+            _ => continue,
+        };
+        conn.execute(
+            "UPDATE bookings SET replaced_by = ?2 WHERE id = ?1",
+            params![replaced, by],
+        )?;
+        joined += 1;
+    }
+    Ok(joined)
 }
 
 /// Removes what was read of a document as a statement, when it is no statement any more.
 pub fn forget(conn: &Connection, document: i64) -> rusqlite::Result<()> {
+    let earlier: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM statements WHERE document_id = ?1",
+            [document],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(earlier) = earlier {
+        release(conn, earlier)?;
+    }
     conn.execute(
         "DELETE FROM bookings WHERE statement_id IN (SELECT id FROM statements WHERE document_id = ?1)",
         [document],

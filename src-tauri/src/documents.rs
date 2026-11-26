@@ -17,6 +17,8 @@ pub enum FileType {
     Png,
     Jpeg,
     Webp,
+    /// A CSV export of a bank, taken only when it reads as a statement of a known layout (#21).
+    Csv,
 }
 
 impl FileType {
@@ -31,6 +33,10 @@ impl FileType {
             Some(Self::Jpeg)
         } else if bytes.len() >= 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
             Some(Self::Webp)
+        } else if crate::statements::layout_b::looks_like(&crate::statements::layout_b::decode(
+            bytes,
+        )) {
+            Some(Self::Csv)
         } else {
             None
         }
@@ -42,6 +48,7 @@ impl FileType {
             Self::Png => "png",
             Self::Jpeg => "jpeg",
             Self::Webp => "webp",
+            Self::Csv => "csv",
         }
     }
 
@@ -424,9 +431,15 @@ pub fn stored_of(
         )
         .optional()?;
     Ok(row.and_then(|(sha256, code)| {
-        let file_type = [FileType::Pdf, FileType::Png, FileType::Jpeg, FileType::Webp]
-            .into_iter()
-            .find(|t| t.code() == code)?;
+        let file_type = [
+            FileType::Pdf,
+            FileType::Png,
+            FileType::Jpeg,
+            FileType::Webp,
+            FileType::Csv,
+        ]
+        .into_iter()
+        .find(|t| t.code() == code)?;
         Some((stored_path(root, &sha256, file_type), file_type))
     }))
 }

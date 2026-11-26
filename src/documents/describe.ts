@@ -26,6 +26,8 @@ export function textStateLabel(state: string | null, pages: number | null): stri
       return `${pageCount}Scan ohne Text, wird als Bild gelesen`;
     case "image":
       return "Bild, wird als Bild gelesen";
+    case "table":
+      return "Tabelle (CSV-Export der Bank)";
     default:
       return `${pageCount}noch nicht gelesen`;
   }

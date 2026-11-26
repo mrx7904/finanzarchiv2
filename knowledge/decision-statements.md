@@ -33,3 +33,27 @@
   - 110 of 110 statements read, 110 of 110 adding up to the cent, 1,924 bookings, 3 accounts;
   - 1,894 of the bookings with another side, the rest are closings and the like;
   - on the run of the start of the new version, all 110 were filed by `check:balance` and their 110 decisions of stage 2 superseded.
+
+## Statements as CSV, CSV before PDF (#21)
+
+- **Layout B** is a CSV export:
+  - Cells are split by ";", and a quote opens a quoted cell only at its start.
+  - The text is UTF-8 (its BOM dropped) or Windows-1252, as the owner's bank writes it.
+  - Above the table stand lines of key and value: "Umsatzanzeige", "IBAN", "Kontoname", "Bank", "Zeitraum" ("dd.mm.yyyy - dd.mm.yyyy") and "Saldo".
+  - The table is headed "Buchung;…;Saldo;Währung;Betrag;Währung" and lists the bookings newest first, each with the balance after it. They are stored oldest first.
+  - The old balance is the oldest booking's balance after it minus its amount, the new one the "Saldo" of the head. The period starts the day before "Zeitraum" begins, as a PDF's old balance does.
+  - Proved like a PDF by `check:balance`.
+- The intake takes a `.csv` only when its bytes read as layout B (`FileType::Csv`, detected from the content, never the name). Any other CSV is refused at the door as before.
+- Its lines are kept as the lines of one page (`text_state` `table`), so the readers, the checks and the name work on it as on a PDF. The stage `classified` gives it the kind statement by its layout.
+- The table `documents` was built anew to allow `csv` (migration 0012). Since then the migration runner turns the foreign keys off while migrations run and checks them with `PRAGMA foreign_key_check` before each commit, as SQLite recommends for a changed CHECK.
+- **CSV before PDF:** a booking of another statement of the same account with the same day and amount is the same booking, when it is the only such one of the day on both sides. The CSV's booking counts, the PDF's stays as `replaced_by` it. Reading a statement again, or removing it, lets the bookings it replaced count again.
+
+### Measured on 2026-11-26
+
+- Tests:
+  - an invented CSV of layout B is read oldest first and adds up;
+  - Windows-1252 and quotes are read;
+  - any other CSV is refused;
+  - a PDF and a CSV of the same account count their shared booking once, the CSV first, also after reading again, and the PDF's booking counts again without the CSV.
+- The owner's two CSV files (copies, counts only): both taken at the door, read, and adding up to the cent, 315 bookings. They belong to accounts without PDF statements, so no booking was joined.
+- A copy of the owner's archive migrated from version 10 to 12 with 0 broken foreign keys and its 132 documents.

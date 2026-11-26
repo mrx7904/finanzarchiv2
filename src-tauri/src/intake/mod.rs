@@ -154,6 +154,17 @@ fn read_text(
             Some((read, state, readers::e_invoice::attachment(pdfium, &bytes)))
         }),
         (documents::FileType::Pdf, None) => None,
+        // A CSV statement keeps each line of its table as a line of one page (#21).
+        (documents::FileType::Csv, _) => fs::read(&path).ok().map(|bytes| {
+            let text = crate::statements::layout_b::decode(&bytes);
+            let page = pages::PageText {
+                number: 1,
+                width: 0.0,
+                height: 0.0,
+                lines: crate::statements::layout_b::lines_of(&text),
+            };
+            (vec![page], "table", None)
+        }),
         _ => Some((Vec::new(), "image", None)),
     };
     if kill(Point::Prepared) {
@@ -201,7 +212,15 @@ fn classify(
             .map_err(|_| Stopped::Database)?;
         if let Some(id) = jobs::document_of(&tx, job.id).map_err(|_| Stopped::Database)? {
             let lines = documents::lines_of(&tx, id).map_err(|_| Stopped::Database)?;
-            let found = kinds::classify(lines.iter().map(String::as_str));
+            // A CSV statement is known by its layout (#21), a table has no sentences to count.
+            let found = if crate::statements::layout_b::looks_like(&lines.join("\n")) {
+                kinds::Classified {
+                    kind: kinds::Kind::Statement,
+                    signals: vec!["umsatzanzeige"],
+                }
+            } else {
+                kinds::classify(lines.iter().map(String::as_str))
+            };
             documents::set_kind(&tx, id, found.kind, &found.signals)
                 .map_err(|_| Stopped::Database)?;
         }
