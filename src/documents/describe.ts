@@ -65,3 +65,10 @@ export function downloadsLine(state: { on: boolean; taken: number; leftOut: numb
   if (state.lying > 0) parts.push(`${state.lying} lagen schon da`);
   return `Ein: ${parts.join(", ")}.`;
 }
+
+/** How a mailbox stands (#29): why its last login failed, or when it worked. */
+export function mailboxLine(mailbox: { checkedAt: string | null; problem: string | null }): string {
+  if (mailbox.problem) return mailbox.problem;
+  if (mailbox.checkedAt) return `Nur lesend angemeldet, zuletzt am ${formatDay(mailbox.checkedAt)}.`;
+  return "Noch nicht geprüft.";
+}

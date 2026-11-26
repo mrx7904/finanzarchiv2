@@ -6,6 +6,7 @@ import { Button, EmptyState, List, ListRow } from "../ui";
 import { formatDay, kindLabel, stateLabel, textStateLabel } from "./describe";
 import { Filing } from "./Filing";
 import { Folders } from "./Folders";
+import { Mailboxes } from "./Mailboxes";
 import { DocumentName, TemplatesDialog } from "./Names";
 import { PageImage } from "./PageImage";
 
@@ -18,6 +19,7 @@ export function Documents() {
   const [busy, setBusy] = useState(false);
   const [naming, setNaming] = useState(false);
   const [folders, setFolders] = useState(false);
+  const [mailboxes, setMailboxes] = useState(false);
 
   const reload = useCallback(async () => {
     const listed = await commands.listDocuments();
@@ -48,6 +50,10 @@ export function Documents() {
         Ordner …
       </Button>
       <Folders open={folders} onClose={() => setFolders(false)} />
+      <Button kind="plain" icon="mail" onClick={() => setMailboxes(true)}>
+        Postfächer …
+      </Button>
+      <Mailboxes open={mailboxes} onClose={() => setMailboxes(false)} />
       <Button kind="plain" onClick={() => setNaming(true)}>
         Namensvorlagen …
       </Button>
