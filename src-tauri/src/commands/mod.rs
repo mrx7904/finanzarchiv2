@@ -157,6 +157,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             names::rename_document,
             money::list_accounts,
             money::list_bookings,
+            money::booking_detail,
+            money::link_to_booking,
             money::list_categories,
             money::add_category,
             money::rename_category,

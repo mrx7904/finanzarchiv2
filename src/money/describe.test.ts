@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bankLine, bookingFilter, bookingWho, formatIsoDay, moneyPath } from "./describe";
+import { bankLine, bookingFilter, bookingWho, cardLine, formatIsoDay, moneyPath, partyYearLine } from "./describe";
 
 describe("Konten and Umsätze", () => {
   it("says the bank's last balance with its day", () => {
@@ -27,5 +27,18 @@ describe("Konten and Umsätze", () => {
     path[0]?.onSelect?.();
     expect(back.toAccounts).toHaveBeenCalledOnce();
     expect(moneyPath(null, true, back).map((segment) => segment.label)).toEqual(["Konten", "Alle Umsätze"]);
+  });
+});
+
+describe("an opened booking", () => {
+  it("names the party over the year and what a card holds", () => {
+    expect(partyYearLine({ party: "Testhaus Energie", year: 2026, count: 4, sum: "254,00 €", incoming: false })).toBe(
+      "Testhaus Energie in 2026: 4 Umsätze, zusammen 254,00 € aus",
+    );
+    expect(partyYearLine({ party: "Beispiel GmbH", year: 2026, count: 1, sum: "3.000,00 €", incoming: true })).toBe(
+      "Beispiel GmbH in 2026: 1 Umsatz, zusammen 3.000,00 € ein",
+    );
+    expect(cardLine("Rechnung", "R-7", "2026-02-01", "85,00 €")).toBe("Rechnung · Nr. R-7 · 01.02.2026 · 85,00 €");
+    expect(cardLine("Zahlungsbeleg", null, undefined, "12,00 €")).toBe("Zahlungsbeleg · 12,00 €");
   });
 });

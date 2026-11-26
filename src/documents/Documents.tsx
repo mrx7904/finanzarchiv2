@@ -13,9 +13,12 @@ import { PageImage } from "./PageImage";
 
 // The documents of #04 in the pieces of the design system (#07), imports through the queue of #05,
 // the first page of each and the preview of the chosen one from #06.
-export function Documents() {
+export function Documents({ focus = null }: { focus?: number | null }) {
   const [rows, setRows] = useState<DocumentRow[]>([]);
-  const [chosen, setChosen] = useState<number | null>(null);
+  const [chosen, setChosen] = useState<number | null>(focus);
+  useEffect(() => {
+    if (focus !== null) setChosen(focus);
+  }, [focus]);
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [naming, setNaming] = useState(false);
