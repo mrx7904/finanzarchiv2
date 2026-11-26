@@ -965,6 +965,56 @@ fn measure_statements(pdfium: &Pdfium, corpus: &Path, archive: Option<&str>, out
     write(&path, &result);
 }
 
+/// The reader of layout B on copies of the owner's CSV files (#21): which read as a statement, which
+/// add up, how many bookings. Counts only.
+fn measure_csv(folder: &Path, out: &Path) {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    let mut bookings = 0_usize;
+    for entry in fs::read_dir(folder).into_iter().flatten().flatten() {
+        let path = entry.path();
+        if !path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("csv"))
+        {
+            continue;
+        }
+        let bytes = fs::read(&path).unwrap_or_default();
+        let detected = documents::FileType::detect(&bytes) == Some(documents::FileType::Csv);
+        let text = finanzarchiv2_lib::statements::layout_b::decode(&bytes);
+        let lines: Vec<readers::Line> = finanzarchiv2_lib::statements::layout_b::lines_of(&text)
+            .into_iter()
+            .map(|line| readers::Line {
+                page: 1,
+                text: line.text,
+                left: f64::from(line.left),
+                bottom: f64::from(line.bottom),
+                right: f64::from(line.right),
+                top: f64::from(line.top),
+            })
+            .collect();
+        let read = finanzarchiv2_lib::statements::read(&lines);
+        for (key, right) in [
+            ("csv.taken at the door", detected),
+            ("csv.read", read.is_some()),
+            (
+                "csv.adds up",
+                read.as_ref().and_then(|statement| statement.difference())
+                    == Some(finanzarchiv2_lib::money::Cents::ZERO),
+            ),
+        ] {
+            let tally = tallies.entry(key.to_owned()).or_default();
+            tally.total += 1;
+            tally.right += u32::from(right);
+        }
+        bookings += read.map_or(0, |statement| statement.bookings.len());
+    }
+    println!("  {bookings} Buchungen");
+    let mut result = report("files", &tallies);
+    result["reader"] = json!("csv");
+    result["bookings"] = json!(bookings);
+    write(&out.join("private").join("files-csv.json"), &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -1004,6 +1054,14 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if reader == "csv" {
+        let Some(folder) = value("--files") else {
+            eprintln!("--reader csv braucht --files <Ordner mit Kopien der CSV-Dateien>");
+            std::process::exit(1);
+        };
+        measure_csv(Path::new(&folder), &out);
+        return;
+    }
     if reader == "statements" {
         measure_statements(pdfium, &corpus, value("--archive").as_deref(), &out);
         return;

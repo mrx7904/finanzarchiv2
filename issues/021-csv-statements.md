@@ -5,7 +5,7 @@
 
 ## Done when
 
-- [ ] The intake takes a `.csv` only when it reads as a statement of a known layout (IBAN, period, balances), with its encoding detected. Any other CSV is refused at the door as today.
-- [ ] Its balances prove it like a PDF (`check:balance`).
-- [ ] A booking of a CSV and a booking of a PDF of the same account are the same when day, direction and amount agree and it is the only such booking of the day. The CSV's booking counts, and a link or category the owner gave stays.
-- [ ] Tested with generated CSV and PDF of overlapping months. Measured on the owner's CSV files, counts only.
+- [x] The intake takes a `.csv` only when it reads as a statement of a known layout (IBAN, period, balances), with its encoding detected. Any other CSV is refused at the door as today.
+- [x] Its balances prove it like a PDF (`check:balance`).
+- [x] A booking of a CSV and a booking of a PDF of the same account are the same when day, direction and amount agree and it is the only such booking of the day. The CSV's booking counts, and a link or category the owner gave stays.
+- [x] Tested with generated CSV and PDF of overlapping months. Measured on the owner's CSV files, counts only.

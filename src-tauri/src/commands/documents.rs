@@ -16,7 +16,8 @@ use crate::documents::{self, Source};
 use crate::intake::{Intake, jobs};
 use crate::previews;
 
-const EXTENSIONS: &[&str] = &["pdf", "png", "jpg", "jpeg", "webp"];
+/// What the dialog offers. A CSV is taken only when it reads as a statement (#21).
+const EXTENSIONS: &[&str] = &["pdf", "png", "jpg", "jpeg", "webp", "csv"];
 
 /// Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type, Event)]

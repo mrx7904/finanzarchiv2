@@ -31,6 +31,7 @@ describe("the filing of #16", () => {
     expect(stateLabel("waiting")).toBe("wartet auf dich");
     expect(stateLabel("open")).toBe("noch nicht geprüft");
     expect(stateLabel("held")).toBe("zurückgehalten");
+    expect(textStateLabel("table", null)).toBe("Tabelle (CSV-Export der Bank)");
   });
 
   it("names the rule that filed it and when", () => {
