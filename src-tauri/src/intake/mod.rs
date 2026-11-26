@@ -68,6 +68,7 @@ pub fn process(
                 }
                 next
             }
+            Stage::Checked => check(archive, job, kill)?,
             _ => advance(archive, job, stage, kill)?,
         };
     }
@@ -302,7 +303,10 @@ fn asked(conn: &rusqlite::Connection, root: &std::path::Path, id: i64) -> rusqli
     let fields: Vec<readers::model::Field> = readers::model::fields_of(kind)
         .iter()
         .copied()
-        .filter(|(name, _, _)| !found.iter().any(|f| f == name))
+        // The decisive values are asked even when code found them: two independent readers (#16).
+        .filter(|(name, _, _)| {
+            !found.iter().any(|f| f == name) || readers::image::decisive(kind).contains(name)
+        })
         .collect();
     Ok(Asked {
         id,
@@ -426,6 +430,47 @@ fn read_by_model(
         return Err(Stopped::Killed);
     }
     Ok(Stage::Checked)
+}
+
+/// The stage `checked`: the checks of #16 decide, in one transaction with the stage, whether the
+/// document is filed by itself or waits for the owner with its reasons.
+fn check(
+    archive: &Mutex<Opened>,
+    job: &Job,
+    kill: &mut dyn FnMut(Point) -> bool,
+) -> Result<Stage, Stopped> {
+    let next = {
+        let guard = archive.lock().map_err(|_| Stopped::Database)?;
+        let Opened::Ready(ready) = &*guard else {
+            return Err(Stopped::NotReady);
+        };
+        let tx = ready
+            .connection()
+            .unchecked_transaction()
+            .map_err(|_| Stopped::Database)?;
+        let next = match jobs::document_of(&tx, job.id).map_err(|_| Stopped::Database)? {
+            Some(id) => {
+                let verdict = crate::checks::decide(&tx, id, Timestamp::now())
+                    .map_err(|_| Stopped::Database)?;
+                if verdict.filed() {
+                    Stage::Filed
+                } else {
+                    Stage::Waiting
+                }
+            }
+            None => Stage::Filed,
+        };
+        jobs::set_stage(&tx, job.id, next, Timestamp::now()).map_err(|_| Stopped::Database)?;
+        if kill(Point::BeforeCommit) {
+            return Err(Stopped::Killed);
+        }
+        tx.commit().map_err(|_| Stopped::Database)?;
+        next
+    };
+    if kill(Point::AfterCommit) {
+        return Err(Stopped::Killed);
+    }
+    Ok(next)
 }
 
 /// Holds the job in the stage `model` with the German reason the model gave none.

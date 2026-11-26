@@ -131,6 +131,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             documents::dismiss_failed,
             documents::list_documents,
             documents::page_image,
+            documents::document_checks,
+            documents::undo_filing,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

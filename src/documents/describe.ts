@@ -30,3 +30,25 @@ export function textStateLabel(state: string | null, pages: number | null): stri
       return `${pageCount}noch nicht gelesen`;
   }
 }
+
+/** Where a document stands after the checks of #16. */
+export function stateLabel(state: string): string {
+  switch (state) {
+    case "filed":
+      return "abgelegt";
+    case "waiting":
+      return "wartet auf dich";
+    default:
+      return "noch nicht geprüft";
+  }
+}
+
+/** The line above "Warum?": who filed it and when, or why it waits. */
+export function filingLine(state: string, rule: string | null, decidedAt: string | null): string {
+  if (state === "filed" && rule !== null && decidedAt !== null) {
+    return rule.startsWith("file.statement") ? `Als Kontoauszug abgelegt am ${formatDay(decidedAt)}.` : `Von selbst abgelegt am ${formatDay(decidedAt)}, alle Prüfungen bestanden.`;
+  }
+  if (state === "filed") return "Abgelegt.";
+  if (state === "waiting") return "Wartet auf dich, weil:";
+  return "Noch nicht geprüft.";
+}

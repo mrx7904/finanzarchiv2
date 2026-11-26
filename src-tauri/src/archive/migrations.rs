@@ -13,6 +13,7 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
     (6, include_str!("../../migrations/0006_field_values.sql")),
     (7, include_str!("../../migrations/0007_e_invoices.sql")),
     (8, include_str!("../../migrations/0008_model_stage.sql")),
+    (9, include_str!("../../migrations/0009_decisions.sql")),
 ];
 
 #[derive(Debug, thiserror::Error)]
