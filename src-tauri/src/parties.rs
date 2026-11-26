@@ -223,7 +223,12 @@ pub fn assign(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
         .collect::<rusqlite::Result<_>>()?;
     let mut assigned = 0;
     for (id, other_side, purpose) in bookings {
-        if let Some(party) = party_of(tx, &other_side, iban_in(&purpose).as_deref(), now)? {
+        // A payment service paid someone else: that payee is the party (#43).
+        let found = match payee_of(&other_side, &purpose) {
+            Some(payee) => party_of(tx, &payee, None, now)?,
+            None => party_of(tx, &other_side, iban_in(&purpose).as_deref(), now)?,
+        };
+        if let Some(party) = found {
             tx.execute(
                 "UPDATE bookings SET party_id = ?2 WHERE id = ?1",
                 params![id, party],
@@ -252,6 +257,61 @@ pub fn assign(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
     Ok(assigned)
 }
 
+static PAYEE_BEFORE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"\.\s+([^,.\s][^,]*?),\s*Ihr\b")
+        .unwrap_or_else(|_| unreachable!("a fixed pattern"))
+});
+static PAYEE_AFTER: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"(?i)\bIhr Einkauf bei\s+(.+?)(?:\s+(?:EREF|MREF|CRED|IBAN|BIC)\b|$)")
+        .unwrap_or_else(|_| unreachable!("a fixed pattern"))
+});
+
+/// The payee of a booking of a payment service, as its bank prints it: "… .PP/. Beispiel Musik,
+/// Ihr Einkauf bei Beispiel Musik EREF: …". `None` for a booking of anyone else.
+pub fn payee_of(other_side: &str, purpose: &str) -> Option<String> {
+    if !crate::categorize::payment_service(other_side) {
+        return None;
+    }
+    let found = PAYEE_BEFORE
+        .captures(purpose)
+        .or_else(|| PAYEE_AFTER.captures(purpose))
+        .map(|found| {
+            found[1]
+                .trim()
+                .trim_end_matches(['…', '.'])
+                .trim()
+                .to_owned()
+        })?;
+    (found.chars().any(char::is_alphabetic) && !crate::categorize::payment_service(&found))
+        .then_some(found)
+}
+
+/// The bookings of a payment service that were given the service as their party get their payee
+/// (#43), once. Returns how many.
+pub fn payees(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
+    let bookings: Vec<(i64, String, String)> = conn
+        .prepare(
+            "SELECT b.id, coalesce(b.other_side, ''), b.purpose FROM bookings b JOIN parties p ON p.id = b.party_id
+             WHERE b.other_side IS NOT NULL AND b.category_id IS NULL",
+        )?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut moved = 0;
+    for (id, other_side, purpose) in bookings {
+        let Some(payee) = payee_of(&other_side, &purpose) else {
+            continue;
+        };
+        let Some(party) = party_of(conn, &payee, None, now)? else {
+            continue;
+        };
+        moved += conn.execute(
+            "UPDATE bookings SET party_id = ?2 WHERE id = ?1 AND party_id IS NOT ?2",
+            params![id, party],
+        )?;
+    }
+    Ok(moved)
+}
+
 /// The category of a booking: its own, else its party's.
 pub fn category_of(conn: &Connection, booking: i64) -> rusqlite::Result<Option<i64>> {
     conn.query_row(
@@ -278,7 +338,8 @@ pub fn choose_category(
     match (for_party, party) {
         (true, Some(party)) => {
             tx.execute(
-                "UPDATE parties SET category_id = ?2 WHERE id = ?1",
+                // The owner's choice, also of none, is never changed by the model (#43).
+                "UPDATE parties SET category_id = ?2, category_by = 'owner' WHERE id = ?1",
                 params![party, category],
             )?;
             // The booking follows its party from now on.

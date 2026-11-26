@@ -38,6 +38,7 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
         21,
         include_str!("../../migrations/0021_paypal_and_amazon.sql"),
     ),
+    (22, include_str!("../../migrations/0022_category_by.sql")),
 ];
 
 #[derive(Debug, thiserror::Error)]

@@ -1342,6 +1342,334 @@ fn measure_mail(model_name: &str, database: &Path, days: i64, out: &Path) {
     write(&out.join("private").join("archive-mail.json"), &result);
 }
 
+/// Invented parties with the category they belong to (#43). Names of shops and services are public,
+/// the rest is made up. "keine" is the right answer for a payment service and a private person.
+const INVENTED_PARTIES: &[(&str, i64, u32, &str, &[&str], &str)] = &[
+    (
+        "Beispiel Software GmbH",
+        385_000,
+        12,
+        "monatlich",
+        &["Gehalt 03/2026", "Lohn und Gehalt"],
+        "Gehalt und Lohn",
+    ),
+    (
+        "Deutsche Rentenversicherung",
+        120_000,
+        12,
+        "monatlich",
+        &["Rente"],
+        "Rente und Sozialleistungen",
+    ),
+    (
+        "Familienkasse",
+        25_500,
+        12,
+        "monatlich",
+        &["Kindergeld KG123"],
+        "Rente und Sozialleistungen",
+    ),
+    (
+        "Finanzamt Musterstadt",
+        48_200,
+        1,
+        "",
+        &["Erstattung ESt 2025"],
+        "Erstattungen",
+    ),
+    (
+        "Beispielbank Tagesgeld",
+        412,
+        4,
+        "vierteljährlich",
+        &["Zinsen"],
+        "Zinsen und Erträge",
+    ),
+    (
+        "Wohnbau Musterstadt eG",
+        -78_000,
+        12,
+        "monatlich",
+        &["Miete Wohnung 3", "Nutzungsgebühr"],
+        "Miete und Wohnen",
+    ),
+    (
+        "Stadtwerke Musterstadt",
+        -8_500,
+        12,
+        "monatlich",
+        &["Abschlag Strom Gas Vertragskonto 123"],
+        "Strom und Heizung",
+    ),
+    (
+        "Telekom Deutschland",
+        -4_495,
+        12,
+        "monatlich",
+        &["Festnetz Internet Rechnung"],
+        "Internet und Telefon",
+    ),
+    (
+        "Beispiel Versicherung AG",
+        -6_210,
+        1,
+        "jährlich",
+        &["Haftpflicht Beitrag 2026"],
+        "Versicherungen",
+    ),
+    (
+        "REWE Markt GmbH",
+        -3_412,
+        40,
+        "wöchentlich",
+        &["REWE SAGT DANKE"],
+        "Lebensmittel",
+    ),
+    (
+        "ALDI SUED",
+        -2_105,
+        25,
+        "",
+        &["ALDI SUED Filiale 123"],
+        "Lebensmittel",
+    ),
+    (
+        "dm-drogerie markt",
+        -1_850,
+        10,
+        "",
+        &["dm Filiale"],
+        "Drogerie und Haushalt",
+    ),
+    (
+        "Lieferando",
+        -2_990,
+        8,
+        "",
+        &["Lieferando Bestellung"],
+        "Restaurant und Café",
+    ),
+    (
+        "ARAL Station",
+        -6_820,
+        14,
+        "",
+        &["ARAL Tankstelle"],
+        "Auto und Tanken",
+    ),
+    (
+        "DB Fernverkehr AG",
+        -4_990,
+        3,
+        "",
+        &["Fahrkarte Online"],
+        "Bus und Bahn",
+    ),
+    (
+        "Deutschlandticket Musterverkehr",
+        -5_800,
+        12,
+        "monatlich",
+        &["D-Ticket Abo"],
+        "Bus und Bahn",
+    ),
+    (
+        "Apotheke am Markt",
+        -1_299,
+        4,
+        "",
+        &["Apotheke"],
+        "Gesundheit und Apotheke",
+    ),
+    (
+        "Zalando SE",
+        -7_995,
+        3,
+        "",
+        &["Zalando Bestellung"],
+        "Kleidung",
+    ),
+    (
+        "Valve Steam",
+        -1_999,
+        5,
+        "",
+        &["STEAM PURCHASE"],
+        "Freizeit und Hobby",
+    ),
+    (
+        "FitX Deutschland",
+        -1_999,
+        12,
+        "monatlich",
+        &["Mitgliedsbeitrag"],
+        "Freizeit und Hobby",
+    ),
+    (
+        "Airbnb Payments",
+        -45_000,
+        1,
+        "",
+        &["Airbnb Buchung"],
+        "Reisen und Urlaub",
+    ),
+    (
+        "Spotify AB",
+        -1_099,
+        12,
+        "monatlich",
+        &["Spotify Premium"],
+        "Abos und Medien",
+    ),
+    (
+        "Netflix International",
+        -1_399,
+        12,
+        "monatlich",
+        &["Netflix"],
+        "Abos und Medien",
+    ),
+    (
+        "Beispiel Hochschule",
+        -120_000,
+        2,
+        "",
+        &["Semesterbeitrag", "Studiengebühr"],
+        "Bildung",
+    ),
+    (
+        "Aktion Deutschland Hilft",
+        -5_000,
+        2,
+        "",
+        &["Spende"],
+        "Geschenke und Spenden",
+    ),
+    (
+        "Beitragsservice ARD ZDF",
+        -5_508,
+        4,
+        "vierteljährlich",
+        &["Rundfunkbeitrag"],
+        "Steuern und Abgaben",
+    ),
+    (
+        "Beispielbank eG",
+        -695,
+        12,
+        "monatlich",
+        &["Kontoführungsentgelt"],
+        "Bankgebühren",
+    ),
+    (
+        "Geldautomat Sparkasse",
+        -10_000,
+        6,
+        "",
+        &["Auszahlung GA"],
+        "Bargeld",
+    ),
+    (
+        "Beispiel Broker",
+        -20_000,
+        12,
+        "monatlich",
+        &["Sparplan ETF"],
+        "Sparen und Anlegen",
+    ),
+    (
+        "PayPal Europe",
+        -2_399,
+        30,
+        "",
+        &["PayPal Einkauf"],
+        "keine",
+    ),
+    ("Max Muster", -2_000, 1, "", &["Danke fürs Essen"], "keine"),
+];
+
+/// The categories by the model on invented parties (#43): how many it put right. The model unloaded
+/// afterwards, within the GPU budget.
+fn measure_categories(model_name: &str, out: &Path) {
+    let Ok(model) = ollama::Ollama::from_env(model_name) else {
+        eprintln!("Ollama ist nicht erreichbar");
+        std::process::exit(1);
+    };
+    let categories: Vec<(i64, String, String)> = finanzarchiv2_lib::parties::DEFAULT_CATEGORIES
+        .iter()
+        .enumerate()
+        .map(|(at, (name, direction))| {
+            (
+                i64::try_from(at).unwrap_or(0),
+                (*name).to_owned(),
+                (*direction).to_owned(),
+            )
+        })
+        .collect();
+    let started = std::time::Instant::now();
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    let mut wrong: Vec<String> = Vec::new();
+    for (name, cents, times, rhythm, purposes, expected) in INVENTED_PARTIES {
+        if started.elapsed() > MODEL_BUDGET {
+            break;
+        }
+        let context = finanzarchiv2_lib::categorize::Context {
+            party: 0,
+            name: (*name).to_owned(),
+            outgoing: if *cents < 0 { *times } else { 0 },
+            incoming: if *cents >= 0 { *times } else { 0 },
+            typical: Some((finanzarchiv2_lib::money::Cents::new(*cents), *times)),
+            rhythm: match *rhythm {
+                "monatlich" => Some("monatlich"),
+                "vierteljährlich" => Some("vierteljährlich"),
+                "jährlich" => Some("jährlich"),
+                "wöchentlich" => Some("wöchentlich"),
+                _ => None,
+            },
+            kinds: vec![if *cents < 0 {
+                "Lastschrift".into()
+            } else {
+                "Gutschrift".into()
+            }],
+            purposes: purposes
+                .iter()
+                .map(|purpose| (*purpose).to_owned())
+                .collect(),
+            senders: Vec::new(),
+        };
+        let chosen = if finanzarchiv2_lib::categorize::payment_service(name) {
+            Ok(None)
+        } else {
+            finanzarchiv2_lib::categorize::ask(&model, &context, &categories)
+        };
+        let got = match chosen {
+            Ok(Some(id)) => categories
+                .iter()
+                .find(|(at, _, _)| *at == id)
+                .map_or("?".to_owned(), |(_, name, _)| name.clone()),
+            Ok(None) => "keine".to_owned(),
+            Err(error) => format!("Fehler: {error}"),
+        };
+        let tally = tallies.entry("categories".to_owned()).or_default();
+        tally.total += 1;
+        if got == *expected {
+            tally.right += 1;
+        } else {
+            wrong.push(format!("{name}: {got} statt {expected}"));
+        }
+    }
+    let _ = model.unload();
+    let mut result = report("categories", &tallies);
+    result["reader"] = json!("categories");
+    result["wrong"] = json!(wrong);
+    result["seconds"] = json!(started.elapsed().as_secs());
+    for line in &wrong {
+        println!("  falsch: {line}");
+    }
+    println!("  {} s", started.elapsed().as_secs());
+    write(&out.join("categories.json"), &result);
+}
+
 /// The ledger of a measuring round: it knows no mail, keeps nothing and counts every verdict.
 struct MeasureBook<'a> {
     count: &'a dyn Fn(String),
@@ -1439,6 +1767,11 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "categories" {
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        measure_categories(&model, &out);
         return;
     }
     if reader == "mail" {

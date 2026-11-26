@@ -2,6 +2,7 @@
 
 pub mod accounts;
 pub mod archive;
+pub mod categorize;
 pub mod checks;
 pub mod commands;
 pub mod documents;
@@ -94,6 +95,10 @@ pub fn run() -> ExitCode {
                     {
                         eprintln!("Wartende Belege ließen sich nicht neu prüfen");
                     }
+                    // #43: a booking of PayPal and the like belongs to its payee.
+                    if parties::payees(ready.connection(), jiff::Timestamp::now()).is_err() {
+                        eprintln!("Die Empfänger von PayPal-Buchungen ließen sich nicht zuordnen");
+                    }
                     // #32: two mails of one PayPal payment are one, a PayPal mail finds its seller's
                     // invoice, an invoice its order.
                     if payments::merge_twins(ready.connection(), &root, jiff::Timestamp::now())
@@ -154,6 +159,12 @@ pub fn run() -> ExitCode {
             );
             if workers > 0 {
                 mail_reader.start();
+            }
+            // Categories by the model for the parties without one (#43).
+            if workers > 0
+                && let Some(model) = intake.model()
+            {
+                categorize::start(Arc::clone(&archive), model);
             }
             app.manage(archive);
             app.manage(intake);
