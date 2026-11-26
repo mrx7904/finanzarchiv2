@@ -1,5 +1,6 @@
 //! The core of Finanzarchiv 2.0. Every rule of the archive lives here, the window only shows and asks.
 
+pub mod accounts;
 pub mod archive;
 pub mod checks;
 pub mod commands;

@@ -57,3 +57,19 @@
   - a PDF and a CSV of the same account count their shared booking once, the CSV first, also after reading again, and the PDF's booking counts again without the CSV.
 - The owner's two CSV files (copies, counts only): both taken at the door, read, and adding up to the cent, 315 bookings. They belong to accounts without PDF statements, so no booking was joined.
 - A copy of the owner's archive migrated from version 10 to 12 with 0 broken foreign keys and its 132 documents.
+
+## The balance of each account against the bank (#22)
+
+- An account has one opening: a balance at the end of a day (`accounts.opening_day`, `opening_cents`). It is taken from the earliest statement of the account and moves back when an earlier one is read (`accounts::refresh_opening`, after every statement stored or removed). An opening the owner typed (`opening_source` `owner`) is never written over.
+- `accounts::balance_on(account, day)` is the opening plus the bookings after its day up to the day, those another booking replaced left out. A booking of the earliest statement dated on the day of its old balance counts, its old balance does not hold it.
+- `accounts::findings(account)` holds the archive against the bank:
+  - for each statement, the counted balance at its end against the new balance it printed (`Differs`);
+  - between two statements, a later start or another balance than the one the statement before ended with (`Gap`);
+  - an account without an opening (`NoOpening`).
+
+  Each finding has its German sentence. The counted balance at the end of a statement (`counted_through`) adds the bookings of every statement up to it, each with its own statement and not by day: the owner's bank dates some bookings with the closing day of the statement before, and counting them by day put them into that one (79 false differences on one account on the first run).
+- Property tests: bookings in any order give the same balance, and a month cut into two statements gives the same as one, without a finding.
+
+### Measured on 2026-11-26
+
+The owner's archive (a copy, migrated and read again, counts only): all 3 accounts without a finding, each one's balance equal to the bank's last.

@@ -1015,6 +1015,48 @@ fn measure_csv(folder: &Path, out: &Path) {
     write(&out.join("private").join("files-csv.json"), &result);
 }
 
+/// The balance of each account against the bank on a writable copy of the owner's archive (#22):
+/// the copy is migrated and read again, then each account's findings are counted. Counts only.
+fn measure_accounts(database: &Path, out: &Path) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let conn = ready.connection();
+    let _ = documents::classify_missing(conn);
+    let _ = readers::read_outdated(conn, jiff::Timestamp::now());
+    // The balance after every booking read, whatever day it is now.
+    let today = jiff::civil::date(2100, 1, 1);
+    let listed = finanzarchiv2_lib::accounts::list(conn, today).unwrap_or_default();
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    for account in &listed {
+        let mut count = |key: &str, right: bool| {
+            let tally = tallies.entry(key.to_owned()).or_default();
+            tally.total += 1;
+            tally.right += u32::from(right);
+        };
+        count("account.without finding", account.findings.is_empty());
+        count(
+            "account.balance equals the bank's last",
+            account.balance.is_some()
+                && account.bank_balance.map(|(_, cents)| cents) == account.balance,
+        );
+        for finding in &account.findings {
+            let kind = match finding {
+                finanzarchiv2_lib::accounts::Finding::Differs { .. } => "finding.differs",
+                finanzarchiv2_lib::accounts::Finding::Gap { .. } => "finding.gap",
+                finanzarchiv2_lib::accounts::Finding::NoOpening => "finding.no opening",
+            };
+            count(kind, true);
+        }
+    }
+    let mut result = report("archive", &tallies);
+    result["reader"] = json!("accounts");
+    write(&out.join("private").join("archive-accounts.json"), &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -1054,6 +1096,14 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if reader == "accounts" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader accounts braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_accounts(Path::new(&database), &out);
+        return;
+    }
     if reader == "csv" {
         let Some(folder) = value("--files") else {
             eprintln!("--reader csv braucht --files <Ordner mit Kopien der CSV-Dateien>");
