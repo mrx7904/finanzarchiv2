@@ -34,7 +34,8 @@ Checked on 2026-11-25 at crates.io (`/api/v1/crates/<name>`), registry.npmjs.org
 | Folder watching | `notify` | 9.0.0 |
 | Model client | `ureq` without TLS, a thin client of the Ollama API (see "The model client of #14") | 3.5.2 |
 | Mail (#29) | `async-imap` with `runtime-tokio`, `tokio-rustls` with `ring`, `webpki-roots`, `futures-util` (see `decision-mail.md`) | 0.12.0, 0.26.6, 1.0.12, 0.3.34 |
-| Mail, later | `mail-parser` (#31), `oauth2` (#30, deferred) | 1.0.2, 5.0.0 |
+| Mail, parsing (#31) | `mail-parser` without default features | 1.0.2 |
+| Mail, later | `oauth2` (#30, deferred) | 5.0.0 |
 | Credentials | `keyring`, mode `v1` (Windows Credential Manager, macOS keychain) | 4.2.0 |
 | CSV, XML | `csv`, `quick-xml` (e-invoices) | 1.4.0, 0.42.0 |
 | Tests in Rust | `proptest`, `insta`, `cargo-mutants` | 1.12.0, 1.49.0, 27.1.0 |

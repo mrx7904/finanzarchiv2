@@ -4,13 +4,14 @@ import { Button, Dialog, TextField } from "../ui";
 import { mailboxLine } from "./describe";
 
 // "Postfächer" of #29: the owner's Gmail, read only. A mailbox is added once its login worked, the
-// app password goes to the keychain of the system and is never shown again.
+// app password goes to the keychain of the system and is never shown again. Its mails are read every
+// 15 minutes and at "Jetzt lesen" (#31).
 export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mailboxes, setMailboxes] = useState<MailboxRow[]>([]);
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"add" | number | null>(null);
+  const [busy, setBusy] = useState<"add" | "read" | number | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -21,7 +22,7 @@ export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => voi
     });
   }, [open]);
 
-  const run = async (which: "add" | number, call: () => ReturnType<typeof commands.listMailboxes>) => {
+  const run = async (which: "add" | "read" | number, call: () => ReturnType<typeof commands.listMailboxes>) => {
     setBusy(which);
     const result = await call();
     setBusy(null);
@@ -50,9 +51,16 @@ export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => voi
       title="Postfächer"
       description="Das Archiv liest dein Gmail nur: Es verschiebt, löscht, sendet und markiert nichts. Das App-Passwort liegt im Schlüsselbund des Systems."
       actions={
-        <Button kind="primary" onClick={onClose}>
-          Fertig
-        </Button>
+        <>
+          {mailboxes.length > 0 ? (
+            <Button busy={busy === "read"} disabled={busy !== null} onClick={() => void run("read", () => commands.readMailNow())}>
+              Jetzt lesen
+            </Button>
+          ) : null}
+          <Button kind="primary" onClick={onClose}>
+            Fertig
+          </Button>
+        </>
       }
     >
       {mailboxes.length > 0 ? (

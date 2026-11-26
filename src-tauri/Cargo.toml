@@ -38,6 +38,7 @@ tokio-rustls = { version = "=0.26.6", default-features = false, features = ["rin
 webpki-roots = "=1.0.12"
 keyring = "=4.2.0"
 futures-util = "=0.3.34"
+mail-parser = { version = "=1.0.2", default-features = false }
 
 [dev-dependencies]
 lopdf = "=0.47.0"

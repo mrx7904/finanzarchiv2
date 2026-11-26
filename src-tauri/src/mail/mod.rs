@@ -3,7 +3,12 @@
 //! with `EXAMINE`, bodies fetched with `BODY.PEEK`, and [`guard::ReadOnly`] holds back every writing
 //! command before it reaches the socket.
 
+#[cfg(test)]
+mod fake;
 pub mod guard;
+pub mod reader;
+pub mod render;
+pub mod round;
 pub mod secrets;
 
 use std::fmt::Debug;
@@ -119,7 +124,7 @@ fn tls_config() -> Result<ClientConfig, MailError> {
 }
 
 /// The TLS connection to Gmail. The host is fixed here, so no other host can be reached.
-async fn connect_gmail() -> Result<tokio_rustls::client::TlsStream<TcpStream>, MailError> {
+pub async fn connect_gmail() -> Result<tokio_rustls::client::TlsStream<TcpStream>, MailError> {
     let tcp = TcpStream::connect((GMAIL_HOST, GMAIL_PORT))
         .await
         .map_err(|_| MailError::Unreachable)?;
@@ -148,19 +153,24 @@ pub struct Mailbox {
     pub checked_at: Option<String>,
     /// Why the last login failed, in German, `None` when it worked.
     pub problem: Option<String>,
+    /// When the last round through it ended without a fault.
+    pub read_at: Option<String>,
 }
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Mailbox>> {
-    conn.prepare("SELECT id, address, checked_at, problem FROM mailboxes ORDER BY address")?
-        .query_map([], |row| {
-            Ok(Mailbox {
-                id: row.get(0)?,
-                address: row.get(1)?,
-                checked_at: row.get(2)?,
-                problem: row.get(3)?,
-            })
-        })?
-        .collect()
+    conn.prepare(
+        "SELECT id, address, checked_at, problem, read_at FROM mailboxes ORDER BY address",
+    )?
+    .query_map([], |row| {
+        Ok(Mailbox {
+            id: row.get(0)?,
+            address: row.get(1)?,
+            checked_at: row.get(2)?,
+            problem: row.get(3)?,
+            read_at: row.get(4)?,
+        })
+    })?
+    .collect()
 }
 
 /// Why a mailbox was not added or tested, in German.

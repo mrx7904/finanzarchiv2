@@ -13,6 +13,8 @@
 //! 14 minutes, and unloads it afterwards. `--reader image --model <name> --width <px>` reads the
 //! scans of the corpus as page images. `--reader checks --archive <copy>` runs the stages `read` to
 //! `checked` on a writable copy of the archive and counts what is filed and why the rest waits.
+//! `--reader mail --archive <copy> --days <n>` runs one round through each mailbox of the copy over
+//! the last days, read only, with the app passwords of the keychain, and counts the verdicts.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -1230,6 +1232,124 @@ fn measure_downloads(pdfium: &Pdfium, model_name: &str, folder: &Path, out: &Pat
     write(&out.join("private").join("files-downloads.json"), &result);
 }
 
+/// One round through each mailbox of a copy of the owner's database (#31), over the last days,
+/// read only: the addresses from the copy, the app passwords from the keychain. Nothing is staged
+/// or kept, only the verdicts are counted. The model unloaded afterwards, within the GPU budget.
+fn measure_mail(pdfium: &'static Pdfium, model_name: &str, database: &Path, days: i64, out: &Path) {
+    use finanzarchiv2_lib::mail::{self, round, secrets::Secrets};
+    let Ok(conn) =
+        rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+    else {
+        eprintln!("Die Kopie der Datenbank ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    // Only the addresses, so a copy of an older version of the archive serves too.
+    let mailboxes: Vec<String> = conn
+        .prepare("SELECT address FROM mailboxes ORDER BY address")
+        .and_then(|mut statement| {
+            statement
+                .query_map([], |row| row.get(0))?
+                .collect::<rusqlite::Result<_>>()
+        })
+        .unwrap_or_default();
+    if mailboxes.is_empty() {
+        eprintln!("Die Kopie kennt keine Postfächer");
+        std::process::exit(1);
+    }
+    let model = ollama::Ollama::from_env(model_name).ok();
+    let started = std::time::Instant::now();
+    let since = jiff::Timestamp::now()
+        .checked_sub(jiff::SignedDuration::from_hours(24 * days))
+        .unwrap_or(jiff::Timestamp::UNIX_EPOCH)
+        .to_zoned_datetime(jiff::tz::TimeZone::UTC)
+        .date();
+    let tallies: std::cell::RefCell<BTreeMap<String, Tally>> = std::cell::RefCell::default();
+    let count = |key: String| {
+        let mut tallies = tallies.borrow_mut();
+        let tally = tallies.entry(key).or_default();
+        tally.total += 1;
+        tally.right += 1;
+    };
+    let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    else {
+        eprintln!("Kein Laufzeitsystem");
+        std::process::exit(1);
+    };
+    let mut asked = 0;
+    let mut waiting = 0;
+    let mut failed = 0;
+    let mut stopped = None;
+    for mailbox in &mailboxes {
+        let Ok(Some(password)) = mail::secrets::Keychain.get(mailbox) else {
+            failed += 1;
+            continue;
+        };
+        let left = MODEL_BUDGET.saturating_sub(started.elapsed());
+        let outcome = runtime.block_on(async {
+            tokio::time::timeout(left, async {
+                let stream = mail::connect_gmail().await?;
+                round::read(
+                    stream,
+                    mailbox,
+                    &password,
+                    &round::Place::default(),
+                    since,
+                    Some(pdfium),
+                    model.as_ref().map(|model| model as &dyn LocalModel),
+                    &|_| false,
+                    &mut |looked| {
+                        let how = if looked.files.is_empty() {
+                            format!("left: {}", looked.verdict.split(" (").next().unwrap_or(""))
+                        } else if looked.verdict.contains("PDF der Mail") {
+                            "taken: the mail as a PDF".to_owned()
+                        } else {
+                            "taken: PDF attachments".to_owned()
+                        };
+                        count(how);
+                    },
+                )
+                .await
+            })
+            .await
+        });
+        match outcome {
+            Ok(Ok((_, counts))) => {
+                asked += counts.asked;
+                waiting += counts.waiting;
+            }
+            Ok(Err(_)) => failed += 1,
+            Err(_) => {
+                stopped = Some("Zeitbudget erreicht");
+                break;
+            }
+        }
+    }
+    if let Some(model) = &model {
+        let _ = model.unload();
+    }
+    let tallies = tallies.into_inner();
+    let mut result = report("mail", &tallies);
+    result["reader"] = json!("mail");
+    result["mailboxes"] = json!(mailboxes.len());
+    result["days"] = json!(days);
+    result["asked_model"] = json!(asked);
+    result["waiting"] = json!(waiting);
+    result["failed_mailboxes"] = json!(failed);
+    result["seconds"] = json!(started.elapsed().as_secs());
+    result["stopped"] = json!(stopped);
+    println!(
+        "  {} Postfächer, {} an das Modell, {} warten, {} ohne Erfolg, {} s",
+        mailboxes.len(),
+        asked,
+        waiting,
+        failed,
+        started.elapsed().as_secs()
+    );
+    write(&out.join("private").join("archive-mail.json"), &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -1275,6 +1395,18 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "mail" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader mail braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        let days = value("--days")
+            .and_then(|days| days.parse().ok())
+            .unwrap_or(30);
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        measure_mail(pdfium, &model, Path::new(&database), days, &out);
         return;
     }
     if reader == "downloads" {

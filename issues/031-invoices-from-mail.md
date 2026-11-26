@@ -5,7 +5,9 @@
 
 ## Done when
 
-- [ ] A prefilter by code: a PDF attachment, or a word of an invoice in subject or sender. Only those mails go to the local model, which answers from sender, subject, names of attachments and the start of the text. It is never asked how sure it is.
-- [ ] Every mail looked at is a row of `mail_messages` under the hash of its Message-ID, with the verdict and no body. A mail is never asked about twice, and what the owner dismissed never comes back.
-- [ ] A PDF attachment goes through the intake with the mail as its source. A mail that is the invoice itself becomes a PDF of its text with sender, date and subject on top, made without loading anything from outside (no image, no link followed).
-- [ ] Measured on one month of the owner's mail, counts only: mails looked at, taken, left out, seconds.
+- [x] A prefilter by code: a PDF attachment, or a word of an invoice in subject or sender. Only those mails go to the local model, which answers from sender, subject, names of attachments and the start of the text. It is never asked how sure it is.
+- [x] Every mail looked at is a row of `mail_messages` under the hash of its Message-ID, with the verdict and no body. A mail is never asked about twice, and what the owner dismissed never comes back.
+- [x] A PDF attachment goes through the intake with the mail as its source. A mail that is the invoice itself becomes a PDF of its text with sender, date and subject on top, made without loading anything from outside (no image, no link followed).
+- [x] Measured on one month of the owner's mail, counts only: mails looked at, taken, left out, seconds.
+
+**Done:** 2026-11-26. Measured on 30 days of the owner's two mailboxes, read only: 278 mails looked at, 10 taken, 268 left out (237 by code, 31 by the model), 41 asked, 51 s ([decision-mail](../knowledge/decision-mail.md)).

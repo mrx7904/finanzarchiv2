@@ -66,9 +66,13 @@ export function downloadsLine(state: { on: boolean; taken: number; leftOut: numb
   return `Ein: ${parts.join(", ")}.`;
 }
 
-/** How a mailbox stands (#29): why its last login failed, or when it worked. */
-export function mailboxLine(mailbox: { checkedAt: string | null; problem: string | null }): string {
+/** How a mailbox stands (#29, #31): why its last login failed, or what its rounds gave. */
+export function mailboxLine(mailbox: { checkedAt: string | null; problem: string | null; readAt: string | null; looked: number; taken: number }): string {
   if (mailbox.problem) return mailbox.problem;
-  if (mailbox.checkedAt) return `Nur lesend angemeldet, zuletzt am ${formatDay(mailbox.checkedAt)}.`;
+  if (mailbox.readAt) {
+    const mails = mailbox.looked === 1 ? "1 Mail" : `${mailbox.looked} Mails`;
+    return `Nur lesend, zuletzt gelesen am ${formatDay(mailbox.readAt)}: ${mails} angesehen, ${mailbox.taken} mit Beleg.`;
+  }
+  if (mailbox.checkedAt) return "Nur lesend angemeldet, wird gleich gelesen.";
   return "Noch nicht geprüft.";
 }

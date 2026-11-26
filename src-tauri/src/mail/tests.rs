@@ -1,133 +1,25 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use async_imap::error::Error;
 use futures_util::TryStreamExt;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
+
+use super::fake::{assert_nothing_written, fake_server};
 
 use super::*;
 use crate::archive;
 use crate::testing;
 use secrets::InMemory;
 
-/// Every command line the fake server received, in order.
-type Seen = Arc<Mutex<Vec<String>>>;
-
-/// A fake IMAP server on a local port that records every command and answers like Gmail would.
-/// It accepts writing commands too, so only the client can keep them away.
-async fn fake_server() -> (std::net::SocketAddr, Seen) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let at = listener.local_addr().unwrap();
-    let seen: Seen = Arc::default();
-    let record = Arc::clone(&seen);
-    tokio::spawn(async move {
-        while let Ok((socket, _)) = listener.accept().await {
-            tokio::spawn(serve(socket, Arc::clone(&record)));
-        }
-    });
-    (at, seen)
-}
-
-async fn serve(socket: TcpStream, seen: Seen) {
-    let (read, mut write) = socket.into_split();
-    let mut lines = BufReader::new(read);
-    let _ = write
-        .write_all(b"* OK [CAPABILITY IMAP4rev1] fake ready\r\n")
-        .await;
-    loop {
-        let mut line = String::new();
-        if lines.read_line(&mut line).await.unwrap_or(0) == 0 {
-            return;
-        }
-        let line = line.trim_end().to_owned();
-        seen.lock().unwrap().push(line.clone());
-        let mut words = line.split(' ');
-        let tag = words.next().unwrap_or("*").to_owned();
-        let mut command = words.next().unwrap_or("").to_ascii_uppercase();
-        if command == "UID" {
-            command = format!("UID {}", words.next().unwrap_or("").to_ascii_uppercase());
-        }
-        let reply = match command.as_str() {
-            "LOGIN" if line.ends_with("\"app-passwort\"") => {
-                format!("{tag} OK LOGIN completed\r\n")
-            }
-            "LOGIN" if line.ends_with("\"konto-passwort\"") => {
-                format!("{tag} NO [ALERT] Application-specific password required (Failure)\r\n")
-            }
-            "LOGIN" => {
-                format!("{tag} NO [AUTHENTICATIONFAILED] Invalid credentials (Failure)\r\n")
-            }
-            "EXAMINE" => format!(
-                "* FLAGS (\\Seen)\r\n* 3 EXISTS\r\n* 0 RECENT\r\n* OK [UIDVALIDITY 7] UIDs valid\r\n{tag} OK [READ-ONLY] INBOX selected\r\n"
-            ),
-            "UID SEARCH" => format!("* SEARCH 1 2 3\r\n{tag} OK SEARCH completed\r\n"),
-            "UID FETCH" => {
-                format!("* 1 FETCH (UID 1 BODY[] {{5}}\r\nhallo)\r\n{tag} OK FETCH completed\r\n")
-            }
-            "LOGOUT" => {
-                let _ = write
-                    .write_all(format!("* BYE\r\n{tag} OK LOGOUT completed\r\n").as_bytes())
-                    .await;
-                return;
-            }
-            _ => format!("{tag} OK done\r\n"),
-        };
-        if write.write_all(reply.as_bytes()).await.is_err() {
-            return;
-        }
-    }
-}
-
-/// Whether a command line the server received would change the mailbox. Written apart from the
-/// guard, so the test does not judge the guard by its own rule.
-fn writes(line: &str) -> bool {
-    let upper = line.to_ascii_uppercase();
-    let words: Vec<&str> = upper.split(' ').collect();
-    let command = match words.get(1) {
-        Some(&"UID") => words.get(2).copied().unwrap_or(""),
-        other => other.copied().unwrap_or(""),
-    };
-    let writing = [
-        "SELECT",
-        "STORE",
-        "COPY",
-        "MOVE",
-        "EXPUNGE",
-        "APPEND",
-        "CREATE",
-        "DELETE",
-        "RENAME",
-        "SUBSCRIBE",
-        "UNSUBSCRIBE",
-        "CLOSE",
-        "UNSELECT",
-        "SETACL",
-        "SETMETADATA",
-        "SETQUOTA",
-    ];
-    writing.contains(&command)
-        || (command == "FETCH"
-            && (upper.contains("BODY[")
-                || upper.contains("BINARY[")
-                || upper.contains("RFC822 ")
-                || upper.contains("RFC822)")
-                || upper.ends_with("RFC822")
-                || upper.contains("RFC822.TEXT")))
-}
-
-fn assert_nothing_written(seen: &Seen) {
-    let seen = seen.lock().unwrap();
-    assert!(!seen.is_empty(), "the server saw no command at all");
-    let written: Vec<&String> = seen.iter().filter(|line| writes(line)).collect();
-    assert!(
-        written.is_empty(),
-        "writing commands reached the server: {written:?}"
-    );
+/// Three invented mails, the first one only the word of the old test.
+fn three() -> Vec<Vec<u8>> {
+    vec![b"hallo".to_vec(), b"zwei".to_vec(), b"drei".to_vec()]
 }
 
 #[tokio::test]
 async fn a_login_looks_into_the_inbox_and_writes_nothing() {
-    let (at, seen) = fake_server().await;
+    let (at, seen) = fake_server(three()).await;
     let stream = TcpStream::connect(at).await.unwrap();
     assert_eq!(
         check_login(stream, "test@example.com", "app-passwort").await,
@@ -145,7 +37,7 @@ async fn a_login_looks_into_the_inbox_and_writes_nothing() {
 
 #[tokio::test]
 async fn a_failed_login_says_why_in_german() {
-    let (at, _) = fake_server().await;
+    let (at, _) = fake_server(three()).await;
     let wrong = check_login(
         TcpStream::connect(at).await.unwrap(),
         "test@example.com",
@@ -180,7 +72,7 @@ macro_rules! held_back {
 
 #[tokio::test]
 async fn every_writing_command_is_held_back_before_the_socket() {
-    let (at, seen) = fake_server().await;
+    let (at, seen) = fake_server(three()).await;
     let stream = TcpStream::connect(at).await.unwrap();
     let mut client = async_imap::Client::new(ReadOnly::new(stream));
     client.read_response().await.unwrap().unwrap();

@@ -51,8 +51,13 @@ describe("the downloads of #28", () => {
 
 describe("the mailboxes of #29", () => {
   it("says why a login failed, or when it worked", () => {
-    expect(mailboxLine({ checkedAt: "2026-11-26T10:00:00Z", problem: "Gmail hat die Anmeldung abgelehnt." })).toBe("Gmail hat die Anmeldung abgelehnt.");
-    expect(mailboxLine({ checkedAt: "2026-11-26T10:00:00Z", problem: null })).toBe(`Nur lesend angemeldet, zuletzt am ${formatDay("2026-11-26T10:00:00Z")}.`);
-    expect(mailboxLine({ checkedAt: null, problem: null })).toBe("Noch nicht geprüft.");
+    const none = { readAt: null, looked: 0, taken: 0 };
+    expect(mailboxLine({ ...none, checkedAt: "2026-11-26T10:00:00Z", problem: "Gmail hat die Anmeldung abgelehnt." })).toBe("Gmail hat die Anmeldung abgelehnt.");
+    expect(mailboxLine({ ...none, checkedAt: "2026-11-26T10:00:00Z", problem: null })).toBe("Nur lesend angemeldet, wird gleich gelesen.");
+    expect(mailboxLine({ ...none, checkedAt: null, problem: null })).toBe("Noch nicht geprüft.");
+    expect(mailboxLine({ checkedAt: null, problem: null, readAt: "2026-11-26T10:00:00Z", looked: 412, taken: 9 })).toBe(
+      `Nur lesend, zuletzt gelesen am ${formatDay("2026-11-26T10:00:00Z")}: 412 Mails angesehen, 9 mit Beleg.`,
+    );
+    expect(mailboxLine({ checkedAt: null, problem: null, readAt: "2026-11-26T10:00:00Z", looked: 1, taken: 0 })).toContain("1 Mail angesehen");
   });
 });

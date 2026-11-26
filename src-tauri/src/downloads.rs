@@ -19,7 +19,7 @@ pub struct Verdict {
     pub reason: String,
 }
 
-fn kind_word(kind: Kind) -> &'static str {
+pub fn kind_word(kind: Kind) -> &'static str {
     match kind {
         Kind::Invoice => "eine Rechnung",
         Kind::Payslip => "eine Gehaltsabrechnung",
@@ -29,7 +29,7 @@ fn kind_word(kind: Kind) -> &'static str {
     }
 }
 
-fn money(kind: Kind) -> bool {
+pub fn money(kind: Kind) -> bool {
     matches!(
         kind,
         Kind::Invoice | Kind::Payslip | Kind::Receipt | Kind::Statement

@@ -175,6 +175,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             mail::add_mailbox,
             mail::test_mailbox,
             mail::remove_mailbox,
+            mail::read_mail_now,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
