@@ -12,7 +12,7 @@
   - `check:duplicate`: no other document of the kind has the same sender, number (or date) and gross, or the same employer and month. Both of two such documents wait, the owner decides.
   - `check:undone`: the owner undid the automatic filing.
 - The value that counts for a field is the one of the strongest reader: the owner, the e-invoice, code, the model, the image.
-- A statement is filed by the rule `file.statement:1` without these checks, the owner's choice of 2026-11-25. Its bookings are read in stage 3, which brings their own checks. Everything else is filed by `file.checks-passed:1`.
+- A statement was filed by the rule `file.statement:1` without these checks in stage 2, the owner's choice of 2026-11-25. Since #20 it passes `check:balance` instead and is filed by `file.checks-passed:1` like everything else (`decision-statements.md`).
 - So that two independent readers exist, the model is asked for the decisive values even when code found them (#14 asked only for the missing ones).
 - "Rückgängig" (`checks::undo`) marks the decision undone and lets the document wait. It is never filed by itself again, the check `check:undone` fails until the owner decides in #17.
 - Documents of an older archive that were never checked (`state` `open`) get a job at the stage `read` at the next start (`checks::requeue_unchecked`), so the model reads them and the checks decide.

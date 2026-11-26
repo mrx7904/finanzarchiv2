@@ -1,54 +1,95 @@
 {
   "bookings": [
     {
-      "cents": -44164,
-      "date": "02.02.2026",
-      "party": "Testhaus Energie AG",
-      "printed": "441,64 S"
+      "cents": 86139,
+      "date": "03.02.2026",
+      "kind": "Lohn/Gehalt",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "861,39"
     },
     {
-      "cents": -13891,
+      "cents": 373987,
       "date": "04.02.2026",
-      "party": "Probe Handwerk GmbH",
-      "printed": "138,91 S"
+      "kind": "Lohn/Gehalt",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "3.739,87"
     },
     {
-      "cents": -75403,
-      "date": "11.02.2026",
+      "cents": -50239,
+      "date": "05.02.2026",
+      "kind": "Basislastschrift",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "502,39"
+    },
+    {
+      "cents": -75609,
+      "date": "08.02.2026",
+      "kind": "Basislastschrift",
+      "party": "Platzhalter Verlag GmbH",
+      "printed": "756,09"
+    },
+    {
+      "cents": -43964,
+      "date": "09.02.2026",
+      "kind": "Basislastschrift",
+      "party": "Erfunden Möbel KG",
+      "printed": "439,64"
+    },
+    {
+      "cents": -35675,
+      "date": "12.02.2026",
+      "kind": "Kartenzahlung girocard",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "356,75"
+    },
+    {
+      "cents": -59940,
+      "date": "12.02.2026",
+      "kind": "Basislastschrift",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "599,40"
+    },
+    {
+      "cents": 62951,
+      "date": "15.02.2026",
+      "kind": "Lohn/Gehalt",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "629,51"
+    },
+    {
+      "cents": -40389,
+      "date": "17.02.2026",
+      "kind": "Basislastschrift",
       "party": "Muster Versicherung AG",
-      "printed": "754,03 S"
+      "printed": "403,89"
     },
     {
-      "cents": 343732,
-      "date": "17.02.2026",
+      "cents": 254321,
+      "date": "23.02.2026",
+      "kind": "Lohn/Gehalt",
       "party": "Beispiel Arbeitgeber GmbH",
-      "printed": "3.437,32 H"
+      "printed": "2.543,21"
     },
     {
-      "cents": 331334,
-      "date": "17.02.2026",
-      "party": "Beispiel Arbeitgeber GmbH",
-      "printed": "3.313,34 H"
-    },
-    {
-      "cents": -23485,
-      "date": "19.02.2026",
-      "party": "Fiktiv Telekom GmbH",
-      "printed": "234,85 S"
+      "cents": -49418,
+      "date": "27.02.2026",
+      "kind": "Überweisungsauftrag",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "494,18"
     }
   ],
   "cents": {
-    "closing": 876405,
-    "opening": 358282
+    "closing": 681185,
+    "opening": 259021
   },
   "fields": {
-    "closing": "8.764,05 H",
+    "closing": "6.811,85",
     "iban": "DE54 8910 0936 4537 2693 31",
-    "opening": "3.582,82 H",
-    "period_from": "01.02.2026",
+    "opening": "2.590,21",
+    "period_from": "31.01.2026",
     "period_to": "28.02.2026"
   },
   "kind": "statement",
-  "layout": "B",
+  "layout": null,
   "text_layer": true
 }

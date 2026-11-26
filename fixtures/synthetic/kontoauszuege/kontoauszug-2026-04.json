@@ -1,60 +1,95 @@
 {
   "bookings": [
     {
-      "cents": -58352,
-      "date": "08.04.2026",
-      "party": "Demo Online-Shop GmbH",
-      "printed": "583,52 S"
+      "cents": -41774,
+      "date": "05.04.2026",
+      "kind": "Dauerauftragsbelast",
+      "party": "Erfunden Möbel KG",
+      "printed": "417,74"
     },
     {
-      "cents": -76625,
-      "date": "08.04.2026",
-      "party": "Exempel Fitness GmbH",
-      "printed": "766,25 S"
+      "cents": -14537,
+      "date": "07.04.2026",
+      "kind": "Dauerauftragsbelast",
+      "party": "Fiktiv Telekom GmbH",
+      "printed": "145,37"
     },
     {
-      "cents": -47702,
+      "cents": -14078,
       "date": "10.04.2026",
+      "kind": "Basislastschrift",
       "party": "Modell Werkstatt e.K.",
-      "printed": "477,02 S"
+      "printed": "140,78"
     },
     {
-      "cents": -82450,
+      "cents": -54977,
       "date": "11.04.2026",
+      "kind": "Überweisungsauftrag",
+      "party": "Platzhalter Verlag GmbH",
+      "printed": "549,77"
+    },
+    {
+      "cents": -19371,
+      "date": "12.04.2026",
+      "kind": "Dauerauftragsbelast",
       "party": "Exempel Fitness GmbH",
-      "printed": "824,50 S"
+      "printed": "193,71"
     },
     {
-      "cents": -61222,
-      "date": "17.04.2026",
-      "party": "Probe Handwerk GmbH",
-      "printed": "612,22 S"
+      "cents": -24773,
+      "date": "13.04.2026",
+      "kind": "Überweisungsauftrag",
+      "party": "Exempel Fitness GmbH",
+      "printed": "247,73"
     },
     {
-      "cents": 110511,
-      "date": "20.04.2026",
+      "cents": 289156,
+      "date": "14.04.2026",
+      "kind": "Lohn/Gehalt",
       "party": "Beispiel Arbeitgeber GmbH",
-      "printed": "1.105,11 H"
+      "printed": "2.891,56"
     },
     {
-      "cents": -18082,
-      "date": "28.04.2026",
+      "cents": -74086,
+      "date": "17.04.2026",
+      "kind": "Basislastschrift",
       "party": "Probe Handwerk GmbH",
-      "printed": "180,82 S"
+      "printed": "740,86"
+    },
+    {
+      "cents": -6907,
+      "date": "20.04.2026",
+      "kind": "Dauerauftragsbelast",
+      "party": "Testhaus Energie AG",
+      "printed": "69,07"
+    },
+    {
+      "cents": -12327,
+      "date": "21.04.2026",
+      "kind": "Kartenzahlung girocard",
+      "party": "Modell Werkstatt e.K.",
+      "printed": "123,27"
+    },
+    {
+      "cents": -4616,
+      "date": "26.04.2026",
+      "kind": "Überweisungsauftrag",
+      "party": "Beispiel Stadtwerke GmbH",
+      "printed": "46,16"
     }
   ],
   "cents": {
-    "closing": 940608,
-    "opening": 1174530
+    "closing": 1072684,
+    "opening": 1050974
   },
   "fields": {
-    "closing": "9.406,08 H",
+    "closing": "10.726,84",
     "iban": "DE54 8910 0936 4537 2693 31",
-    "opening": "11.745,30 H",
-    "period_from": "01.04.2026",
+    "opening": "10.509,74",
+    "period_from": "31.03.2026",
     "period_to": "30.04.2026"
   },
   "kind": "statement",
-  "layout": "B",
+  "layout": null,
   "text_layer": true
 }

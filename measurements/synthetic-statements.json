@@ -1,0 +1,46 @@
+{
+  "corpus": "synthetic",
+  "fields": {
+    "booking.amount": {
+      "right": 41,
+      "total": 41
+    },
+    "booking.day": {
+      "right": 41,
+      "total": 41
+    },
+    "booking.kind": {
+      "right": 41,
+      "total": 41
+    },
+    "booking.other side": {
+      "right": 41,
+      "total": 41
+    },
+    "statement.adds up": {
+      "right": 3,
+      "total": 3
+    },
+    "statement.booking count": {
+      "right": 3,
+      "total": 3
+    },
+    "statement.closing": {
+      "right": 3,
+      "total": 3
+    },
+    "statement.iban": {
+      "right": 3,
+      "total": 3
+    },
+    "statement.layout known": {
+      "right": 6,
+      "total": 6
+    },
+    "statement.opening": {
+      "right": 3,
+      "total": 3
+    }
+  },
+  "reader": "statements"
+}
