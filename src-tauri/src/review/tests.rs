@@ -238,12 +238,99 @@ fn an_unclear_kind_and_a_possible_duplicate_are_answered_too() {
         2,
         "both wait, the owner decides"
     );
-    assert_eq!(
-        answer(conn, second, "check:duplicate", &Answer::No, testing::t0()).unwrap(),
-        "waiting"
+    assert!(
+        matches!(
+            answer(conn, second, "check:duplicate", &Answer::No, testing::t0()),
+            Err(AnswerError::Refused(Refused::Mismatch))
+        ),
+        "a duplicate is answered no by deleting it"
     );
     assert_eq!(
         answer(conn, second, "check:duplicate", &Answer::Yes, testing::t0()).unwrap(),
         "filed"
     );
+}
+
+#[test]
+fn no_to_a_duplicate_deletes_it_into_the_trash_and_its_twin_is_filed() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let root = dir.path().join("Archiv");
+    let first = disputed(conn, 1, "R-7");
+    let second = disputed(conn, 2, "R-7");
+    answer(
+        conn,
+        first,
+        "check:agree gross",
+        &Answer::Yes,
+        testing::t0(),
+    )
+    .unwrap();
+    answer(
+        conn,
+        second,
+        "check:agree gross",
+        &Answer::Yes,
+        testing::t0(),
+    )
+    .unwrap();
+    // The original of the second lies in the archive, as the intake stored it.
+    let (sha256,): (String,) = conn
+        .query_row(
+            "SELECT sha256 FROM documents WHERE id = ?1",
+            [second],
+            |row| Ok((row.get(0)?,)),
+        )
+        .unwrap();
+    let stored = crate::documents::stored_path(&root, &sha256, crate::documents::FileType::Pdf);
+    std::fs::create_dir_all(stored.parent().unwrap()).unwrap();
+    std::fs::write(&stored, b"%PDF").unwrap();
+    let moved = delete_duplicate(conn, &root, second, testing::t0())
+        .unwrap()
+        .unwrap();
+    assert!(moved.starts_with(dir.path().join(crate::documents::TRASH_FOLDER)));
+    assert!(moved.to_string_lossy().ends_with("_d2.pdf"));
+    assert!(!stored.exists());
+    let left: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM field_values WHERE document_id = ?1",
+            [second],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(left, 0, "every row about it is gone");
+    let state: String = conn
+        .query_row(
+            "SELECT state FROM documents WHERE id = ?1",
+            [first],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(state, "filed", "its twin is no duplicate any more");
+    assert!(
+        matches!(
+            delete_duplicate(conn, &root, first, testing::t0()),
+            Err(AnswerError::Refused(Refused::Mismatch))
+        ),
+        "only a document that waits as a duplicate is deleted this way"
+    );
+}
+
+#[test]
+fn no_after_an_undone_filing_sets_the_document_aside() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let id = disputed(conn, 1, "R-1");
+    answer(conn, id, "check:agree gross", &Answer::Yes, testing::t0()).unwrap();
+    checks::undo(conn, id, testing::t0()).unwrap();
+    assert_eq!(questions(conn, "check:undone").unwrap().len(), 1);
+    assert_eq!(
+        answer(conn, id, "check:undone", &Answer::No, testing::t0()).unwrap(),
+        "waiting"
+    );
+    assert!(groups(conn).unwrap().is_empty(), "it left Prüfen");
+    let listed = crate::documents::list(conn).unwrap();
+    assert_eq!(listed[0].state, "held");
 }

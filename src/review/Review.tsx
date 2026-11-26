@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { type ReviewAnswer, type ReviewGroup, type ReviewQuestion, commands } from "../bindings";
 import { PageImage } from "../documents/PageImage";
 import { kindLabel } from "../documents/describe";
-import { Button, EmptyState, List, ListRow, TextField } from "../ui";
+import { Button, Dialog, EmptyState, List, ListRow, TextField } from "../ui";
 import { reviewKey } from "./keys";
 
 /** Where "Prüfen" stands: the group chosen and the question open, both lifted into the app for the path. */
@@ -25,6 +25,7 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadGroups = useCallback(async () => {
     const result = await commands.reviewGroups();
@@ -53,12 +54,19 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
     if (question) onAt({ group: at.group, question });
   };
 
-  const send = async (answer: ReviewAnswer) => {
+  const send = (answer: ReviewAnswer) => {
+    const question = at.question;
+    if (question) void settle(() => commands.answerQuestion(question.document, question.key, answer));
+  };
+
+  /** Runs an answer and moves on to the next document of the group, or back to the groups. */
+  const settle = async (run: () => Promise<{ status: "ok" } | { status: "error"; error: { message: string } }>) => {
     const question = at.question;
     if (!question || !at.group) return;
     setBusy(true);
-    const result = await commands.answerQuestion(question.document, question.key, answer);
+    const result = await run();
     setBusy(false);
+    setDeleting(false);
     if (result.status === "error") {
       setError(result.error.message);
       return;
@@ -81,7 +89,7 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
         if (at.group) open(questions[index]);
         else if (groups[index]) onAt({ group: groups[index], question: null });
       } else if (action.kind === "back") onAt(at.question ? { group: at.group, question: null } : { group: null, question: null });
-      else if (action.kind === "pick") void send({ answer: "reading", index: action.reading });
+      else if (action.kind === "pick") send({ answer: "reading", index: action.reading });
       else return;
       event.preventDefault();
     };
@@ -93,7 +101,8 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
     const question = at.question;
     const first = question.readings[0];
     const isKind = question.key === "check:kind";
-    const yesNo = !isKind;
+    const isDuplicate = question.key === "check:duplicate";
+    const isUndone = question.key === "check:undone";
     return (
       <section className="grid w-full max-w-5xl grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-4">
         <div className="relative overflow-hidden rounded-panel shadow-panel">
@@ -112,27 +121,44 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
           {isKind ? (
             <div className="flex flex-wrap gap-2">
               {KINDS.map((kind) => (
-                <Button key={kind} size="small" busy={busy} onClick={() => void send({ answer: "kind", kind })}>
+                <Button key={kind} size="small" busy={busy} onClick={() => send({ answer: "kind", kind })}>
                   {kindLabel(kind)}
                 </Button>
               ))}
             </div>
-          ) : null}
-          {yesNo ? (
+          ) : isDuplicate ? (
             <div className="flex gap-2">
-              <Button kind="primary" busy={busy} onClick={() => void send({ answer: "yes" })}>
+              <Button kind="primary" busy={busy} onClick={() => send({ answer: "yes" })}>
+                Ja, eigenes Dokument
+              </Button>
+              <Button kind="danger" onClick={() => setDeleting(true)}>
+                Nein, Doppel löschen …
+              </Button>
+            </div>
+          ) : isUndone ? (
+            <div className="flex gap-2">
+              <Button kind="primary" busy={busy} onClick={() => send({ answer: "yes" })}>
+                Ja, ablegen
+              </Button>
+              <Button busy={busy} onClick={() => send({ answer: "no" })}>
+                Nein, zurückhalten
+              </Button>
+            </div>
+          ) : !denied ? (
+            <div className="flex gap-2">
+              <Button kind="primary" busy={busy} onClick={() => send({ answer: "yes" })}>
                 Ja
               </Button>
-              <Button onClick={() => (question.field ? setDenied(true) : void send({ answer: "no" }))}>Nein</Button>
+              <Button onClick={() => setDenied(true)}>Nein</Button>
             </div>
-          ) : null}
-          {denied ? (
+          ) : (
             <div className="flex flex-col gap-2">
+              <p className="text-body font-medium">Welcher Wert stimmt?</p>
               {question.readings.length > 1 ? (
                 <div className="grid grid-cols-2 gap-2">
                   {question.readings.map((reading, number) => (
-                    <Button key={`${reading.reader}-${reading.shown}`} onClick={() => void send({ answer: "reading", index: number })}>
-                      {`${number + 1} · ${reading.reader}: ${reading.shown}`}
+                    <Button key={`${reading.reader}-${reading.shown}`} busy={busy} onClick={() => send({ answer: "reading", index: number })}>
+                      {`${number + 1} · ${reading.shown} (${reading.reader})`}
                     </Button>
                   ))}
                 </div>
@@ -141,18 +167,38 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
                 className="flex items-end gap-2"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  void send({ answer: "typed", text: typed });
+                  send({ answer: "typed", text: typed });
                 }}
               >
-                <TextField label="Richtiger Wert" value={typed} onChange={setTyped} error={error ?? undefined} className="flex-1" />
+                <TextField label={question.readings.length > 1 ? "Oder ein anderer Wert" : "Richtiger Wert"} value={typed} onChange={setTyped} error={error ?? undefined} className="flex-1" />
                 <Button type="submit" busy={busy}>
                   Übernehmen
                 </Button>
               </form>
+              <div>
+                <Button size="small" kind="plain" onClick={() => setDenied(false)}>
+                  Zurück zur Frage
+                </Button>
+              </div>
             </div>
-          ) : error ? (
-            <p className="text-small text-danger">{error}</p>
-          ) : null}
+          )}
+          {error && !denied ? <p className="text-small text-danger">{error}</p> : null}
+          <Dialog
+            open={deleting}
+            onClose={() => setDeleting(false)}
+            title="Doppel löschen?"
+            description={`„${question.name}“ wird aus dem Archiv entfernt. Die Datei kommt in den Ordner „Papierkorb“ neben dem Archiv, bis du ihn leerst.`}
+            actions={
+              <>
+                <Button kind="plain" onClick={() => setDeleting(false)}>
+                  Abbrechen
+                </Button>
+                <Button kind="danger" busy={busy} onClick={() => void settle(() => commands.deleteDuplicate(question.document))}>
+                  Löschen
+                </Button>
+              </>
+            }
+          />
         </div>
       </section>
     );

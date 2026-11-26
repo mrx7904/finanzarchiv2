@@ -35,6 +35,11 @@ export const commands = {
 	reviewQuestions: (key: string, options?: InvokeOptions) => typedError<ReviewQuestion_Serialize[], CommandError>(__TAURI_INVOKE("review_questions", { key }, options)),
 	/**  Takes the owner's answer and returns the document's new state, `filed` or `waiting`. */
 	answerQuestion: (document: number, key: string, answer: ReviewAnswer, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("answer_question", { document, key, answer }, options)),
+	/**
+	 *  "Nein, das ist ein Doppel": deletes the document, its original goes to the `Papierkorb` beside
+	 *  the archive. The documents that waited as its duplicate are checked again.
+	 */
+	deleteDuplicate: (document: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_duplicate", { document }, options)),
 	/**  The templates of the names with their placeholders. */
 	nameTemplates: (options?: InvokeOptions) => typedError<NameTemplates, CommandError>(__TAURI_INVOKE("name_templates", undefined, options)),
 	/**

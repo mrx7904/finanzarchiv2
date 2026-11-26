@@ -147,6 +147,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             review::review_groups,
             review::review_questions,
             review::answer_question,
+            review::delete_duplicate,
             names::name_templates,
             names::set_name_template,
             names::rename_document,
