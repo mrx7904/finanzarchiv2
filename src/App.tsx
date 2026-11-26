@@ -4,6 +4,9 @@ import { commands } from "./bindings";
 import { Documents } from "./documents/Documents";
 import { Intake } from "./intake/Intake";
 import { useIntakeChanged } from "./intake/useIntakeChanged";
+import { Accounts } from "./money/Accounts";
+import { Bookings } from "./money/Bookings";
+import { moneyPath } from "./money/describe";
 import { reviewPath } from "./review/keys";
 import { Review, type ReviewAt } from "./review/Review";
 import { AppShell, Button, SidebarRow } from "./ui";
@@ -26,7 +29,9 @@ function useHash() {
 export function App() {
   const hash = useHash();
   const [loaded, setLoaded] = useState<LoadedStatus | null>(null);
-  const [view, setView] = useState<"documents" | "review">("documents");
+  const [view, setView] = useState<"documents" | "review" | "accounts">("documents");
+  // In "Konten": the account whose bookings are shown, or all (null), or none open (undefined).
+  const [bookingsOf, setBookingsOf] = useState<{ id: number; name: string } | null | undefined>(undefined);
   const [at, setAt] = useState<ReviewAt>({ group: null, question: null });
   const [waiting, setWaiting] = useState(0);
   const countWaiting = () =>
@@ -62,7 +67,9 @@ export function App() {
                 toStart: () => setAt({ group: null, question: null }),
                 toGroup: () => setAt({ group: at.group, question: null }),
               })
-            : [{ label: "Dokumente" }]
+            : view === "accounts"
+              ? moneyPath(bookingsOf?.name ?? null, bookingsOf !== undefined, { toAccounts: () => setBookingsOf(undefined) })
+              : [{ label: "Dokumente" }]
       }
       sidebar={
         ready ? (
@@ -76,6 +83,15 @@ export function App() {
               onSelect={() => {
                 setView("review");
                 setAt({ group: null, question: null });
+              }}
+            />
+            <SidebarRow
+              label="Konten"
+              icon="card"
+              selected={view === "accounts"}
+              onSelect={() => {
+                setView("accounts");
+                setBookingsOf(undefined);
               }}
             />
           </nav>
@@ -97,6 +113,8 @@ export function App() {
         {ready && view === "documents" ? <Intake /> : null}
         {ready && view === "documents" ? <Documents /> : null}
         {ready && view === "review" ? <Review at={at} onAt={setAt} onAnswered={countWaiting} /> : null}
+        {ready && view === "accounts" && bookingsOf === undefined ? <Accounts onOpen={(account) => setBookingsOf(account ? { id: account.id, name: account.name } : null)} /> : null}
+        {ready && view === "accounts" && bookingsOf !== undefined ? <Bookings account={bookingsOf?.id ?? null} /> : null}
       </main>
     </AppShell>
   );

@@ -123,3 +123,17 @@ The owner's archive (a copy, counts only):
 | Left without a link | 10 |
 
 Of the 10 without a link, 7 have no booking of their amount in the statements read: they were paid by another way, a card of another bank, PayPal or cash, which stage 4 brings in.
+
+## Accounts and bookings in the window (#26)
+
+- The sidebar has "Dokumente", "Prüfen" and "Konten". "Konten" lists each account: its name, its balance after every booking read, the bank's last balance with its day, and every finding of #22. A mark says whether they match ("stimmt") or not ("prüfen").
+- "Alle Umsätze", or an account, opens "Umsätze". The path reads "Konten › <Konto> › Umsätze" (or "Konten › Alle Umsätze"), and "Konten" leads back.
+- **"Umsätze"** lists the bookings newest first, 200 at a time ("Weitere laden"). They are filtered in the core (`list_bookings`) by period, category and a text in party, other side or purpose, so ten thousand bookings stay quick. The sums of the bookings found, money in and money out, leave the moves out.
+- A booking opens to show:
+  - its account, kind and purpose;
+  - its category, own or the party's, to change, with "Für alle von …";
+  - the documents linked to it, with "Warum?" (the rule in a sentence) and "Rückgängig";
+  - the move it is half of, with "Warum?" and "Rückgängig";
+  - the page of its statement.
+- "Kategorien …" in "Konten" opens the dialog of the categories: rename, remove, add with their direction. A refused name shows its reason.
+- An amount crosses to the window only as text ("1.234,56 €") and its direction, never as a number, as for every value (`decision-stack.md`).
