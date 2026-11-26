@@ -2,6 +2,7 @@
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
 pub mod documents;
+pub mod evaluations;
 pub mod folders;
 pub mod mail;
 pub mod money;
@@ -160,6 +161,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             money::booking_detail,
             money::link_to_booking,
             money::list_orders,
+            evaluations::evaluation_years,
+            evaluations::evaluation_year,
             money::list_categories,
             money::add_category,
             money::rename_category,

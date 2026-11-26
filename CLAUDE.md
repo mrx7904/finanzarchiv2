@@ -35,6 +35,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | touch a watched folder, the inbox folder or the downloads | [`knowledge/decision-folders.md`](./knowledge/decision-folders.md) |
 | touch a mailbox, IMAP, the app password, "Postfächer" or invoices from mail | [`knowledge/decision-mail.md`](./knowledge/decision-mail.md) |
 | touch PayPal payments, a receipt paired with its invoice, Amazon orders or "Bestellungen" | [`knowledge/decision-payments.md`](./knowledge/decision-payments.md) |
+| touch income and spending, the evaluations or their figures | [`knowledge/decision-evaluations.md`](./knowledge/decision-evaluations.md) |
 | generate the corpus, measure a reader or add test documents | [`knowledge/decision-corpus.md`](./knowledge/decision-corpus.md) |
 | touch the intake queue, its stages, workers or the pause | [`knowledge/decision-intake.md`](./knowledge/decision-intake.md) |
 | open, check or read a PDF, or touch PDFium and how it ships | [`knowledge/decision-pdf.md`](./knowledge/decision-pdf.md) |

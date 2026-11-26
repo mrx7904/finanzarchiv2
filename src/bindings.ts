@@ -57,6 +57,8 @@ export const commands = {
 	/**  The owner links a candidate document to the booking, as the answer of its question in "Prüfen". */
 	linkToBooking: (booking: number, document: number, options?: InvokeOptions) => typedError<BookingDetail_Serialize, CommandError>(__TAURI_INVOKE("link_to_booking", { booking, document }, options)),
 	listOrders: (options?: InvokeOptions) => typedError<OrderRow_Serialize[], CommandError>(__TAURI_INVOKE("list_orders", undefined, options)),
+	evaluationYears: (options?: InvokeOptions) => typedError<number[], CommandError>(__TAURI_INVOKE("evaluation_years", undefined, options)),
+	evaluationYear: (year: number, options?: InvokeOptions) => typedError<YearRow_Serialize, CommandError>(__TAURI_INVOKE("evaluation_year", { year }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -643,6 +645,25 @@ export type PairedDocument = {
 	invoice: boolean,
 };
 
+/**  A category or a party with its sum. `id` null is "Ohne Kategorie" or "Ohne Partei". */
+export type PartRow = PartRow_Serialize | PartRow_Deserialize;
+
+/**  A category or a party with its sum. `id` null is "Ohne Kategorie" or "Ohne Partei". */
+export type PartRow_Deserialize = {
+	id?: number | null,
+	name?: string | null,
+	income: boolean,
+	sum: SumRow,
+};
+
+/**  A category or a party with its sum. `id` null is "Ohne Kategorie" or "Ohne Partei". */
+export type PartRow_Serialize = {
+	id: number | null,
+	name: string | null,
+	income: boolean,
+	sum: SumRow,
+};
+
 /**  The bookings of one party in the year of a booking. */
 export type PartyYear = {
 	party: string,
@@ -750,6 +771,46 @@ export type StatementRef_Serialize = {
 	document: number,
 	name: string,
 	page: number | null,
+};
+
+/**  A sum as the window takes it. */
+export type SumRow = {
+	cents: number,
+	text: string,
+	count: number,
+};
+
+/**  What a year brought, and the year before for comparison. */
+export type YearRow = YearRow_Serialize | YearRow_Deserialize;
+
+/**  What a year brought, and the year before for comparison. */
+export type YearRow_Deserialize = {
+	year: number,
+	income: SumRow[],
+	spending: SumRow[],
+	incomeTotal: SumRow,
+	spendingTotal: SumRow,
+	/**  Income minus spending. */
+	balance: SumRow,
+	categories: PartRow_Deserialize[],
+	parties: PartRow_Deserialize[],
+	previousIncome: SumRow,
+	previousSpending: SumRow,
+};
+
+/**  What a year brought, and the year before for comparison. */
+export type YearRow_Serialize = {
+	year: number,
+	income: SumRow[],
+	spending: SumRow[],
+	incomeTotal: SumRow,
+	spendingTotal: SumRow,
+	/**  Income minus spending. */
+	balance: SumRow,
+	categories: PartRow_Serialize[],
+	parties: PartRow_Serialize[],
+	previousIncome: SumRow,
+	previousSpending: SumRow,
 };
 
 /* Tauri Specta runtime */
