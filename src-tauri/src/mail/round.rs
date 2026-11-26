@@ -18,7 +18,6 @@ use super::{MailError, classify};
 use crate::downloads::{kind_word, money};
 use crate::kinds::Kind;
 use crate::ollama::{LocalModel, Question};
-use crate::pdf::Pdfium;
 
 /// How far back the first round of a mailbox reads.
 pub const REACH_DAYS: i64 = 365;
@@ -61,6 +60,8 @@ pub struct Looked {
     pub hash: String,
     pub received_at: Option<String>,
     pub verdict: String,
+    /// The kind the model gave a mail it took, the hint for the intake.
+    pub kind: Option<Kind>,
     pub files: Vec<(String, Vec<u8>)>,
 }
 
@@ -157,18 +158,25 @@ fn is_pdf(part: &MessagePart<'_>) -> bool {
 }
 
 fn pdf_name(name: Option<&str>, fallback: &str) -> String {
+    file_name(name, fallback, "pdf")
+}
+
+/// A safe file name with the extension, from a name or the fallback.
+fn file_name(name: Option<&str>, fallback: &str, extension: &str) -> String {
     let base = name.unwrap_or(fallback);
-    let base = base
-        .strip_suffix(".pdf")
-        .or_else(|| base.strip_suffix(".PDF"))
-        .unwrap_or(base);
+    let dotted = format!(".{extension}");
+    let base = if base.to_ascii_lowercase().ends_with(&dotted) {
+        &base[..base.len() - dotted.len()]
+    } else {
+        base
+    };
     let safe = crate::naming::safe(base);
     let safe = if safe.is_empty() {
         fallback.to_owned()
     } else {
         safe
     };
-    format!("{safe}.pdf")
+    format!("{safe}.{extension}")
 }
 
 const SYSTEM: &str = "Du sortierst Mails. Sage nur, welche Art die Mail ist: eine Rechnung (invoice), \
@@ -217,6 +225,7 @@ fn looked(head: &Head, verdict: &str) -> Looked {
         hash: head.hash.clone(),
         received_at: head.received_at.clone(),
         verdict: verdict.to_owned(),
+        kind: None,
         files: Vec::new(),
     }
 }
@@ -233,9 +242,8 @@ fn day_and_time(message: &mail_parser::Message<'_>) -> String {
         .unwrap_or_default()
 }
 
-/// Judges a whole mail. `None` when it has to wait for the model or for PDFium.
+/// Judges a whole mail. `None` when it has to wait for the model.
 pub fn judge(
-    pdfium: Option<&Pdfium>,
     model: Option<&dyn LocalModel>,
     head: &Head,
     raw: &[u8],
@@ -261,7 +269,7 @@ pub fn judge(
             "Kein Zeichen einer Rechnung, nicht übernommen.",
         ));
     }
-    let text = message.body_text(0).unwrap_or_default().into_owned();
+    let text = super::text::body_of(&message);
     let names: Vec<String> = pdfs.iter().map(|(name, _)| name.clone()).collect();
     let model = model?;
     *asked += 1;
@@ -281,26 +289,43 @@ pub fn judge(
                 },
                 kind_word(kind)
             ),
+            kind: Some(kind),
             files: pdfs,
             ..looked(head, "")
         });
     }
-    let head_lines = [
+    let recipient = message
+        .to()
+        .and_then(|list| list.first())
+        .and_then(|mailbox| mailbox.address())
+        .unwrap_or("")
+        .to_owned();
+    let mut head_lines = vec![
         format!("Von: {}", head.from),
+        format!("An: {recipient}"),
         format!("Datum: {}", day_and_time(&message)),
         format!("Betreff: {}", head.subject),
     ];
-    let pdf = super::render::mail_pdf(pdfium?, &head_lines, &text).ok()?;
-    let name = pdf_name(
+    let attached: Vec<&str> = message
+        .attachments()
+        .filter_map(|part| part.attachment_name())
+        .collect();
+    if !attached.is_empty() {
+        head_lines.push(format!("Anhänge: {}", attached.join(", ")));
+    }
+    let file = super::text::mail_file(&head_lines, &text);
+    let name = file_name(
         Some(head.subject.as_str()).filter(|subject| !subject.trim().is_empty()),
         "Mail",
+        "txt",
     );
     Some(Looked {
         verdict: format!(
-            "Übernommen als PDF der Mail (laut Modell {}).",
+            "Übernommen als Text der Mail (laut Modell {}).",
             kind_word(kind)
         ),
-        files: vec![(name, pdf)],
+        kind: Some(kind),
+        files: vec![(name, file.into_bytes())],
         ..looked(head, "")
     })
 }
@@ -324,7 +349,6 @@ pub async fn read<S>(
     password: &str,
     place: &Place,
     since: jiff::civil::Date,
-    pdfium: Option<&Pdfium>,
     model: Option<&dyn LocalModel>,
     known: &dyn Fn(&str) -> bool,
     note: &mut dyn FnMut(&Looked),
@@ -418,7 +442,7 @@ where
                     .await
                     .map_err(classify)?;
                 match whole.first().and_then(|fetch| fetch.body()) {
-                    Some(raw) => judge(pdfium, model, head, raw, &mut counts.asked),
+                    Some(raw) => judge(model, head, raw, &mut counts.asked),
                     None => Some(looked(head, "Die Mail ließ sich nicht lesen.")),
                 }
             } else {

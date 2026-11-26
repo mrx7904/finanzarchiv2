@@ -28,6 +28,8 @@ export function textStateLabel(state: string | null, pages: number | null): stri
       return "Bild, wird als Bild gelesen";
     case "table":
       return "Tabelle (CSV-Export der Bank)";
+    case "mail":
+      return "Text einer Mail";
     default:
       return `${pageCount}noch nicht gelesen`;
   }
@@ -75,4 +77,16 @@ export function mailboxLine(mailbox: { checkedAt: string | null; problem: string
   }
   if (mailbox.checkedAt) return "Nur lesend angemeldet, wird gleich gelesen.";
   return "Noch nicht geprüft.";
+}
+
+/** The head and the text of a mail kept as its text (#31): "Von: …" lines up to the first empty line. */
+export function mailParts(text: string): { head: [string, string][]; body: string } {
+  const lines = text.split("\n");
+  const empty = lines.indexOf("");
+  const headLines = empty < 0 ? [] : lines.slice(0, empty);
+  const head: [string, string][] = headLines.map((line) => {
+    const at = line.indexOf(": ");
+    return at < 0 ? ["", line] : [line.slice(0, at), line.slice(at + 2)];
+  });
+  return { head, body: (empty < 0 ? lines : lines.slice(empty + 1)).join("\n").trim() };
 }

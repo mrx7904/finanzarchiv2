@@ -75,6 +75,9 @@ pub fn select(pdfium: Option<&Pdfium>, model: Option<&dyn LocalModel>, path: &Pa
         return out("Die Datei ließ sich nicht lesen.");
     };
     match crate::documents::FileType::detect(&bytes) {
+        Some(crate::documents::FileType::Mail) => {
+            out("Dateien dieser Art nimmt das Archiv nicht an.")
+        }
         Some(crate::documents::FileType::Csv) => Verdict {
             take: true,
             reason: "Aus den Downloads übernommen (ein Kontoauszug als CSV).".into(),

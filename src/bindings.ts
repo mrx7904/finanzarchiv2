@@ -20,11 +20,13 @@ export const commands = {
 	dismissFailed: (options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("dismiss_failed", undefined, options)),
 	/**  The documents of the archive, newest first. */
 	listDocuments: (options?: InvokeOptions) => typedError<DocumentRow_Serialize[], CommandError>(__TAURI_INVOKE("list_documents", undefined, options)),
+	pageImage: (document: number, page: number, width: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("page_image", { document, page, width }, options)),
 	/**
 	 *  A page of a document as an image for the window, as a data URL. The width is rounded up to
 	 *  one of `previews::WIDTHS`.
+	 *  The text of a mail kept as its text (#31), for the preview: its head and text, without the mark.
 	 */
-	pageImage: (document: number, page: number, width: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("page_image", { document, page, width }, options)),
+	mailText: (document: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("mail_text", { document }, options)),
 	/**  The checks of a document for "Warum?" (#16). */
 	documentChecks: (document: number, options?: InvokeOptions) => typedError<DocumentChecks_Serialize, CommandError>(__TAURI_INVOKE("document_checks", { document }, options)),
 	/**  "Rückgängig": the document that was filed by itself waits for the owner again. */

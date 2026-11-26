@@ -165,6 +165,18 @@ fn read_text(
             };
             (vec![page], "table", None)
         }),
+        // A mail keeps each line of its prepared text as a line of one page (#31).
+        (documents::FileType::Mail, _) => fs::read(&path).ok().map(|bytes| {
+            let text = String::from_utf8_lossy(&bytes);
+            let body: String = text.lines().skip(1).collect::<Vec<_>>().join("\n");
+            let page = pages::PageText {
+                number: 1,
+                width: 0.0,
+                height: 0.0,
+                lines: crate::statements::layout_b::lines_of(&body),
+            };
+            (vec![page], "mail", None)
+        }),
         _ => Some((Vec::new(), "image", None)),
     };
     if kill(Point::Prepared) {
@@ -220,6 +232,22 @@ fn classify(
                 }
             } else {
                 kinds::classify(lines.iter().map(String::as_str))
+            };
+            // A file of a mail takes the kind the model gave its mail when code cannot tell (#31).
+            let hinted = match found.kind {
+                kinds::Kind::Other | kinds::Kind::Unknown
+                    if job.source == documents::Source::Mail =>
+                {
+                    crate::mail::reader::hint_for(&tx, &job.path).map_err(|_| Stopped::Database)?
+                }
+                _ => None,
+            };
+            let found = match hinted {
+                Some(kind) => kinds::Classified {
+                    kind,
+                    signals: vec![crate::mail::reader::HINT_SIGNAL],
+                },
+                None => found,
             };
             documents::set_kind(&tx, id, found.kind, &found.signals)
                 .map_err(|_| Stopped::Database)?;
@@ -395,7 +423,8 @@ fn read_by_model(
     );
     let lacking = readers::image::lacks_decisive(asked.kind, &found);
     let mut image = None;
-    if asked.scan || !lacking.is_empty() {
+    let pictured = !matches!(asked.stored, Some((_, documents::FileType::Mail)));
+    if pictured && (asked.scan || !lacking.is_empty()) {
         let pngs = match (&asked.stored, pdfium) {
             (Some((path, file_type)), Some(pdfium)) => fs::read(path)
                 .map(|bytes| {

@@ -33,6 +33,7 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
     (17, include_str!("../../migrations/0017_downloads.sql")),
     (18, include_str!("../../migrations/0018_mailboxes.sql")),
     (19, include_str!("../../migrations/0019_mail_messages.sql")),
+    (20, include_str!("../../migrations/0020_mail_text.sql")),
 ];
 
 #[derive(Debug, thiserror::Error)]

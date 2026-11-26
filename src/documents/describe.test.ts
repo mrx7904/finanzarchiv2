@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downloadsLine, formatDay, mailboxLine, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
+import { downloadsLine, formatDay, mailParts, mailboxLine, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
 
 describe("the list of documents", () => {
   it("names every kind in German", () => {
@@ -59,5 +59,17 @@ describe("the mailboxes of #29", () => {
       `Nur lesend, zuletzt gelesen am ${formatDay("2026-11-26T10:00:00Z")}: 412 Mails angesehen, 9 mit Beleg.`,
     );
     expect(mailboxLine({ checkedAt: null, problem: null, readAt: "2026-11-26T10:00:00Z", looked: 1, taken: 0 })).toContain("1 Mail angesehen");
+  });
+});
+
+describe("a mail kept as its text, #31", () => {
+  it("splits its head from its text", () => {
+    const { head, body } = mailParts("Von: Beispiel GmbH <info@example.com>\nBetreff: Ihre Rechnung: R-7\n\nGesamt 23,80 €\nDanke\n");
+    expect(head).toEqual([
+      ["Von", "Beispiel GmbH <info@example.com>"],
+      ["Betreff", "Ihre Rechnung: R-7"],
+    ]);
+    expect(body).toBe("Gesamt 23,80 €\nDanke");
+    expect(textStateLabel("mail", null)).toBe("Text einer Mail");
   });
 });

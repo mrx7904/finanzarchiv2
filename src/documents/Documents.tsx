@@ -6,6 +6,7 @@ import { Button, EmptyState, List, ListRow } from "../ui";
 import { formatDay, kindLabel, stateLabel, textStateLabel } from "./describe";
 import { Filing } from "./Filing";
 import { Folders } from "./Folders";
+import { MailMark, MailText } from "./MailText";
 import { Mailboxes } from "./Mailboxes";
 import { DocumentName, TemplatesDialog } from "./Names";
 import { PageImage } from "./PageImage";
@@ -75,7 +76,13 @@ export function Documents() {
                 key={row.id}
                 title={row.name}
                 detail={`${kindLabel(row.kind)}, ${stateLabel(row.state)}, importiert am ${formatDay(row.importedAt)}`}
-                leading={<PageImage document={row.id} width={160} label={`Erste Seite von ${row.name}`} className="h-10 w-8 rounded-[3px] shadow-panel" />}
+                leading={
+                  row.fileType === "mail" ? (
+                    <MailMark className="h-10 w-8 rounded-[3px] shadow-panel" />
+                  ) : (
+                    <PageImage document={row.id} width={160} label={`Erste Seite von ${row.name}`} className="h-10 w-8 rounded-[3px] shadow-panel" />
+                  )
+                }
                 selected={chosen === row.id}
                 onSelect={() => setChosen(row.id)}
               />
@@ -84,7 +91,11 @@ export function Documents() {
           <aside aria-label="Vorschau" className="sticky top-0 flex flex-col gap-2 rounded-panel bg-surface p-3 shadow-panel">
             {selected ? (
               <>
-                <PageImage key={selected.id} document={selected.id} width={640} label={`Erste Seite von ${selected.name}`} className="rounded-control" />
+                {selected.fileType === "mail" ? (
+                  <MailText key={selected.id} document={selected.id} />
+                ) : (
+                  <PageImage key={selected.id} document={selected.id} width={640} label={`Erste Seite von ${selected.name}`} className="rounded-control" />
+                )}
                 <DocumentName document={selected.id} name={selected.name} originalName={selected.originalName} byOwner={selected.nameByOwner} onChanged={() => void reload()} />
                 <p className="text-small text-fg-muted">{textStateLabel(selected.textState, selected.pages)}</p>
                 {selected.arrival ? <p className="text-small text-fg-muted">{selected.arrival}</p> : null}

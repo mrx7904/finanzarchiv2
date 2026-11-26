@@ -14,15 +14,21 @@
 - The IMAP library `async-imap` logs every command at the level `trace`, `LOGIN` with its password. The app has no logger yet. When one comes, it holds `async_imap` below `trace`.
 ## Invoices from mail (#31, FA-35)
 
-**Decided:** 2026-11-26 · applies to `mail/round.rs`, `mail/reader.rs`, `mail/render.rs`, the table `mail_messages` (migration 0019)
+**Decided:** 2026-11-26 · applies to `mail/round.rs`, `mail/reader.rs`, `mail/text.rs`, the table `mail_messages` (migrations 0019, 0020), the file type `mail`
 
 - **When:** a round through every mailbox a minute after start, every 15 minutes after, once at once after a mailbox was added, and at "Jetzt lesen" in "Postfächer". One round at a time.
 - **Where:** the folder with the attribute `\All` (RFC 6154), "All Mail" in the language of the account, so a mail is found whatever its labels and whether it was archived. Without one, `INBOX`. A mailbox keeps folder, UIDVALIDITY and the last UID looked at. The next round asks for `UID last+1:*`. A changed UIDVALIDITY or folder starts over by date, and the mails known by hash are skipped.
 - **How far back:** the first round reads the last 365 days (`round::REACH_DAYS`).
 - **Prefilter by code**, from the head (`BODY.PEEK[HEADER]` and `RFC822.SIZE`, 50 mails a command): a word of an invoice in subject or sender (`rechnung`, `invoice`, `beleg`, `quittung`, `receipt`, `zahlung`, `payment`, `abrechnung`, `gutschrift`, `kontoauszug`, `bestellung`, `order`, `billing`, `faktura`), or a mail that is neither plain text nor text with its HTML, so it may carry a PDF. Only those are fetched whole (`BODY.PEEK[]`). A whole mail goes to the model only when it has a PDF attachment (named `.pdf` or `application/pdf`, starting with `%PDF`) or the word. A mail over 30 MB is not fetched.
 - **The model** (`round::ask_kind`) gets sender, subject, the names of the PDF attachments and the first 1,500 characters of the text, and answers one of invoice, payslip, receipt, statement, other. It is never asked how sure it is. When it does not answer, the mail and every later one wait for the next round: the last UID stays before them.
-- **What is taken:** for a document of money, every PDF attachment. Without one, the mail itself becomes a PDF (`render::mail_pdf`): sender, date and subject in bold on top, then the plain text of the mail in Helvetica on A4, wrapped at 92 characters. Only text goes in, so no image, font or link of the mail is ever loaded. Characters Helvetica cannot show become spaces.
-- **Into the intake:** the PDFs wait in `Mail-Eingang` beside the archive, under the first 16 characters of the mail's hash, and go through the intake with the source `mail`. A round removes what the intake took (every job past `queued`).
+- **What is taken:** for a document of money, every PDF attachment. Without one, the mail itself is the document, kept as its **prepared text**, not as a PDF (the owner's word of 2026-11-26; 0.4.0 made a PDF of it):
+  - The file type `mail` (`.txt`, UTF-8), known by its first line `FINANZARCHIV-MAIL 1`. Then a head of `Von`, `An`, `Datum`, `Betreff` and `Anhänge`, an empty line, the text.
+  - The text is the plain text part where the mail has one. An HTML mail is turned into lines by `text::html_to_text`, as code and the model read best: a line per block, a table row on one line with its cells side by side ("Gesamt 23,80 €" as on a printed invoice), an empty line between paragraphs. Styles, scripts, comments, images, link targets, web addresses, hidden blocks (`display:none`, the padding of a mail's preview) and zero-width characters are dropped, entities decoded.
+  - The text stage keeps each line of it as a line of one page (text state `mail`). The code readers and the model read those lines. The model stage asks for no page image of a mail.
+  - The window shows its head and text in the preview, a mail mark in the list, and the verdict of its mail ("Aus einem Postfach. …").
+  - Nothing of the mail is ever loaded, it is plain text. The model reads the same prepared text when it judges the mail.
+- **The kind of the mail as a hint:** where the signals of `kinds.rs` cannot tell a file of a mail (other or unknown), the intake takes the kind the model gave its mail (`mail_messages.kind`, the signal `mail:model`): always for the text of a mail, for an attachment only when it was the mail's only file, so terms or a revocation sent beside an invoice do not become one. Every other check (values, sum, duplicate) still decides whether it is filed. On 0.4.0 83 of 89 files of mails waited only for their kind.
+- **Into the intake:** the files wait in `Mail-Eingang` beside the archive, under the first 16 characters of the mail's hash, and go through the intake with the source `mail`. A round removes what the intake took (every job past `queued`).
 - **Once:** every mail looked at is a row of `mail_messages` under the SHA-256 of its Message-ID (of sender, date and subject when it has none), with the verdict in German, the count of files and no body. A row outlives its mailbox, so a mailbox added again does not ask about a mail twice. A document the owner deletes stays deleted (`deleted_sources`, #27), and its mail is not looked at again anyway.
 
 ## Measured
@@ -38,7 +44,9 @@ No login against the real Gmail was made by the agent: the owner types the app p
 Tests of #31 against the fake server with five invented mails (`mail::round::tests`):
 - a newsletter is judged by its head alone, a photo without PDF and without the word is left by code;
 - a PDF attachment and an invoice in the text are taken, a shipping note the model calls other is left, and the model is asked three times, never how sure it is;
-- the mail as a PDF carries sender, date and subject on top and its text below, umlauts and the euro sign included;
+- an HTML mail becomes lines with a table row on one line, without style, script, hidden preview, image, link or web address;
+- the text of a mail is a document of the type `mail`, its lines are read and the kind of its mail decides where code cannot tell, an attachment takes it only as the mail's only file;
+- documents taken before the hint get it at start, and a mail taken as a PDF by 0.4.0 is forgotten, its document in the Papierkorb, so the next round takes it as text;
 - the next round finds nothing new, a known mail is not asked about, and without the model the rest waits;
 - no command of a round writes.
 
@@ -49,3 +57,5 @@ On the owner's two Gmail mailboxes, read only, counts only (2026-11-26, `measure
 | 278 | 10 (4 with PDF attachments, 6 as a PDF of the mail) | 237 | 31 | 41 | 51 s |
 
 Whether the 10 are all invoices and the 268 hold none was not checked mail by mail: the owner sees the 10 in the archive once the version with #31 runs, and what waits in "Prüfen".
+
+**Since 0.5.0** a mail that is the document itself is kept as its text. At the first start, `reader::replace_mail_pdfs` moves every document 0.4.0 made as a PDF of a mail to the Papierkorb beside the archive, forgets its mail and sets the mailboxes back to the start of their reach, where every other mail is known by its hash, so the next round takes those mails again as text. `reader::apply_hints` gives the files of mails waiting only for their kind the kind of their mail and reads them again. `documents::delete` now also removes the links of a document (#24), which it left before.

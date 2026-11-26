@@ -19,13 +19,24 @@ pub enum FileType {
     Webp,
     /// A CSV export of a bank, taken only when it reads as a statement of a known layout (#21).
     Csv,
+    /// A mail that is the document itself, as its prepared text (#31), starting with [`MAIL_MARK`].
+    Mail,
 }
+
+/// The first line of the text of a mail (#31), so the file says what it is.
+pub const MAIL_MARK: &str = "FINANZARCHIV-MAIL 1";
 
 impl FileType {
     /// Read from the first bytes, never from the name, so a renamed file is what it is.
     pub fn detect(bytes: &[u8]) -> Option<Self> {
         let head = &bytes[..bytes.len().min(1024)];
-        if head.windows(5).any(|window| window == b"%PDF-") {
+        if bytes.starts_with(MAIL_MARK.as_bytes())
+            && bytes
+                .get(MAIL_MARK.len())
+                .is_some_and(|byte| *byte == b'\n')
+        {
+            Some(Self::Mail)
+        } else if head.windows(5).any(|window| window == b"%PDF-") {
             Some(Self::Pdf)
         } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
             Some(Self::Png)
@@ -49,12 +60,14 @@ impl FileType {
             Self::Jpeg => "jpeg",
             Self::Webp => "webp",
             Self::Csv => "csv",
+            Self::Mail => "mail",
         }
     }
 
     pub fn extension(self) -> &'static str {
         match self {
             Self::Jpeg => "jpg",
+            Self::Mail => "txt",
             other => other.code(),
         }
     }
@@ -365,9 +378,13 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
         "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state,
                 CASE WHEN state = 'waiting' AND EXISTS (SELECT 1 FROM field_values v WHERE v.document_id = documents.id AND v.reader = 'owner' AND v.field = 'hold' AND v.value = '1') THEN 'held' ELSE state END,
                 original_name, name_by_owner,
-                (SELECT s.verdict FROM intake_jobs j JOIN seen_files s ON s.path = j.path
-                  JOIN watched_folders w ON w.id = s.folder_id AND w.is_downloads = 1
-                  WHERE j.document_id = documents.id AND j.source = 'folder' ORDER BY j.id DESC LIMIT 1)
+                coalesce(
+                  (SELECT s.verdict FROM intake_jobs j JOIN seen_files s ON s.path = j.path
+                    JOIN watched_folders w ON w.id = s.folder_id AND w.is_downloads = 1
+                    WHERE j.document_id = documents.id AND j.source = 'folder' ORDER BY j.id DESC LIMIT 1),
+                  (SELECT 'Aus einem Postfach. ' || m.verdict FROM intake_jobs j JOIN mail_messages m
+                    ON instr(j.path, substr(m.message_hash, 1, 16)) > 0
+                    WHERE j.document_id = documents.id AND j.source = 'mail' ORDER BY j.id LIMIT 1))
          FROM documents ORDER BY imported_at DESC, id DESC",
     )?;
     statement
@@ -411,6 +428,8 @@ pub fn delete(conn: &Connection, root: &Path, id: i64) -> rusqlite::Result<Optio
         "pages",
         "decisions",
         "e_invoices",
+        "links",
+        "link_questions",
         "intake_jobs",
     ] {
         tx.execute(&format!("DELETE FROM {table} WHERE document_id = ?1"), [id])?;
@@ -478,6 +497,7 @@ pub fn stored_of(
             FileType::Jpeg,
             FileType::Webp,
             FileType::Csv,
+            FileType::Mail,
         ]
         .into_iter()
         .find(|t| t.code() == code)?;
