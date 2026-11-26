@@ -67,6 +67,10 @@ pub struct DocumentRow {
     pub text_state: Option<String>,
     /// open (not checked yet), filed or waiting (#16).
     pub state: String,
+    /// The name of the file as it came in, which the preview keeps beside the name (#18).
+    pub original_name: String,
+    /// Whether the owner typed the name.
+    pub name_by_owner: bool,
 }
 
 /// One result of a check, as "Warum?" shows it.
@@ -275,6 +279,8 @@ pub fn list_documents(
                 imported_at: row.imported_at,
                 text_state: row.text_state,
                 state: row.state,
+                original_name: row.original_name,
+                name_by_owner: row.name_by_owner,
             })
         })
         .collect()

@@ -38,7 +38,7 @@ Order of work: #01 first. Then #02, #03 and #07 in parallel. Then #04, #05 and #
 | [#15](015-reading-by-image.md) | Reading the page as an image | FA-20 | #14 | done |
 | [#16](016-checks-and-filing.md) | Checks decide what is filed by itself | FA-21 | #12, #13, #14 | done |
 | [#17](017-review-as-questions.md) | The review as questions | FA-22 | #16 | done |
-| [#18](018-names-by-template.md) | Names by template | FA-23 | #16 | open |
+| [#18](018-names-by-template.md) | Names by template | FA-23 | #16 | done |
 | [#19](019-snapshot-after-import.md) | A snapshot after a large import | FA-24 | none | done |
 
 **Stage 2 is done when the owner's archive is read, at most 10 % of its documents wait for the owner, and a sample of 30 documents filed without the owner holds no wrong value.** Decided by the owner on 2026-11-25: documents that pass every check are filed automatically, and stage 2 starts while the Mac part of stage 1 is open.

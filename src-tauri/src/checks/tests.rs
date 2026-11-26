@@ -262,3 +262,44 @@ proptest! {
         prop_assert_eq!(payslip_sum(Cents::new(brutto), &cents, netto).passed, off == 0);
     }
 }
+
+#[test]
+fn a_filed_document_is_named_by_its_template_and_the_owners_name_stays() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let id = good_invoice(conn, 1, "R-1");
+    value(
+        conn,
+        id,
+        "code:3",
+        "invoice_date",
+        "20.11.2026",
+        "2026-11-20",
+        true,
+    );
+    decide(conn, id, testing::t0()).unwrap();
+    let name = |conn: &Connection| -> Option<String> {
+        conn.query_row("SELECT name FROM documents WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })
+        .unwrap()
+    };
+    assert_eq!(
+        name(conn).as_deref(),
+        Some("2026-11-20_Beispiel Werkstatt_Rechnung R-1")
+    );
+    crate::naming::rename(conn, id, "Werkstatt November").unwrap();
+    decide(conn, id, testing::t0()).unwrap();
+    assert_eq!(
+        name(conn).as_deref(),
+        Some("Werkstatt November"),
+        "a template never writes over it"
+    );
+    crate::naming::rename(conn, id, "  ").unwrap();
+    assert_eq!(
+        name(conn).as_deref(),
+        Some("2026-11-20_Beispiel Werkstatt_Rechnung R-1"),
+        "empty gives it back to the template"
+    );
+}

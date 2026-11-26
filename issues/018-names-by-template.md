@@ -5,10 +5,10 @@
 
 ## Done when
 
-- [ ] One template per kind with placeholders (date first, as the owner chose in 1.0: for example `{datum}_{absender}_{thema}`), defaults in one place in the core.
-- [ ] The name is built by code from confirmed values, the legal form left out of the sender, characters a file system refuses removed. Tested with generated values and property tests that a name never holds `/` or `\`.
-- [ ] A name typed by the owner is kept and never overwritten by a template.
-- [ ] The list and the preview show the name, the original file name stays in the preview.
+- [x] One template per kind with placeholders (date first, as the owner chose in 1.0: for example `{datum}_{absender}_{thema}`), defaults in one place in the core.
+- [x] The name is built by code from confirmed values, the legal form left out of the sender, characters a file system refuses removed. Tested with generated values and property tests that a name never holds `/` or `\`.
+- [x] A name typed by the owner is kept and never overwritten by a template.
+- [x] The list and the preview show the name, the original file name stays in the preview.
 
 ## Out of scope
 
