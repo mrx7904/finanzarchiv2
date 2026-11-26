@@ -98,3 +98,28 @@ The owner's archive (a copy, counts only):
 | Accounts without a finding, each balance the bank's last | 3 of 3 |
 
 The other 26 marked bookings most likely go to accounts at another bank, whose CSV files are not in the archive yet.
+
+## Documents linked to their bookings (#24)
+
+- A link is a row of `links` (migration 0015): the document, the booking, the part of the booking it takes, the rule, the values it saw, the time and `undone_at`. Bookings that are replaced, made by the app or half of a move are never linked.
+- The rules, the surest first, their parameters in `links::parameters`:
+  - `link.number:1`: the invoice number (at least 4 letters or digits, compared without signs) stands in the other side or purpose of a booking, within 5 days before the invoice date and 45 days after its due date. One booking may pay several invoices whose numbers it names, when their sum is its amount to the cent.
+  - `link.party-amount:1`: the amount with the same party in those days.
+  - `link.amount-name:1`: the amount in those days, and a word of the sender's name (4 letters or more, without the legal form) in the booking's text. The bank often spells the party otherwise than the document, so the parties of #25 are not the same.
+  - `link.payslip:1`: a payslip's Netto from its employer in its month or the first 10 days after it.
+- Where the amount fits in the days but no rule is sure, the document waits as a question in "Prüfen", in the group "Zahlung zuordnen" (`link_questions`): "Welche Buchung hat das Dokument von … bezahlt?". The bookings that fit are offered as buttons (keys 1 and 2), with "Keine davon". The answer is a link of `link.owner:1`, or no link.
+- "Rückgängig" (`links::undo`) marks the link undone and leaves the document to the owner: the rules never link it again, and neither do they a document the owner answered.
+- The rules run after every statement read and every document filed (`links::find`).
+- Not built yet: one document paid in several parts. The owner's archive has no case of it.
+
+### Measured on 2026-11-26
+
+The owner's archive (a copy, counts only):
+
+| What | Count |
+|---|---|
+| Filed invoices, receipts and payslips linked | 7 of 19 (4 by number, 3 by amount and name) |
+| Questions in "Prüfen" | 2 |
+| Left without a link | 10 |
+
+Of the 10 without a link, 7 have no booking of their amount in the statements read: they were paid by another way, a card of another bank, PayPal or cash, which stage 4 brings in.

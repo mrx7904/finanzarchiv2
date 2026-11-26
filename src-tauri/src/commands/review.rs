@@ -124,7 +124,11 @@ pub fn review_questions(
                         .map(|reading| ReviewReading {
                             reader: reading.reader.clone(),
                             printed: reading.printed.clone(),
-                            shown: shown(question.field.as_deref(), &reading.value),
+                            shown: if question.field.as_deref() == Some("booking") {
+                                reading.printed.clone()
+                            } else {
+                                shown(question.field.as_deref(), &reading.value)
+                            },
                             page: reading.page,
                             mark: reading.rect.zip(size).map(
                                 |([left, bottom, right, top], (width, height))| {

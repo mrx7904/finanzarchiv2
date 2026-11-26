@@ -248,6 +248,8 @@ pub fn read_document(
         crate::parties::assign(conn, now)?;
         // And the moves between own accounts are paired (#23).
         crate::moves::find(conn, now)?;
+        // And the documents find the bookings that paid them (#24).
+        crate::links::find(conn, now)?;
     } else {
         crate::statements::forget(conn, document)?;
     }

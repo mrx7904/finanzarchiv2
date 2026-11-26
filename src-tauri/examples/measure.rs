@@ -1121,6 +1121,41 @@ fn measure_accounts(database: &Path, out: &Path) {
             total: marked,
         },
     );
+    for rule in [
+        finanzarchiv2_lib::links::RULE_NUMBER,
+        finanzarchiv2_lib::links::RULE_PARTY_AMOUNT,
+        finanzarchiv2_lib::links::RULE_PAYSLIP,
+    ] {
+        let links = conn
+            .query_row(
+                "SELECT count(*) FROM links WHERE rule = ?1 AND undone_at IS NULL",
+                [rule],
+                |row| row.get::<_, u32>(0),
+            )
+            .unwrap_or(0);
+        tallies.insert(
+            format!("link.{rule}"),
+            Tally {
+                right: links,
+                total: links,
+            },
+        );
+    }
+    tallies.insert(
+        "link.documents linked".to_owned(),
+        Tally {
+            right: count("SELECT count(DISTINCT document_id) FROM links WHERE undone_at IS NULL"),
+            total: count("SELECT count(*) FROM documents WHERE kind IN ('invoice', 'receipt', 'payslip') AND state = 'filed'"),
+        },
+    );
+    let questions = count("SELECT count(*) FROM link_questions WHERE answered_at IS NULL");
+    tallies.insert(
+        "link.questions".to_owned(),
+        Tally {
+            right: questions,
+            total: questions,
+        },
+    );
     println!(
         "  {} Parteien, {} Schreibweisen, {} Kategorien",
         count("SELECT count(*) FROM parties"),
