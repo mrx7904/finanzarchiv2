@@ -158,10 +158,16 @@ pub fn store(
     lines: &[Line],
     now: Timestamp,
 ) -> rusqlite::Result<Option<i64>> {
-    forget(conn, document)?;
-    let Some(statement) = read(lines) else {
+    let Some(statement) = read(lines).filter(|statement| statement.bookings_sum().is_some()) else {
+        forget(conn, document)?;
         return Ok(None);
     };
+    // Read again as it was read before (a reader of another kind changed): its bookings stay, with
+    // their links, moves and the owner's categories (#32).
+    if let Some(kept) = unchanged(conn, document, &statement)? {
+        return Ok(Some(kept));
+    }
+    forget(conn, document)?;
     let Some(sum) = statement.bookings_sum() else {
         return Ok(None);
     };
@@ -214,6 +220,59 @@ pub fn store(
         &statement.closing_day.to_string(),
     )?;
     Ok(Some(id))
+}
+
+/// The statement stored for the document when its bookings are the ones read now, position by
+/// position: day, amount, kind, other side and purpose.
+fn unchanged(
+    conn: &Connection,
+    document: i64,
+    statement: &Statement,
+) -> rusqlite::Result<Option<i64>> {
+    let Some(stored) = conn
+        .query_row(
+            "SELECT id FROM statements WHERE document_id = ?1",
+            [document],
+            |row| row.get::<_, i64>(0),
+        )
+        .optional()?
+    else {
+        return Ok(None);
+    };
+    let rows: Vec<(String, i64, String, Option<String>, String)> = conn
+        .prepare("SELECT day, amount_cents, kind, other_side, purpose FROM bookings WHERE statement_id = ?1 ORDER BY position")?
+        .query_map([stored], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let same = rows.len() == statement.bookings.len()
+        && rows.iter().zip(&statement.bookings).all(
+            |((day, cents, kind, other, purpose), booking)| {
+                *day == booking.day.to_string()
+                    && *cents == booking.amount.value()
+                    && *kind == booking.kind
+                    && *other == booking.other_side
+                    && *purpose == booking.purpose
+            },
+        );
+    Ok(same.then_some(stored))
+}
+
+/// What refers to the bookings of a statement goes before they do: their links (found again by
+/// the rules), the moves they are half of, and the bookings in the owner's corrections.
+fn detach(conn: &Connection, statement: i64) -> rusqlite::Result<()> {
+    let of = "(SELECT id FROM bookings WHERE statement_id = ?1)";
+    conn.execute(
+        &format!("DELETE FROM links WHERE booking_id IN {of}"),
+        [statement],
+    )?;
+    conn.execute(
+        &format!("DELETE FROM booking_pairs WHERE out_booking IN {of} OR in_booking IN {of}"),
+        [statement],
+    )?;
+    conn.execute(
+        &format!("UPDATE corrections SET booking_id = NULL WHERE booking_id IN {of}"),
+        [statement],
+    )?;
+    Ok(())
 }
 
 /// The bookings another statement replaced by one of this statement count again, before this
@@ -292,6 +351,7 @@ pub fn forget(conn: &Connection, document: i64) -> rusqlite::Result<()> {
         .optional()?;
     if let Some(earlier) = earlier {
         release(conn, earlier)?;
+        detach(conn, earlier)?;
     }
     conn.execute(
         "DELETE FROM bookings WHERE statement_id IN (SELECT id FROM statements WHERE document_id = ?1)",

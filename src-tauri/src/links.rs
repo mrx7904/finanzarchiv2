@@ -47,6 +47,8 @@ struct Document {
     party: Option<i64>,
     cents: i64,
     number: Option<String>,
+    /// The order number, which a shop's booking names in place of the invoice's (#32).
+    order: Option<String>,
     /// The words of the sender's or employer's name that may tell its bookings.
     words: Vec<String>,
     from: Date,
@@ -111,6 +113,7 @@ fn open_documents(conn: &Connection) -> rusqlite::Result<Vec<Document>> {
                 party,
                 cents,
                 number: None,
+                order: None,
                 words,
                 from: first,
                 until: plus(last, parameters::SALARY_DAYS_AFTER_MONTH),
@@ -130,6 +133,8 @@ fn open_documents(conn: &Connection) -> rusqlite::Result<Vec<Document>> {
                 // An invoice is paid by money out.
                 cents: -cents,
                 number: get("invoice_number")
+                    .filter(|number| alnum(number).len() >= parameters::MIN_NUMBER),
+                order: get("order_number")
                     .filter(|number| alnum(number).len() >= parameters::MIN_NUMBER),
                 words,
                 from: plus(issued, -parameters::DAYS_BEFORE),
@@ -207,11 +212,18 @@ pub fn find(conn: &Connection, now: Timestamp) -> rusqlite::Result<(usize, usize
     let mut by_booking: BTreeMap<i64, Vec<&Document>> = BTreeMap::new();
     for document in documents
         .iter()
-        .filter(|document| document.number.is_some())
+        .filter(|document| document.number.is_some() || document.order.is_some())
     {
-        let number = alnum(document.number.as_deref().unwrap_or_default());
+        let numbers: Vec<String> = [&document.number, &document.order]
+            .into_iter()
+            .flatten()
+            .map(|number| alnum(number))
+            .collect();
         for booking in &bookings {
-            if alnum(&booking.purpose).contains(&number)
+            let purpose = alnum(&booking.purpose);
+            if numbers
+                .iter()
+                .any(|number| purpose.contains(number.as_str()))
                 && booking.day >= document.from
                 && booking.day <= document.until
             {

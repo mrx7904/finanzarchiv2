@@ -1297,16 +1297,9 @@ fn measure_mail(model_name: &str, database: &Path, days: i64, out: &Path) {
                     &round::Place::default(),
                     since,
                     model.as_ref().map(|model| model as &dyn LocalModel),
-                    &|_| false,
-                    &mut |looked| {
-                        let how = if looked.files.is_empty() {
-                            format!("left: {}", looked.verdict.split(" (").next().unwrap_or(""))
-                        } else if looked.verdict.contains("Text der Mail") {
-                            "taken: the mail as its text".to_owned()
-                        } else {
-                            "taken: PDF attachments".to_owned()
-                        };
-                        count(how);
+                    &mut MeasureBook {
+                        count: &count,
+                        codes: Vec::new(),
                     },
                 )
                 .await
@@ -1347,6 +1340,58 @@ fn measure_mail(model_name: &str, database: &Path, days: i64, out: &Path) {
         started.elapsed().as_secs()
     );
     write(&out.join("private").join("archive-mail.json"), &result);
+}
+
+/// The ledger of a measuring round: it knows no mail, keeps nothing and counts every verdict.
+struct MeasureBook<'a> {
+    count: &'a dyn Fn(String),
+    codes: Vec<String>,
+}
+
+impl finanzarchiv2_lib::mail::round::Ledger for MeasureBook<'_> {
+    fn known(&self, _hash: &str) -> bool {
+        false
+    }
+
+    fn paid_before(&self, code: &str) -> bool {
+        self.codes.iter().any(|known| known == code)
+    }
+
+    fn orders_read(&self, _hash: &str) -> bool {
+        true
+    }
+
+    fn note(&mut self, looked: &finanzarchiv2_lib::mail::round::Looked) {
+        let how = if looked.files.is_empty() {
+            format!("left: {}", looked.verdict.split(" (").next().unwrap_or(""))
+        } else if looked.verdict.contains("PayPal-Zahlung") {
+            "taken: a PayPal payment, read by code".to_owned()
+        } else if looked.verdict.contains("Text der Mail") {
+            "taken: the mail as its text".to_owned()
+        } else {
+            "taken: PDF attachments".to_owned()
+        };
+        (self.count)(how);
+        if looked.verdict.contains("PayPal-Zahlung") && !looked.files.is_empty() {
+            (self.count)(match &looked.paypal_code {
+                Some(_) => "paypal: with its transaction code".to_owned(),
+                None => "paypal: without a transaction code".to_owned(),
+            });
+        }
+        if let Some(code) = &looked.paypal_code
+            && !looked.files.is_empty()
+        {
+            self.codes.push(code.clone());
+        }
+        for order in &looked.orders {
+            (self.count)("amazon: orders told".to_owned());
+            if order.total.is_some() {
+                (self.count)("amazon: orders with their total".to_owned());
+            }
+        }
+    }
+
+    fn note_orders(&mut self, _hash: &str, _orders: &[finanzarchiv2_lib::orders::Order]) {}
 }
 
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downloadsLine, formatDay, mailParts, mailboxLine, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
+import { downloadsLine, formatDay, mailParts, mailboxLine, ordersLine, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
 
 describe("the list of documents", () => {
   it("names every kind in German", () => {
@@ -71,5 +71,14 @@ describe("a mail kept as its text, #31", () => {
     ]);
     expect(body).toBe("Gesamt 23,80 €\nDanke");
     expect(textStateLabel("mail", null)).toBe("Text einer Mail");
+  });
+});
+
+describe("the orders of #32", () => {
+  it("says how many wait for their invoice", () => {
+    expect(ordersLine([])).toMatch(/^Bestellungen, die/);
+    expect(ordersLine([{ invoice: 3 }, { invoice: 4 }])).toBe("Jede der 2 Bestellungen hat ihre Rechnung.");
+    expect(ordersLine([{ invoice: 3 }, { invoice: null }])).toMatch(/^1 Bestellung wartet auf die Rechnung\./);
+    expect(ordersLine([{}, { invoice: null }])).toMatch(/^2 Bestellungen warten/);
   });
 });

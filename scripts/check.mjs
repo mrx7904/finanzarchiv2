@@ -148,7 +148,9 @@ function probeIban() {
   return "";
 }
 
-const ALLOWED_MAIL = /@(users\.noreply\.github\.com|example\.(com|org|net))$|^noreply@anthropic\.com$/i;
+// The public senders of PayPal and Amazon are allowed: the readers of #32 are tested on their own
+// domains (the owner's word of 2026-11-26). Every other address stays refused.
+const ALLOWED_MAIL = /@(users\.noreply\.github\.com|example\.(com|org|net))$|^noreply@anthropic\.com$|@([a-z0-9-]+\.)*(paypal|amazon)\.(de|com|co\.uk)$/i;
 const IMAGE_NAME = /@\d+x\.(png|jpe?g|webp|gif|svg)$/i;
 const PATTERNS = [
   { what: "an IBAN", regex: /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b/g, allowed: (file, hit) => file.startsWith("fixtures/synthetic/") || !ibanIsValid(hit) || PUBLIC_EXAMPLE_IBANS.has(hit.replace(/\s/g, "")) },

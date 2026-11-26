@@ -74,6 +74,18 @@ pub struct DocumentRow {
     pub name_by_owner: bool,
     /// Why the downloads folder took it (#28), null for every other way in.
     pub arrival: Option<String>,
+    /// The other document of a pair of an invoice and its PayPal receipt (#32).
+    pub paired: Option<PairedDocument>,
+}
+
+/// The invoice of a PayPal receipt, or the PayPal receipt of an invoice.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PairedDocument {
+    pub document: u32,
+    pub name: String,
+    /// Whether the other document is the invoice, this one its receipt.
+    pub invoice: bool,
 }
 
 /// One result of a check, as "Warum?" shows it.
@@ -295,9 +307,21 @@ pub fn list_documents(
     let Opened::Ready(ready) = &*opened else {
         return Ok(Vec::new());
     };
-    let rows = documents::list(ready.connection()).map_err(|_| CommandError::internal())?;
+    let conn = ready.connection();
+    let rows = documents::list(conn).map_err(|_| CommandError::internal())?;
+    let names: std::collections::HashMap<i64, String> =
+        rows.iter().map(|row| (row.id, row.name.clone())).collect();
     rows.into_iter()
         .map(|row| {
+            let paired = crate::payments::pair_of(conn, row.id)
+                .map_err(|_| CommandError::internal())?
+                .and_then(|(other, is_receipt)| {
+                    Some(PairedDocument {
+                        document: u32::try_from(other).ok()?,
+                        name: names.get(&other)?.clone(),
+                        invoice: is_receipt,
+                    })
+                });
             Ok(DocumentRow {
                 id: u32::try_from(row.id).map_err(|_| CommandError::internal())?,
                 name: row.name,
@@ -310,6 +334,7 @@ pub fn list_documents(
                 original_name: row.original_name,
                 name_by_owner: row.name_by_owner,
                 arrival: row.arrival,
+                paired,
             })
         })
         .collect()

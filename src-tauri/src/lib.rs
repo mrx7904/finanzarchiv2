@@ -15,8 +15,10 @@ pub mod money;
 pub mod moves;
 pub mod naming;
 pub mod ollama;
+pub mod orders;
 pub mod pages;
 pub mod parties;
+pub mod payments;
 pub mod pdf;
 pub mod previews;
 pub mod readers;
@@ -90,6 +92,16 @@ pub fn run() -> ExitCode {
                         .is_err()
                     {
                         eprintln!("Wartende Belege ließen sich nicht neu prüfen");
+                    }
+                    // #32: two mails of one PayPal payment are one, a PayPal mail finds its seller's
+                    // invoice, an invoice its order.
+                    if payments::merge_twins(ready.connection(), &root, jiff::Timestamp::now())
+                        .is_err()
+                        || payments::recheck(ready.connection(), jiff::Timestamp::now()).is_err()
+                        || payments::pair(ready.connection(), jiff::Timestamp::now()).is_err()
+                        || orders::match_invoices(ready.connection()).is_err()
+                    {
+                        eprintln!("PayPal und Bestellungen ließen sich nicht abgleichen");
                     }
                     (
                         intake::jobs::workers(ready.connection()),

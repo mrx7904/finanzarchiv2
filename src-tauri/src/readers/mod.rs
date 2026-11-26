@@ -7,6 +7,7 @@ pub mod image;
 pub mod invoice;
 pub mod model;
 pub mod parse;
+pub mod paypal;
 pub mod payslip;
 
 use jiff::Timestamp;
@@ -16,7 +17,7 @@ use rusqlite::{Connection, params};
 use crate::money::Cents;
 
 /// Raised when a reader reads differently, so older documents are read again at the next start.
-pub const READERS_VERSION: i64 = 5;
+pub const READERS_VERSION: i64 = 6;
 
 /// A line of a page with its place, as the stage `text` stored it.
 #[derive(Debug, Clone, PartialEq)]
@@ -220,6 +221,17 @@ pub fn read_document(
         e_invoice: e_invoice::attachment_of(conn, document)?,
     };
     let mut readers = for_kind(kind);
+    // A mail of PayPal is read by the reader of its payments, never by the one of invoices (#32).
+    let mail: bool = conn
+        .query_row(
+            "SELECT file_type = 'mail' FROM documents WHERE id = ?1",
+            [document],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+    if mail && paypal::from_paypal(&input.lines) {
+        readers = vec![Box::new(paypal::PayPalCode)];
+    }
     let e_invoice_name = e_invoice::EInvoice.name();
     if input.e_invoice.is_some() && !readers.iter().any(|reader| reader.name() == e_invoice_name) {
         readers.insert(0, Box::new(e_invoice::EInvoice));
@@ -268,6 +280,9 @@ pub fn read_document(
         "UPDATE documents SET read_version = ?2 WHERE id = ?1",
         params![document, READERS_VERSION],
     )?;
+    // A PayPal mail finds the seller's invoice it paid, an invoice its order (#32).
+    crate::payments::pair(conn, now)?;
+    crate::orders::match_invoices(conn)?;
     Ok(values.len())
 }
 
