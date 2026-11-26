@@ -35,6 +35,7 @@ pub fn group_label(key: &str) -> String {
         AGREE => format!("{name} ungleich gelesen"),
         SUM => "Summe geht nicht auf".into(),
         DUPLICATE => "Mögliches Doppel".into(),
+        LINK => "Zahlung zuordnen".into(),
         _ => "Sonstiges".into(),
     }
 }
@@ -80,7 +81,10 @@ fn waiting(conn: &Connection) -> rusqlite::Result<Vec<i64>> {
         .collect()
 }
 
-/// The groups with how many documents wait in each, in the order of `ORDER`.
+/// The group of the documents for which more than one booking fits (#24).
+pub const LINK: &str = "link:choose";
+
+/// The groups with how many documents wait in each, in the order of `ORDER`, then the link questions.
 pub fn groups(conn: &Connection) -> rusqlite::Result<Vec<(String, u32)>> {
     let mut counts: Vec<(String, u32)> = Vec::new();
     for document in waiting(conn)? {
@@ -97,6 +101,10 @@ pub fn groups(conn: &Connection) -> rusqlite::Result<Vec<(String, u32)>> {
             .iter()
             .position(|check| key.split(' ').next() == Some(*check))
     });
+    let asked = u32::try_from(crate::links::asked(conn)?.len()).unwrap_or(u32::MAX);
+    if asked > 0 {
+        counts.push((LINK.to_owned(), asked));
+    }
     Ok(counts)
 }
 
@@ -277,8 +285,62 @@ fn question(conn: &Connection, document: i64, key: &str) -> rusqlite::Result<Que
     })
 }
 
+/// A link question: which of the fitting bookings paid the document (#24).
+fn link_question(conn: &Connection, document: i64) -> rusqlite::Result<Option<Question>> {
+    let Some(candidates) = crate::links::question(conn, document)? else {
+        return Ok(None);
+    };
+    let name: String = conn.query_row(
+        "SELECT coalesce(name, original_name) FROM documents WHERE id = ?1",
+        [document],
+        |row| row.get(0),
+    )?;
+    let chosen = checks::chosen(&checks::values(conn, document)?);
+    let sender = chosen
+        .get("sender")
+        .or_else(|| chosen.get("employer"))
+        .map(|seen| format!(" von „{}“", seen.printed))
+        .unwrap_or_default();
+    let readings = candidates
+        .iter()
+        .map(|(id, day, cents, other)| {
+            let day = day
+                .parse::<jiff::civil::Date>()
+                .map_or_else(|_| day.clone(), |day| day.strftime("%d.%m.%Y").to_string());
+            Reading {
+                reader: "Buchung".into(),
+                printed: format!(
+                    "{day} · {} · {}",
+                    Cents::new(*cents),
+                    other.as_deref().unwrap_or("ohne Gegenseite")
+                ),
+                value: id.to_string(),
+                page: None,
+                rect: None,
+            }
+        })
+        .collect();
+    Ok(Some(Question {
+        document,
+        name,
+        key: LINK.to_owned(),
+        field: Some("booking".into()),
+        text: format!("Welche Buchung hat das Dokument{sender} bezahlt?"),
+        readings,
+        page: 1,
+        page_size: None,
+    }))
+}
+
 /// The questions of a group, oldest document first.
 pub fn questions(conn: &Connection, key: &str) -> rusqlite::Result<Vec<Question>> {
+    if key == LINK {
+        let mut found = Vec::new();
+        for document in crate::links::asked(conn)? {
+            found.extend(link_question(conn, document)?);
+        }
+        return Ok(found);
+    }
     let mut found = Vec::new();
     for document in waiting(conn)? {
         if first_reason(conn, document)?.as_deref() == Some(key) {
@@ -376,6 +438,29 @@ pub fn answer(
     answer: &Answer,
     now: Timestamp,
 ) -> Result<String, AnswerError> {
+    if key == LINK {
+        let index = match answer {
+            Answer::Yes => Some(0),
+            Answer::Reading(index) => Some(*index),
+            Answer::No => None,
+            _ => return Err(Refused::Mismatch.into()),
+        };
+        let chosen = match index {
+            Some(index) => {
+                let question = link_question(conn, document)?.ok_or(Refused::Mismatch)?;
+                let reading = question.readings.get(index).ok_or(Refused::Mismatch)?;
+                Some(
+                    reading
+                        .value
+                        .parse::<i64>()
+                        .map_err(|_| Refused::Mismatch)?,
+                )
+            }
+            None => None,
+        };
+        crate::links::answer(conn, document, chosen, now)?;
+        return Ok("filed".into());
+    }
     let tx = conn.unchecked_transaction()?;
     let kind = kind_of(&tx, document)?;
     let check = key.split(' ').next().unwrap_or(key);

@@ -334,3 +334,50 @@ fn no_after_an_undone_filing_sets_the_document_aside() {
     let listed = crate::documents::list(conn).unwrap();
     assert_eq!(listed[0].state, "held");
 }
+
+#[test]
+fn a_link_question_is_a_group_of_its_own_and_its_answer_links() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let id = document(conn, 1, Kind::Invoice);
+    conn.execute("UPDATE documents SET state = 'filed' WHERE id = ?1", [id])
+        .unwrap();
+    let account =
+        crate::statements::account_of(conn, "DE89370400440532013000", None, testing::t0()).unwrap();
+    let mut bookings = Vec::new();
+    for day in ["2026-03-03", "2026-03-20"] {
+        conn.execute(
+            "INSERT INTO bookings (account_id, position, day, amount_cents, kind, other_side, purpose) VALUES (?1, 0, ?2, -4200, 'Lastschrift', 'Testhaus Energie', '')",
+            params![account, day],
+        )
+        .unwrap();
+        bookings.push(conn.last_insert_rowid());
+    }
+    conn.execute(
+        "INSERT INTO link_questions (document_id, candidates, asked_at) VALUES (?1, ?2, 'x')",
+        params![id, serde_json::json!(bookings).to_string()],
+    )
+    .unwrap();
+    assert!(groups(conn).unwrap().contains(&(LINK.to_owned(), 1)));
+    assert_eq!(group_label(LINK), "Zahlung zuordnen");
+    let asked = questions(conn, LINK).unwrap();
+    assert_eq!(asked[0].readings.len(), 2);
+    assert!(
+        asked[0].readings[1]
+            .printed
+            .starts_with("20.03.2026 · -42,00 €"),
+        "{}",
+        asked[0].readings[1].printed
+    );
+    answer(conn, id, LINK, &Answer::Reading(1), testing::t0()).unwrap();
+    let linked: i64 = conn
+        .query_row(
+            "SELECT booking_id FROM links WHERE document_id = ?1",
+            [id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(linked, bookings[1]);
+    assert!(questions(conn, LINK).unwrap().is_empty());
+}

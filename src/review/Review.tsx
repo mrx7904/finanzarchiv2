@@ -83,7 +83,7 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement) return;
       const list = at.group ? questions : groups;
-      const action = reviewKey(event.key, { count: list.length, index, open: at.question !== null, readings: denied ? readings.length : 0 });
+      const action = reviewKey(event.key, { count: list.length, index, open: at.question !== null, readings: denied || at.question?.key === "link:choose" ? readings.length : 0 });
       if (action.kind === "move") setIndex(action.index);
       else if (action.kind === "open") {
         if (at.group) open(questions[index]);
@@ -103,6 +103,7 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
     const isKind = question.key === "check:kind";
     const isDuplicate = question.key === "check:duplicate";
     const isUndone = question.key === "check:undone";
+    const isLink = question.key === "link:choose";
     return (
       <section className="grid w-full max-w-5xl grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-4">
         <div className="relative overflow-hidden rounded-panel shadow-panel">
@@ -117,7 +118,7 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
         </div>
         <div className="flex flex-col gap-3 rounded-panel bg-surface p-4 shadow-panel">
           <p className="text-body font-medium">{question.text}</p>
-          {first ? <p className="text-small text-fg-muted">Gelesen von {question.readings.map((reading) => `${reading.reader}: ${reading.shown}`).join(", ")}</p> : null}
+          {first && !isLink ? <p className="text-small text-fg-muted">Gelesen von {question.readings.map((reading) => `${reading.reader}: ${reading.shown}`).join(", ")}</p> : null}
           {isKind ? (
             <div className="flex flex-wrap gap-2">
               {KINDS.map((kind) => (
@@ -125,6 +126,19 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
                   {kindLabel(kind)}
                 </Button>
               ))}
+            </div>
+          ) : isLink ? (
+            <div className="flex flex-col gap-2">
+              {question.readings.map((reading, number) => (
+                <Button key={reading.shown} busy={busy} onClick={() => send({ answer: "reading", index: number })}>
+                  {`${number + 1} · ${reading.shown}`}
+                </Button>
+              ))}
+              <div>
+                <Button size="small" kind="plain" busy={busy} onClick={() => send({ answer: "no" })}>
+                  Keine davon
+                </Button>
+              </div>
             </div>
           ) : isDuplicate ? (
             <div className="flex gap-2">

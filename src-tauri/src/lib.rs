@@ -7,6 +7,7 @@ pub mod commands;
 pub mod documents;
 pub mod intake;
 pub mod kinds;
+pub mod links;
 pub mod money;
 pub mod moves;
 pub mod naming;
