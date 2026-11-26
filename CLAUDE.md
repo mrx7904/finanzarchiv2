@@ -32,6 +32,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | touch the name of a document, its templates or "Umbenennen" | [`knowledge/decision-names.md`](./knowledge/decision-names.md) |
 | touch a statement, its layouts, `accounts`, `statements`, `bookings` or the balance of an account | [`knowledge/decision-statements.md`](./knowledge/decision-statements.md) |
 | touch a party, its spellings, a category or a correction | [`knowledge/decision-parties.md`](./knowledge/decision-parties.md) |
+| touch a watched folder, the inbox folder or the downloads | [`knowledge/decision-folders.md`](./knowledge/decision-folders.md) |
 | generate the corpus, measure a reader or add test documents | [`knowledge/decision-corpus.md`](./knowledge/decision-corpus.md) |
 | touch the intake queue, its stages, workers or the pause | [`knowledge/decision-intake.md`](./knowledge/decision-intake.md) |
 | open, check or read a PDF, or touch PDFium and how it ships | [`knowledge/decision-pdf.md`](./knowledge/decision-pdf.md) |
