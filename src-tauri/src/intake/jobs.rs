@@ -245,7 +245,7 @@ pub fn count_open(conn: &Connection) -> rusqlite::Result<u32> {
 /// Jobs that took a new document since the given moment.
 pub fn count_added_since(conn: &Connection, since: Timestamp) -> rusqlite::Result<u32> {
     conn.query_row(
-        "SELECT count(*) FROM intake_jobs WHERE stage = 'filed' AND known = 0 AND updated_at >= ?1",
+        "SELECT count(*) FROM intake_jobs WHERE stage IN ('filed', 'waiting') AND known = 0 AND updated_at >= ?1",
         [since.to_string()],
         |row| row.get(0),
     )

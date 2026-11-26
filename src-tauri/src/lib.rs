@@ -1,6 +1,7 @@
 //! The core of Finanzarchiv 2.0. Every rule of the archive lives here, the window only shows and asks.
 
 pub mod archive;
+pub mod checks;
 pub mod commands;
 pub mod documents;
 pub mod intake;
@@ -53,6 +54,12 @@ pub fn run() -> ExitCode {
                     }
                     if readers::read_outdated(ready.connection(), jiff::Timestamp::now()).is_err() {
                         eprintln!("Ältere Dokumente ließen sich nicht neu lesen");
+                    }
+                    let root = documents::archive_root(ready.path());
+                    if checks::requeue_unchecked(ready.connection(), &root, jiff::Timestamp::now())
+                        .is_err()
+                    {
+                        eprintln!("Ungeprüfte Dokumente ließen sich nicht in den Eingang legen");
                     }
                     (
                         intake::jobs::workers(ready.connection()),

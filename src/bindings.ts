@@ -25,6 +25,10 @@ export const commands = {
 	 *  one of `previews::WIDTHS`.
 	 */
 	pageImage: (document: number, page: number, width: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("page_image", { document, page, width }, options)),
+	/**  The checks of a document for "Warum?" (#16). */
+	documentChecks: (document: number, options?: InvokeOptions) => typedError<DocumentChecks_Serialize, CommandError>(__TAURI_INVOKE("document_checks", { document }, options)),
+	/**  "Rückgängig": the document that was filed by itself waits for the owner again. */
+	undoFiling: (document: number, options?: InvokeOptions) => typedError<DocumentChecks_Serialize, CommandError>(__TAURI_INVOKE("undo_filing", { document }, options)),
 };
 
 /** Events */
@@ -41,6 +45,29 @@ export type AppStatus = {
 /**  The state of the archive as the window shows it. */
 export type ArchiveStatus = { state: "ready" } | { state: "damaged"; snapshots: SnapshotInfo[] } | { state: "missing"; snapshots: SnapshotInfo[] };
 
+/**  One result of a check, as "Warum?" shows it. */
+export type CheckRow = CheckRow_Serialize | CheckRow_Deserialize;
+
+/**  One result of a check, as "Warum?" shows it. */
+export type CheckRow_Deserialize = {
+	/**  The stable id, for example `check:agree`. */
+	check: string,
+	field?: string | null,
+	passed: boolean,
+	/**  The German sentence of the result. */
+	detail?: string | null,
+};
+
+/**  One result of a check, as "Warum?" shows it. */
+export type CheckRow_Serialize = {
+	/**  The stable id, for example `check:agree`. */
+	check: string,
+	field: string | null,
+	passed: boolean,
+	/**  The German sentence of the result. */
+	detail: string | null,
+};
+
 /**
  *  What went wrong, as a kind the window can act on and a German sentence for the owner.
  *  It never carries the text of a library, which could quote a document.
@@ -48,6 +75,31 @@ export type ArchiveStatus = { state: "ready" } | { state: "damaged"; snapshots: 
 export type CommandError = {
 	kind: ErrorKind,
 	message: string,
+};
+
+/**  The checks of a document and the decision that filed it. */
+export type DocumentChecks = DocumentChecks_Serialize | DocumentChecks_Deserialize;
+
+/**  The checks of a document and the decision that filed it. */
+export type DocumentChecks_Deserialize = {
+	state: string,
+	/**  The rule that filed it, null when it waits or was never checked. */
+	rule?: string | null,
+	/**  UTC, ISO 8601. */
+	decidedAt?: string | null,
+	/**  The failed checks first. */
+	checks: CheckRow_Deserialize[],
+};
+
+/**  The checks of a document and the decision that filed it. */
+export type DocumentChecks_Serialize = {
+	state: string,
+	/**  The rule that filed it, null when it waits or was never checked. */
+	rule: string | null,
+	/**  UTC, ISO 8601. */
+	decidedAt: string | null,
+	/**  The failed checks first. */
+	checks: CheckRow_Serialize[],
 };
 
 export type DocumentRow = DocumentRow_Serialize | DocumentRow_Deserialize;
@@ -62,6 +114,8 @@ export type DocumentRow_Deserialize = {
 	importedAt: string,
 	/**  text, scan or image, null while the intake has not read it. */
 	textState?: string | null,
+	/**  open (not checked yet), filed or waiting (#16). */
+	state: string,
 };
 
 export type DocumentRow_Serialize = {
@@ -74,6 +128,8 @@ export type DocumentRow_Serialize = {
 	importedAt: string,
 	/**  text, scan or image, null while the intake has not read it. */
 	textState: string | null,
+	/**  open (not checked yet), filed or waiting (#16). */
+	state: string,
 };
 
 export type ErrorKind = 

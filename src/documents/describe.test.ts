@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDay, kindLabel, textStateLabel } from "./describe";
+import { formatDay, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
 
 describe("the list of documents", () => {
   it("names every kind in German", () => {
@@ -22,5 +22,19 @@ describe("the list of documents", () => {
     expect(textStateLabel("scan", 2)).toBe("2 Seiten, Scan ohne Text, wird als Bild gelesen");
     expect(textStateLabel("image", null)).toBe("Bild, wird als Bild gelesen");
     expect(textStateLabel(null, 1)).toBe("1 Seite, noch nicht gelesen");
+  });
+});
+
+describe("the filing of #16", () => {
+  it("says where a document stands", () => {
+    expect(stateLabel("filed")).toBe("abgelegt");
+    expect(stateLabel("waiting")).toBe("wartet auf dich");
+    expect(stateLabel("open")).toBe("noch nicht geprüft");
+  });
+
+  it("names the rule that filed it and when", () => {
+    expect(filingLine("filed", "file.checks-passed:1", "2026-11-26T08:00:00Z")).toBe("Von selbst abgelegt am 26.11.2026, alle Prüfungen bestanden.");
+    expect(filingLine("filed", "file.statement:1", "2026-11-26T08:00:00Z")).toBe("Als Kontoauszug abgelegt am 26.11.2026.");
+    expect(filingLine("waiting", null, null)).toBe("Wartet auf dich, weil:");
   });
 });

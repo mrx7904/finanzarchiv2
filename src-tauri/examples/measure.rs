@@ -11,7 +11,8 @@
 //! counts the e-invoices among the PDFs of a copy of the owner's files. Both write to `private/`.
 //! `--reader model --model <name>` asks the local model at `OLLAMA_HOST` for every field, within
 //! 14 minutes, and unloads it afterwards. `--reader image --model <name> --width <px>` reads the
-//! scans of the corpus as page images.
+//! scans of the corpus as page images. `--reader checks --archive <copy>` runs the stages `read` to
+//! `checked` on a writable copy of the archive and counts what is filed and why the rest waits.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -729,6 +730,123 @@ fn measure_image(pdfium: &Pdfium, model_name: &str, width: u32, corpus: &Path, o
     );
 }
 
+/// The checks of #16 on a copy of the owner's archive (the database with its folder `Archiv`
+/// beside it): the copy is opened and migrated, every document goes through the stages `read` to
+/// `checked` with the model, and how many are filed and why the others wait is counted.
+fn measure_checks(pdfium: &Pdfium, model_name: &str, database: &Path, out: &Path) {
+    let model = match ollama::Ollama::from_env(model_name) {
+        Ok(model) => model,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+    };
+    let opened = match finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now()) {
+        Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) => ready,
+        _ => {
+            eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+            std::process::exit(1);
+        }
+    };
+    let root = documents::archive_root(database);
+    let now = jiff::Timestamp::now();
+    let conn = opened.connection();
+    let _ = documents::classify_missing(conn);
+    let _ = readers::e_invoice::extract_missing(conn, &root, pdfium);
+    let _ = readers::read_outdated(conn, now);
+    let _ = finanzarchiv2_lib::checks::requeue_unchecked(conn, &root, now);
+    let archive = std::sync::Mutex::new(finanzarchiv2_lib::archive::Opened::Ready(opened));
+    let started = std::time::Instant::now();
+    let paused = std::sync::atomic::AtomicBool::new(false);
+    let mut stopped = None;
+    loop {
+        if started.elapsed() > MODEL_BUDGET {
+            stopped = Some("Zeitbudget erreicht".to_owned());
+            break;
+        }
+        let job = archive.lock().ok().and_then(|guard| match &*guard {
+            finanzarchiv2_lib::archive::Opened::Ready(ready) => {
+                finanzarchiv2_lib::intake::jobs::open_jobs(ready.connection())
+                    .ok()?
+                    .into_iter()
+                    .next()
+            }
+            _ => None,
+        });
+        let Some(job) = job else { break };
+        match finanzarchiv2_lib::intake::process(
+            &archive,
+            Some(pdfium),
+            Some(&model),
+            &job,
+            &paused,
+            &mut |_| false,
+        ) {
+            Ok(finanzarchiv2_lib::intake::Stage::Model) => {
+                stopped = Some("Das Modell antwortet nicht".to_owned());
+                break;
+            }
+            Ok(_) => {}
+            Err(_) => {
+                stopped = Some("Die Kopie ließ sich nicht schreiben".to_owned());
+                break;
+            }
+        }
+    }
+    if model.unload().is_err() {
+        eprintln!("Das Modell ließ sich nicht entladen, bitte ollama stop {model_name}");
+    }
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    if let Ok(guard) = archive.lock()
+        && let finanzarchiv2_lib::archive::Opened::Ready(ready) = &*guard
+    {
+        let conn = ready.connection();
+        let states: Vec<(String, String)> = conn
+            .prepare("SELECT kind, state FROM documents")
+            .and_then(|mut statement| {
+                statement
+                    .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                    .collect()
+            })
+            .unwrap_or_default();
+        for (kind, state) in states {
+            let tally = tallies.entry(format!("{kind}.filed")).or_default();
+            tally.total += 1;
+            tally.right += u32::from(state == "filed");
+        }
+        let reasons: Vec<(String, String, Option<String>, i64)> = conn
+            .prepare(
+                "SELECT d.kind, c.check_id, c.field, count(*) FROM field_checks c JOIN documents d ON d.id = c.document_id
+                 WHERE c.passed = 0 AND c.check_id LIKE 'check:%' GROUP BY 1, 2, 3",
+            )
+            .and_then(|mut statement| {
+                statement
+                    .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?
+                    .collect()
+            })
+            .unwrap_or_default();
+        for (kind, check, field, count) in reasons {
+            let key = format!(
+                "{kind}.waits for {check}{}",
+                field.map(|field| format!(" {field}")).unwrap_or_default()
+            );
+            let tally = tallies.entry(key).or_default();
+            tally.right = u32::try_from(count).unwrap_or(0);
+            tally.total = tally.right;
+        }
+    }
+    let mut result = report("archive", &tallies);
+    result["reader"] = json!("checks");
+    result["model"] = json!(model_name);
+    result["seconds"] = json!(started.elapsed().as_secs());
+    result["stopped"] = json!(stopped);
+    println!("  {} s", started.elapsed().as_secs());
+    if let Some(reason) = &stopped {
+        eprintln!("Abgebrochen: {reason}");
+    }
+    write(&out.join("private").join("archive-checks.json"), &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -768,6 +886,15 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if reader == "checks" {
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader checks braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_checks(pdfium, &model, Path::new(&database), &out);
+        return;
+    }
     if reader == "image" {
         let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
         let width = value("--width")

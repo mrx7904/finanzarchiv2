@@ -65,6 +65,33 @@ pub struct DocumentRow {
     pub imported_at: String,
     /// text, scan or image, null while the intake has not read it.
     pub text_state: Option<String>,
+    /// open (not checked yet), filed or waiting (#16).
+    pub state: String,
+}
+
+/// One result of a check, as "Warum?" shows it.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckRow {
+    /// The stable id, for example `check:agree`.
+    pub check: String,
+    pub field: Option<String>,
+    pub passed: bool,
+    /// The German sentence of the result.
+    pub detail: Option<String>,
+}
+
+/// The checks of a document and the decision that filed it.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentChecks {
+    pub state: String,
+    /// The rule that filed it, null when it waits or was never checked.
+    pub rule: Option<String>,
+    /// UTC, ISO 8601.
+    pub decided_at: Option<String>,
+    /// The failed checks first.
+    pub checks: Vec<CheckRow>,
 }
 
 fn enqueue(intake: &Intake, paths: &[PathBuf], source: Source) -> Result<Queued, CommandError> {
@@ -247,6 +274,7 @@ pub fn list_documents(
                 pages: row.pages.and_then(|pages| u32::try_from(pages).ok()),
                 imported_at: row.imported_at,
                 text_state: row.text_state,
+                state: row.state,
             })
         })
         .collect()
@@ -277,4 +305,60 @@ mod tests {
             Queued { files: 0 }
         );
     }
+}
+
+fn checks_of(conn: &rusqlite::Connection, document: i64) -> Result<DocumentChecks, CommandError> {
+    let shown = crate::checks::shown(conn, document).map_err(|error| match error {
+        rusqlite::Error::QueryReturnedNoRows => CommandError::not_found(),
+        _ => CommandError::internal(),
+    })?;
+    Ok(DocumentChecks {
+        state: shown.state,
+        rule: shown.rule,
+        decided_at: shown.decided_at,
+        checks: shown
+            .outcomes
+            .into_iter()
+            .map(|(check, field, passed, detail)| CheckRow {
+                check,
+                field,
+                passed,
+                detail,
+            })
+            .collect(),
+    })
+}
+
+/// The checks of a document for "Warum?" (#16).
+#[tauri::command]
+#[specta::specta]
+pub fn document_checks(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    document: u32,
+) -> Result<DocumentChecks, CommandError> {
+    let opened = archive.lock().map_err(|_| CommandError::internal())?;
+    let Opened::Ready(ready) = &*opened else {
+        return Err(CommandError::archive_not_ready());
+    };
+    checks_of(ready.connection(), i64::from(document))
+}
+
+/// "Rückgängig": the document that was filed by itself waits for the owner again.
+#[tauri::command]
+#[specta::specta]
+pub fn undo_filing(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    document: u32,
+) -> Result<DocumentChecks, CommandError> {
+    let opened = archive.lock().map_err(|_| CommandError::internal())?;
+    let Opened::Ready(ready) = &*opened else {
+        return Err(CommandError::archive_not_ready());
+    };
+    crate::checks::undo(
+        ready.connection(),
+        i64::from(document),
+        jiff::Timestamp::now(),
+    )
+    .map_err(|_| CommandError::internal())?;
+    checks_of(ready.connection(), i64::from(document))
 }

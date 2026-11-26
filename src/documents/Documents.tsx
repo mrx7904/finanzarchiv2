@@ -3,7 +3,8 @@ import { type DocumentRow_Serialize as DocumentRow, commands } from "../bindings
 import { queuedLine } from "../intake/describe";
 import { useIntakeChanged } from "../intake/useIntakeChanged";
 import { Button, EmptyState, List, ListRow } from "../ui";
-import { formatDay, kindLabel, textStateLabel } from "./describe";
+import { formatDay, kindLabel, stateLabel, textStateLabel } from "./describe";
+import { Filing } from "./Filing";
 import { PageImage } from "./PageImage";
 
 // The documents of #04 in the pieces of the design system (#07), imports through the queue of #05,
@@ -55,7 +56,7 @@ export function Documents() {
               <ListRow
                 key={row.id}
                 title={row.name}
-                detail={`${kindLabel(row.kind)}, importiert am ${formatDay(row.importedAt)}`}
+                detail={`${kindLabel(row.kind)}, ${stateLabel(row.state)}, importiert am ${formatDay(row.importedAt)}`}
                 leading={<PageImage document={row.id} width={160} label={`Erste Seite von ${row.name}`} className="h-10 w-8 rounded-[3px] shadow-panel" />}
                 selected={chosen === row.id}
                 onSelect={() => setChosen(row.id)}
@@ -68,6 +69,7 @@ export function Documents() {
                 <PageImage key={selected.id} document={selected.id} width={640} label={`Erste Seite von ${selected.name}`} className="rounded-control" />
                 <p className="text-body font-medium">{selected.name}</p>
                 <p className="text-small text-fg-muted">{textStateLabel(selected.textState, selected.pages)}</p>
+                <Filing key={`${selected.id}-${selected.state}`} document={selected.id} onChanged={() => void reload()} />
               </>
             ) : (
               <p className="px-2 py-8 text-center text-small text-fg-muted">Wähle ein Dokument, um seine erste Seite zu sehen.</p>

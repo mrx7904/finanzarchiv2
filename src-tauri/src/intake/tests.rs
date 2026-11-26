@@ -105,7 +105,7 @@ fn every_job_ends_filed_or_failed_with_its_reason() {
     assert_eq!(
         count(
             &archive,
-            "SELECT count(*) FROM intake_jobs WHERE stage = 'filed' AND known = 0"
+            "SELECT count(*) FROM intake_jobs WHERE stage IN ('filed', 'waiting') AND known = 0"
         ),
         5
     );
@@ -338,7 +338,7 @@ fn a_paused_job_keeps_its_stage_and_goes_on_later() {
             &mut |_| false
         )
         .unwrap(),
-        Stage::Filed
+        Stage::Waiting
     );
 }
 
@@ -392,7 +392,7 @@ fn killed_at_random_points_and_started_again_ends_with_every_file_once() {
                     assert_eq!(
                         count(
                             &archive,
-                            "SELECT count(*) FROM intake_jobs WHERE stage = 'filed' AND known = 0"
+                            "SELECT count(*) FROM intake_jobs WHERE stage IN ('filed', 'waiting') AND known = 0"
                         ),
                         FILES as i64
                     );
@@ -435,7 +435,7 @@ fn several_workers_drain_the_queue_and_report_each_change() {
     let deadline = Instant::now() + Duration::from_secs(60);
     while count(
         &archive,
-        "SELECT count(*) FROM intake_jobs WHERE stage = 'filed'",
+        "SELECT count(*) FROM intake_jobs WHERE stage IN ('filed', 'waiting')",
     ) < 40
     {
         assert!(Instant::now() < deadline, "the workers did not finish");
@@ -468,7 +468,7 @@ fn kill_test_child() {
     intake.start(2, Some(testing::pdfium()));
     while count(
         &archive,
-        "SELECT count(*) FROM intake_jobs WHERE stage NOT IN ('filed', 'failed')",
+        "SELECT count(*) FROM intake_jobs WHERE stage NOT IN ('filed', 'waiting', 'failed')",
     ) > 0
     {
         std::thread::sleep(Duration::from_millis(5));
@@ -538,7 +538,7 @@ fn the_process_killed_at_random_moments_loses_nothing() {
     assert_eq!(
         count(
             &archive,
-            "SELECT count(*) FROM intake_jobs WHERE stage = 'filed' AND known = 0"
+            "SELECT count(*) FROM intake_jobs WHERE stage IN ('filed', 'waiting') AND known = 0"
         ),
         FILES as i64
     );
@@ -573,7 +573,7 @@ fn measure_workers() {
         intake.enqueue(&paths, Source::Dialog).unwrap();
         while count(
             &archive,
-            "SELECT count(*) FROM intake_jobs WHERE stage = 'filed'",
+            "SELECT count(*) FROM intake_jobs WHERE stage IN ('filed', 'waiting')",
         ) < 200
         {
             std::thread::sleep(Duration::from_millis(5));
@@ -734,7 +734,7 @@ fn without_ollama_a_job_waits_with_its_reason_and_goes_on_when_it_answers() {
         &mut |_| false,
     )
     .unwrap();
-    assert_eq!(stage, Stage::Filed);
+    assert_eq!(stage, Stage::Waiting);
     let asked = requests.recv().unwrap();
     assert!(
         !asked.contains("invoice_number"),
@@ -800,7 +800,7 @@ fn a_scan_gets_its_kind_and_values_from_the_page_image() {
         &mut |_| false,
     )
     .unwrap();
-    assert_eq!(stage, Stage::Filed);
+    assert_eq!(stage, Stage::Waiting);
     let asked = requests.recv().unwrap();
     let body: serde_json::Value =
         serde_json::from_str(asked.split("\r\n\r\n").nth(1).unwrap()).unwrap();
