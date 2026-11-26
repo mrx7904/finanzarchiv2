@@ -8,6 +8,7 @@ import { Filing } from "./Filing";
 import { Folders } from "./Folders";
 import { MailMark, MailText } from "./MailText";
 import { Mailboxes } from "./Mailboxes";
+import { Orders } from "./Orders";
 import { DocumentName, TemplatesDialog } from "./Names";
 import { PageImage } from "./PageImage";
 
@@ -24,6 +25,7 @@ export function Documents({ focus = null }: { focus?: number | null }) {
   const [naming, setNaming] = useState(false);
   const [folders, setFolders] = useState(false);
   const [mailboxes, setMailboxes] = useState(false);
+  const [orders, setOrders] = useState(false);
 
   const reload = useCallback(async () => {
     const listed = await commands.listDocuments();
@@ -58,6 +60,17 @@ export function Documents({ focus = null }: { focus?: number | null }) {
         Postfächer …
       </Button>
       <Mailboxes open={mailboxes} onClose={() => setMailboxes(false)} />
+      <Button kind="plain" onClick={() => setOrders(true)}>
+        Bestellungen …
+      </Button>
+      <Orders
+        open={orders}
+        onClose={() => setOrders(false)}
+        onOpenDocument={(document) => {
+          setOrders(false);
+          setChosen(document);
+        }}
+      />
       <Button kind="plain" onClick={() => setNaming(true)}>
         Namensvorlagen …
       </Button>
@@ -102,6 +115,14 @@ export function Documents({ focus = null }: { focus?: number | null }) {
                 <DocumentName document={selected.id} name={selected.name} originalName={selected.originalName} byOwner={selected.nameByOwner} onChanged={() => void reload()} />
                 <p className="text-small text-fg-muted">{textStateLabel(selected.textState, selected.pages)}</p>
                 {selected.arrival ? <p className="text-small text-fg-muted">{selected.arrival}</p> : null}
+                {selected.paired ? (
+                  <p className="text-small text-fg-muted">
+                    {selected.paired.invoice ? "Zahlungsbeleg der Rechnung " : "Bezahlt über PayPal, Beleg "}
+                    <button type="button" className="text-fg-accent underline-offset-2 hover:underline" onClick={() => setChosen(selected.paired?.document ?? null)}>
+                      {selected.paired.name}
+                    </button>
+                  </p>
+                ) : null}
                 <Filing key={`${selected.id}-${selected.state}`} document={selected.id} onChanged={() => void reload()} />
               </>
             ) : (

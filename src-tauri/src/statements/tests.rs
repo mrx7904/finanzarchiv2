@@ -332,3 +332,75 @@ fn the_same_booking_of_a_csv_and_a_pdf_counts_once_the_csv_first() {
         "without the CSV the PDF's booking counts again"
     );
 }
+
+#[test]
+fn a_statement_read_again_keeps_its_bookings_and_what_hangs_on_them() {
+    let dir = tempfile::tempdir().unwrap();
+    let crate::archive::Opened::Ready(ready) = crate::archive::open(
+        &dir.path().join(crate::archive::FILE_NAME),
+        crate::testing::t0(),
+    )
+    .unwrap() else {
+        panic!("not ready")
+    };
+    let conn = ready.connection();
+    let document_of = |number: u8, kind: &str| {
+        conn.execute(
+            "INSERT INTO documents (sha256, file_type, kind, original_name, size_bytes, source, imported_at) VALUES (?1, 'pdf', ?2, 'a.pdf', 1, 'dialog', 'x')",
+            rusqlite::params![format!("{number:064x}"), kind],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    let document = document_of(1, "statement");
+    let invoice = document_of(2, "invoice");
+    store(conn, document, &sample(), crate::testing::t0())
+        .unwrap()
+        .unwrap();
+    let ids = |conn: &Connection| -> Vec<i64> {
+        conn.prepare("SELECT id FROM bookings ORDER BY id")
+            .unwrap()
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap()
+    };
+    let before = ids(conn);
+    conn.execute(
+        "INSERT INTO links (document_id, booking_id, cents, rule, inputs, decided_at) VALUES (?1, ?2, -100, 'link.owner:1', '{}', 'x')",
+        rusqlite::params![invoice, before[0]],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO corrections (kind, booking_id, made_at) VALUES ('booking-category', ?1, 'x')",
+        [before[1]],
+    )
+    .unwrap();
+    // A reader of another kind changed: read again, nothing of it changes.
+    store(conn, document, &sample(), crate::testing::t0())
+        .unwrap()
+        .unwrap();
+    assert_eq!(ids(conn), before, "the same bookings");
+    let links: i64 = conn
+        .query_row("SELECT count(*) FROM links", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(links, 1, "the link stays");
+
+    // When the statement reads otherwise, what hung on its bookings goes before they do.
+    let shorter: Vec<Line> = sample()
+        .into_iter()
+        .filter(|line| !line.text.contains("Miete"))
+        .collect();
+    let _ = store(conn, document, &shorter, crate::testing::t0()).unwrap();
+    forget(conn, document).unwrap();
+    let left: (i64, i64) = conn
+        .query_row("SELECT (SELECT count(*) FROM links), (SELECT count(*) FROM corrections WHERE booking_id IS NOT NULL)", [], |row| Ok((row.get(0)?, row.get(1)?)))
+        .unwrap();
+    assert_eq!(left, (0, 0));
+    let broken: i64 = conn
+        .query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(broken, 0);
+}

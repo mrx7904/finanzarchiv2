@@ -54,6 +54,8 @@ fn looked(hash: char, verdict: &str, kind: Option<Kind>, files: Vec<(String, Vec
         verdict: verdict.into(),
         kind,
         files,
+        paypal_code: None,
+        orders: Vec::new(),
     }
 }
 

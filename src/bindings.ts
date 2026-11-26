@@ -56,6 +56,7 @@ export const commands = {
 	bookingDetail: (booking: number, options?: InvokeOptions) => typedError<BookingDetail_Serialize, CommandError>(__TAURI_INVOKE("booking_detail", { booking }, options)),
 	/**  The owner links a candidate document to the booking, as the answer of its question in "Prüfen". */
 	linkToBooking: (booking: number, document: number, options?: InvokeOptions) => typedError<BookingDetail_Serialize, CommandError>(__TAURI_INVOKE("link_to_booking", { booking, document }, options)),
+	listOrders: (options?: InvokeOptions) => typedError<OrderRow_Serialize[], CommandError>(__TAURI_INVOKE("list_orders", undefined, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -417,6 +418,8 @@ export type DocumentRow_Deserialize = {
 	nameByOwner: boolean,
 	/**  Why the downloads folder took it (#28), null for every other way in. */
 	arrival?: string | null,
+	/**  The other document of a pair of an invoice and its PayPal receipt (#32). */
+	paired?: PairedDocument | null,
 };
 
 export type DocumentRow_Serialize = {
@@ -437,6 +440,8 @@ export type DocumentRow_Serialize = {
 	nameByOwner: boolean,
 	/**  Why the downloads folder took it (#28), null for every other way in. */
 	arrival: string | null,
+	/**  The other document of a pair of an invoice and its PayPal receipt (#32). */
+	paired: PairedDocument | null,
 };
 
 /**  The downloads as "Ordner" shows them: switched on or not, and what they gave. */
@@ -601,6 +606,41 @@ export type NameTemplate = {
 export type NameTemplates = {
 	templates: NameTemplate[],
 	placeholders: Placeholder[],
+};
+
+/**  An order as "Bestellungen" shows it (#32). */
+export type OrderRow = OrderRow_Serialize | OrderRow_Deserialize;
+
+/**  An order as "Bestellungen" shows it (#32). */
+export type OrderRow_Deserialize = {
+	id: number,
+	shop: string,
+	number: string,
+	/**  ISO day of the order mail. */
+	day?: string | null,
+	total?: string | null,
+	invoice?: number | null,
+	invoiceName?: string | null,
+};
+
+/**  An order as "Bestellungen" shows it (#32). */
+export type OrderRow_Serialize = {
+	id: number,
+	shop: string,
+	number: string,
+	/**  ISO day of the order mail. */
+	day: string | null,
+	total: string | null,
+	invoice: number | null,
+	invoiceName: string | null,
+};
+
+/**  The invoice of a PayPal receipt, or the PayPal receipt of an invoice. */
+export type PairedDocument = {
+	document: number,
+	name: string,
+	/**  Whether the other document is the invoice, this one its receipt. */
+	invoice: boolean,
 };
 
 /**  The bookings of one party in the year of a booking. */

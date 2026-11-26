@@ -63,6 +63,24 @@ pub struct Looked {
     /// The kind the model gave a mail it took, the hint for the intake.
     pub kind: Option<Kind>,
     pub files: Vec<(String, Vec<u8>)>,
+    /// PayPal's transaction code of a payment mail (#32).
+    pub paypal_code: Option<String>,
+    /// The orders an Amazon mail tells (#32).
+    pub orders: Vec<crate::orders::Order>,
+}
+
+/// What a round asks of the archive and tells it (#31, #32).
+pub trait Ledger {
+    /// Whether a mail was looked at before, by its hash.
+    fn known(&self, hash: &str) -> bool;
+    /// Whether a PayPal payment with this transaction code was taken before.
+    fn paid_before(&self, code: &str) -> bool;
+    /// Whether the orders of a mail looked at before were read.
+    fn orders_read(&self, hash: &str) -> bool;
+    /// Keeps a mail looked at now.
+    fn note(&mut self, looked: &Looked);
+    /// Keeps the orders of a mail looked at before.
+    fn note_orders(&mut self, hash: &str, orders: &[crate::orders::Order]);
 }
 
 /// What a round did.
@@ -75,6 +93,18 @@ pub struct Counts {
     pub waiting: u32,
     /// Mails that went to the model.
     pub asked: u32,
+    /// Orders of Amazon the mails told (#32).
+    pub orders: u32,
+}
+
+/// "26.11.2026" of an RFC 3339 time, "2026-11-26T10:15:00+01:00".
+fn day_of_rfc(time: &str) -> String {
+    let day = time.get(..10).unwrap_or("");
+    let mut parts = day.split('-');
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(year), Some(month), Some(day)) => format!("{day}.{month}.{year}"),
+        _ => String::new(),
+    }
 }
 
 /// The head of a mail, as code judges it.
@@ -227,6 +257,8 @@ fn looked(head: &Head, verdict: &str) -> Looked {
         verdict: verdict.to_owned(),
         kind: None,
         files: Vec::new(),
+        paypal_code: None,
+        orders: Vec::new(),
     }
 }
 
@@ -242,58 +274,35 @@ fn day_and_time(message: &mail_parser::Message<'_>) -> String {
         .unwrap_or_default()
 }
 
+/// The lines of the text of a mail as a reader takes them.
+fn lines_of(file: &str) -> Vec<crate::readers::Line> {
+    file.lines()
+        .skip(1)
+        .enumerate()
+        .map(|(at, text)| crate::readers::Line {
+            page: 1,
+            text: text.to_owned(),
+            left: 0.0,
+            bottom: -(at as f64) - 1.0,
+            right: 0.0,
+            top: -(at as f64),
+        })
+        .collect()
+}
+
 /// Judges a whole mail. `None` when it has to wait for the model.
 pub fn judge(
     model: Option<&dyn LocalModel>,
     head: &Head,
     raw: &[u8],
     asked: &mut u32,
+    paid_before: &dyn Fn(&str) -> bool,
 ) -> Option<Looked> {
     let parser = MessageParser::default();
     let Some(message) = parser.parse(raw) else {
         return Some(looked(head, "Die Mail ließ sich nicht lesen."));
     };
-    let pdfs: Vec<(String, Vec<u8>)> = message
-        .attachments()
-        .filter(is_pdf)
-        .map(|part| {
-            (
-                pdf_name(part.attachment_name(), "Anhang"),
-                part.decoded().into_owned(),
-            )
-        })
-        .collect();
-    if pdfs.is_empty() && !names_invoice(head) {
-        return Some(looked(
-            head,
-            "Kein Zeichen einer Rechnung, nicht übernommen.",
-        ));
-    }
     let text = super::text::body_of(&message);
-    let names: Vec<String> = pdfs.iter().map(|(name, _)| name.clone()).collect();
-    let model = model?;
-    *asked += 1;
-    let kind = ask_kind(model, head, &names, &text)?;
-    if !money(kind) {
-        return Some(looked(head, "Laut Modell kein Beleg, nicht übernommen."));
-    }
-    if !pdfs.is_empty() {
-        let count = pdfs.len();
-        return Some(Looked {
-            verdict: format!(
-                "Übernommen: {} (laut Modell {}).",
-                if count == 1 {
-                    "der PDF-Anhang".to_owned()
-                } else {
-                    format!("{count} PDF-Anhänge")
-                },
-                kind_word(kind)
-            ),
-            kind: Some(kind),
-            files: pdfs,
-            ..looked(head, "")
-        });
-    }
     let recipient = message
         .to()
         .and_then(|list| list.first())
@@ -314,11 +323,101 @@ pub fn judge(
         head_lines.push(format!("Anhänge: {}", attached.join(", ")));
     }
     let file = super::text::mail_file(&head_lines, &text);
-    let name = file_name(
-        Some(head.subject.as_str()).filter(|subject| !subject.trim().is_empty()),
-        "Mail",
-        "txt",
-    );
+    let lines = lines_of(&file);
+    let text_name = || {
+        file_name(
+            Some(head.subject.as_str()).filter(|subject| !subject.trim().is_empty()),
+            "Mail",
+            "txt",
+        )
+    };
+    // A payment mail of PayPal is read by code, never asked about, and taken once (#32).
+    if let Some(payment) = crate::readers::paypal::read_payment(&lines)
+        && payment.complete()
+    {
+        let code = payment.code_text();
+        if code.as_deref().is_some_and(paid_before) {
+            return Some(Looked {
+                paypal_code: code,
+                ..looked(
+                    head,
+                    "Eine zweite Mail derselben PayPal-Zahlung, nicht übernommen.",
+                )
+            });
+        }
+        return Some(Looked {
+            verdict: "Übernommen als Text der Mail (eine PayPal-Zahlung, vom Code gelesen).".into(),
+            kind: Some(Kind::Receipt),
+            files: vec![(text_name(), file.clone().into_bytes())],
+            paypal_code: code,
+            ..looked(head, "")
+        });
+    }
+    // A mail of Amazon tells its orders (#32); without a PDF it is no document.
+    let orders = if crate::orders::from_amazon(&head.from) {
+        let texts: Vec<String> = file.lines().skip(1).map(str::to_owned).collect();
+        crate::orders::read(&texts)
+    } else {
+        Vec::new()
+    };
+    let pdfs: Vec<(String, Vec<u8>)> = message
+        .attachments()
+        .filter(is_pdf)
+        .map(|part| {
+            (
+                pdf_name(part.attachment_name(), "Anhang"),
+                part.decoded().into_owned(),
+            )
+        })
+        .collect();
+    if pdfs.is_empty() && !orders.is_empty() {
+        let numbers: Vec<&str> = orders.iter().map(|order| order.number.as_str()).collect();
+        return Some(Looked {
+            orders: orders.clone(),
+            ..looked(
+                head,
+                &format!(
+                    "Eine Bestellung bei Amazon ({}), die Rechnung lädst du bei Amazon herunter.",
+                    numbers.join(", ")
+                ),
+            )
+        });
+    }
+    if pdfs.is_empty() && !names_invoice(head) {
+        return Some(looked(
+            head,
+            "Kein Zeichen einer Rechnung, nicht übernommen.",
+        ));
+    }
+    let names: Vec<String> = pdfs.iter().map(|(name, _)| name.clone()).collect();
+    let model = model?;
+    *asked += 1;
+    let kind = ask_kind(model, head, &names, &text)?;
+    if !money(kind) {
+        return Some(Looked {
+            orders,
+            ..looked(head, "Laut Modell kein Beleg, nicht übernommen.")
+        });
+    }
+    if !pdfs.is_empty() {
+        let count = pdfs.len();
+        return Some(Looked {
+            verdict: format!(
+                "Übernommen: {} (laut Modell {}).",
+                if count == 1 {
+                    "der PDF-Anhang".to_owned()
+                } else {
+                    format!("{count} PDF-Anhänge")
+                },
+                kind_word(kind)
+            ),
+            kind: Some(kind),
+            files: pdfs,
+            orders,
+            ..looked(head, "")
+        });
+    }
+    let name = text_name();
     Some(Looked {
         verdict: format!(
             "Übernommen als Text der Mail (laut Modell {}).",
@@ -326,6 +425,7 @@ pub fn judge(
         ),
         kind: Some(kind),
         files: vec![(name, file.into_bytes())],
+        orders,
         ..looked(head, "")
     })
 }
@@ -340,9 +440,8 @@ pub fn imap_date(date: jiff::civil::Date) -> String {
     format!("{}-{month}-{}", date.day(), date.year())
 }
 
-/// Reads one mailbox from where it was left. `known` says whether a mail was looked at before,
-/// `note` keeps a mail looked at now. Returns where the mailbox is left and what the round did.
-#[allow(clippy::too_many_arguments)]
+/// Reads one mailbox from where it was left, asking and telling the archive through `ledger`.
+/// Returns where the mailbox is left and what the round did.
 pub async fn read<S>(
     stream: S,
     address: &str,
@@ -350,8 +449,7 @@ pub async fn read<S>(
     place: &Place,
     since: jiff::civil::Date,
     model: Option<&dyn LocalModel>,
-    known: &dyn Fn(&str) -> bool,
-    note: &mut dyn FnMut(&Looked),
+    ledger: &mut dyn Ledger,
 ) -> Result<(Place, Counts), MailError>
 where
     S: AsyncRead + AsyncWrite + Unpin + Debug + Send,
@@ -427,13 +525,47 @@ where
                 last = *uid;
                 continue;
             };
-            if known(&head.hash) {
+            let amazon = crate::orders::from_amazon(&head.from);
+            if ledger.known(&head.hash) {
+                // A mail of Amazon looked at before #32 is read once more for its orders.
+                if amazon && *size <= LARGEST && !ledger.orders_read(&head.hash) {
+                    let whole: Vec<_> = session
+                        .uid_fetch(uid.to_string(), "(UID BODY.PEEK[])")
+                        .await
+                        .map_err(classify)?
+                        .try_collect()
+                        .await
+                        .map_err(classify)?;
+                    let orders = whole
+                        .first()
+                        .and_then(|fetch| fetch.body())
+                        .and_then(|raw| {
+                            MessageParser::default()
+                                .parse(raw)
+                                .map(|message| super::text::body_of(&message))
+                        })
+                        .map(|body| {
+                            let mut texts = vec![format!(
+                                "Datum: {}",
+                                head.received_at
+                                    .as_deref()
+                                    .map(day_of_rfc)
+                                    .unwrap_or_default()
+                            )];
+                            texts.extend(body.lines().map(str::to_owned));
+                            crate::orders::read(&texts)
+                        })
+                        .unwrap_or_default();
+                    counts.orders += u32::try_from(orders.len()).unwrap_or(0);
+                    ledger.note_orders(&head.hash, &orders);
+                }
                 last = *uid;
                 continue;
             }
+            let paypal = head.from.to_lowercase().contains("paypal");
             let verdict = if *size > LARGEST {
                 Some(looked(head, "Zu groß zum Lesen, nicht übernommen."))
-            } else if head.attached || names_invoice(head) {
+            } else if head.attached || names_invoice(head) || amazon || paypal {
                 let whole: Vec<_> = session
                     .uid_fetch(uid.to_string(), "(UID BODY.PEEK[])")
                     .await
@@ -442,7 +574,9 @@ where
                     .await
                     .map_err(classify)?;
                 match whole.first().and_then(|fetch| fetch.body()) {
-                    Some(raw) => judge(model, head, raw, &mut counts.asked),
+                    Some(raw) => judge(model, head, raw, &mut counts.asked, &|code| {
+                        ledger.paid_before(code)
+                    }),
                     None => Some(looked(head, "Die Mail ließ sich nicht lesen.")),
                 }
             } else {
@@ -457,8 +591,9 @@ where
                     .unwrap_or(u32::MAX);
                 break 'round;
             };
-            note(&verdict);
+            ledger.note(&verdict);
             counts.looked += 1;
+            counts.orders += u32::try_from(verdict.orders.len()).unwrap_or(0);
             if verdict.files.is_empty() {
                 counts.left_out += 1;
             } else {

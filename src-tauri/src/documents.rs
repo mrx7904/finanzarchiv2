@@ -434,6 +434,14 @@ pub fn delete(conn: &Connection, root: &Path, id: i64) -> rusqlite::Result<Optio
     ] {
         tx.execute(&format!("DELETE FROM {table} WHERE document_id = ?1"), [id])?;
     }
+    tx.execute(
+        "DELETE FROM receipts_of WHERE receipt_id = ?1 OR invoice_id = ?1",
+        [id],
+    )?;
+    tx.execute(
+        "UPDATE orders SET document_id = NULL WHERE document_id = ?1",
+        [id],
+    )?;
     tx.execute("DELETE FROM documents WHERE id = ?1", [id])?;
     // A watched folder or a mailbox does not bring it back (#27).
     tx.execute(

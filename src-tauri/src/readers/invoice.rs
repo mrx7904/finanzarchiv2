@@ -86,6 +86,47 @@ fn date_on(lines: &[Line], labels: &[&str], field: &'static str) -> Option<Value
     })
 }
 
+/// Amazon's order number, "302-1234567-1234567", as its invoice and the bank's purpose print it.
+static AMAZON_ORDER: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"\b\d{3}-\d{7}-\d{7}\b").unwrap_or_else(|_| unreachable!("a fixed pattern"))
+});
+
+/// The order number of an invoice (#32): Amazon's form wherever it stands, else the token after
+/// "Bestellnummer" or "Bestellnr.". It finds the order mail of the invoice and the booking that
+/// names it.
+pub fn order_number(lines: &[Line]) -> Option<Value> {
+    lines
+        .iter()
+        .find_map(|line| {
+            let found = AMAZON_ORDER.find(&line.text)?;
+            Some(Value::on(
+                "order_number",
+                found.as_str(),
+                Normalized::Text(found.as_str().to_owned()),
+                line,
+            ))
+        })
+        .or_else(|| {
+            ["bestellnummer", "bestellnr"].iter().find_map(|label| {
+                lines.iter().find_map(|line| {
+                    let rest = after_label(&line.text, label)?;
+                    let token = rest
+                        .split_whitespace()
+                        .next()?
+                        .trim_end_matches([',', ';', '.']);
+                    (token.len() >= 5 && token.chars().any(|c| c.is_ascii_digit())).then(|| {
+                        Value::on(
+                            "order_number",
+                            token,
+                            Normalized::Text(token.to_owned()),
+                            line,
+                        )
+                    })
+                })
+            })
+        })
+}
+
 fn invoice_number(lines: &[Line]) -> Option<Value> {
     NUMBER.iter().find_map(|label| {
         lines.iter().find_map(|line| {
@@ -163,6 +204,7 @@ impl Reader for InvoiceCode {
             amount_on(lines, GROSS, "gross"),
             iban_of(lines),
             sender(lines),
+            order_number(lines),
         ]
         .into_iter()
         .flatten()
@@ -299,5 +341,44 @@ mod tests {
         );
         assert_eq!(value(&values, "invoice_number"), None);
         assert_eq!(value(&values, "vat"), None);
+    }
+}
+
+#[cfg(test)]
+mod order_tests {
+    use super::*;
+
+    fn line(text: &str) -> Line {
+        Line {
+            page: 1,
+            text: text.to_owned(),
+            left: 0.0,
+            bottom: 0.0,
+            right: 0.0,
+            top: 0.0,
+        }
+    }
+
+    #[test]
+    fn an_invoice_names_its_order() {
+        let amazon = [
+            line("Rechnung"),
+            line("Bestellnummer 302-1234567-7654321"),
+            line("Gesamtpreis 23,80 €"),
+        ];
+        assert_eq!(
+            order_number(&amazon)
+                .map(|value| value.value.stored())
+                .as_deref(),
+            Some("302-1234567-7654321")
+        );
+        let shop = [line("Bestellnr.: B-2026-0815"), line("Summe 12,00 €")];
+        assert_eq!(
+            order_number(&shop)
+                .map(|value| value.value.stored())
+                .as_deref(),
+            Some("B-2026-0815")
+        );
+        assert_eq!(order_number(&[line("Rechnung R-1")]), None);
     }
 }

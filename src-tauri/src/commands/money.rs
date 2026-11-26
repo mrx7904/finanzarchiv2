@@ -303,6 +303,46 @@ pub fn list_bookings(
     })
 }
 
+/// An order as "Bestellungen" shows it (#32).
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderRow {
+    pub id: u32,
+    pub shop: String,
+    pub number: String,
+    /// ISO day of the order mail.
+    pub day: Option<String>,
+    pub total: Option<String>,
+    pub invoice: Option<u32>,
+    pub invoice_name: Option<String>,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn list_orders(archive: State<'_, Arc<Mutex<Opened>>>) -> Result<Vec<OrderRow>, CommandError> {
+    with_ready(&archive, |conn| {
+        crate::orders::list(conn)
+            .map_err(database)?
+            .into_iter()
+            .map(|order| {
+                Ok(OrderRow {
+                    id: id32(order.id)?,
+                    shop: order.shop,
+                    number: order.number,
+                    day: order.day,
+                    total: order.total.map(|cents| cents.to_string()),
+                    invoice: order
+                        .invoice
+                        .as_ref()
+                        .map(|(id, _)| id32(*id))
+                        .transpose()?,
+                    invoice_name: order.invoice.map(|(_, name)| name),
+                })
+            })
+            .collect()
+    })
+}
+
 /// A document as the detail of a booking shows it: what it is and what was read from it.
 #[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

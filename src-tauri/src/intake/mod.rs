@@ -233,6 +233,20 @@ fn classify(
             } else {
                 kinds::classify(lines.iter().map(String::as_str))
             };
+            // A mail of PayPal is a receipt by code (#32).
+            let paypal = job.source == documents::Source::Mail
+                && crate::readers::paypal::read_payment(
+                    &crate::readers::lines_of(&tx, id).map_err(|_| Stopped::Database)?,
+                )
+                .is_some_and(|payment| payment.complete());
+            let found = if paypal {
+                kinds::Classified {
+                    kind: kinds::Kind::Receipt,
+                    signals: vec!["paypal"],
+                }
+            } else {
+                found
+            };
             // A file of a mail takes the kind the model gave its mail when code cannot tell (#31).
             let hinted = match found.kind {
                 kinds::Kind::Other | kinds::Kind::Unknown

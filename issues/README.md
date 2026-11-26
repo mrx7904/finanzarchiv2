@@ -72,7 +72,7 @@ Order of work: #20 first, then #21, #22 and #25, then #23 and #24, then #26.
 | [#29](029-gmail-read-only.md) | Gmail, read-only | FA-34 | #05 | done |
 | [#30](030-microsoft-365.md) | Microsoft 365 with OAuth in the system browser | FA-34 | #29 | deferred (the owner reads Gmail only, 2026-11-26) |
 | [#31](031-invoices-from-mail.md) | Invoices from mail | FA-35 | #29, #14 | done |
-| [#32](032-paypal-and-amazon.md) | PayPal and Amazon | FA-36 | #31, #24 | open |
+| [#32](032-paypal-and-amazon.md) | PayPal and Amazon | FA-36 | #31, #24 | done |
 
 **Stage 4 is done when a document the owner saves, downloads or receives by mail is in the archive without a click, and no mailbox was changed by the app.**
 

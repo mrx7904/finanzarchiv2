@@ -75,8 +75,8 @@ pub fn keep(
         }
     }
     conn.execute(
-        "INSERT INTO mail_messages (mailbox_id, message_hash, received_at, looked_at, verdict, taken, kind)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT (message_hash) DO NOTHING",
+        "INSERT INTO mail_messages (mailbox_id, message_hash, received_at, looked_at, verdict, taken, kind, paypal_code)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) ON CONFLICT (message_hash) DO NOTHING",
         params![
             mailbox,
             looked.hash,
@@ -84,9 +84,12 @@ pub fn keep(
             now.to_string(),
             looked.verdict,
             i64::try_from(paths.len()).unwrap_or(0),
-            looked.kind.map(Kind::code)
+            looked.kind.map(Kind::code),
+            looked.paypal_code
         ],
     )?;
+    // A mail of a shop keeps its orders (#32), and every mail counts as read for them.
+    crate::orders::note(conn, &looked.hash, &looked.orders, now)?;
     Ok(paths)
 }
 
@@ -114,6 +117,73 @@ pub fn tidy(conn: &Connection, staging: &Path) -> rusqlite::Result<()> {
         let _ = std::fs::remove_dir(dir.path());
     }
     Ok(())
+}
+
+/// Whether a PayPal payment with this transaction code was taken before (#32).
+pub fn paid_before(conn: &Connection, code: &str) -> rusqlite::Result<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM mail_messages WHERE paypal_code = ?1 AND taken > 0 LIMIT 1",
+            [code],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some())
+}
+
+/// Whether the orders of a mail looked at before were read (#32).
+pub fn orders_read(conn: &Connection, hash: &str) -> rusqlite::Result<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT orders_read FROM mail_messages WHERE message_hash = ?1",
+            [hash],
+            |row| row.get::<_, bool>(0),
+        )
+        .optional()?
+        .unwrap_or(true))
+}
+
+/// The ledger of a round in the archive: what it knows and where a mail looked at goes.
+struct ArchiveLedger<'a> {
+    reader: &'a Reader,
+    mailbox: i64,
+    taken: Vec<PathBuf>,
+}
+
+impl round::Ledger for ArchiveLedger<'_> {
+    fn known(&self, hash: &str) -> bool {
+        self.reader
+            .with(|conn, _| is_known(conn, hash))
+            .unwrap_or(true)
+    }
+
+    fn paid_before(&self, code: &str) -> bool {
+        self.reader
+            .with(|conn, _| paid_before(conn, code))
+            .unwrap_or(false)
+    }
+
+    fn orders_read(&self, hash: &str) -> bool {
+        self.reader
+            .with(|conn, _| orders_read(conn, hash))
+            .unwrap_or(true)
+    }
+
+    fn note(&mut self, looked: &Looked) {
+        let mailbox = self.mailbox;
+        if let Some(paths) = self
+            .reader
+            .with(|conn, staging| keep(conn, staging, mailbox, looked, Timestamp::now()))
+        {
+            self.taken.extend(paths);
+        }
+    }
+
+    fn note_orders(&mut self, hash: &str, orders: &[crate::orders::Order]) {
+        let _ = self
+            .reader
+            .with(|conn, _| crate::orders::note(conn, hash, orders, Timestamp::now()));
+    }
 }
 
 /// What the mailboxes gave so far: mails looked at and taken.
@@ -197,14 +267,10 @@ impl Reader {
             .unwrap_or(Timestamp::UNIX_EPOCH)
             .to_zoned_datetime(jiff::tz::TimeZone::UTC)
             .date();
-        let known = |hash: &str| self.with(|conn, _| is_known(conn, hash)).unwrap_or(true);
-        let mut taken: Vec<PathBuf> = Vec::new();
-        let mut note = |looked: &Looked| {
-            if let Some(paths) =
-                self.with(|conn, staging| keep(conn, staging, id, looked, Timestamp::now()))
-            {
-                taken.extend(paths);
-            }
+        let mut ledger = ArchiveLedger {
+            reader: self,
+            mailbox: id,
+            taken: Vec::new(),
         };
         let stream = tokio::time::timeout(Duration::from_secs(30), super::connect_gmail())
             .await
@@ -216,10 +282,10 @@ impl Reader {
             &place,
             since,
             self.model.as_deref(),
-            &known,
-            &mut note,
+            &mut ledger,
         )
         .await?;
+        let taken = ledger.taken;
         let _ = self.with(|conn, _| {
             conn.execute(
                 "UPDATE mailboxes SET folder = ?2, uid_validity = ?3, last_uid = ?4 WHERE id = ?1",

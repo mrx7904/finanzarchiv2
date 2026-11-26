@@ -90,3 +90,12 @@ export function mailParts(text: string): { head: [string, string][]; body: strin
   });
   return { head, body: (empty < 0 ? lines : lines.slice(empty + 1)).join("\n").trim() };
 }
+
+/** What "Bestellungen" says on top (#32): how many orders wait for their invoice, and where it goes. */
+export function ordersLine(orders: { invoice?: number | null }[]): string {
+  const missing = orders.filter((order) => typeof order.invoice !== "number").length;
+  if (orders.length === 0) return "Bestellungen, die die Mails von Amazon nennen, mit ihrer Rechnung.";
+  if (missing === 0) return `Jede der ${orders.length} Bestellungen hat ihre Rechnung.`;
+  const which = missing === 1 ? "1 Bestellung wartet" : `${missing} Bestellungen warten`;
+  return `${which} auf die Rechnung. Lade sie bei Amazon unter „Meine Bestellungen“ herunter und lege sie in den Eingangsordner oder die Downloads, das Archiv ordnet sie über die Bestellnummer zu.`;
+}
