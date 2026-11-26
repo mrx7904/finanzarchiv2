@@ -49,6 +49,18 @@ export const commands = {
 	setNameTemplate: (kind: string, template: string, options?: InvokeOptions) => typedError<NameTemplates, CommandError>(__TAURI_INVOKE("set_name_template", { kind, template }, options)),
 	/**  The owner's name of a document, kept from now on. Empty gives it back to its template. */
 	renameDocument: (document: number, name: string, options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("rename_document", { document, name }, options)),
+	listAccounts: (options?: InvokeOptions) => typedError<AccountRow_Serialize[], CommandError>(__TAURI_INVOKE("list_accounts", undefined, options)),
+	listBookings: (filter: BookingFilter_Deserialize, options?: InvokeOptions) => typedError<BookingPage_Serialize, CommandError>(__TAURI_INVOKE("list_bookings", { filter }, options)),
+	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
+	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
+	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
+	removeCategory: (category: number, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("remove_category", { category }, options)),
+	/**  The owner's category for a booking, or with `for_party` for all of its party ("Für alle von …"). */
+	chooseCategory: (booking: number, category: number | null, forParty: boolean, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("choose_category", { booking, category, forParty }, options)),
+	/**  "Rückgängig" for a link of a document to a booking. */
+	undoLink: (link: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("undo_link", { link }, options)),
+	/**  "Rückgängig" for a move between own accounts. */
+	undoMove: (pair: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("undo_move", { pair }, options)),
 };
 
 /** Events */
@@ -57,6 +69,37 @@ export const events = {
 };
 
 /* Types */
+/**  An account as "Konten" shows it. */
+export type AccountRow = AccountRow_Serialize | AccountRow_Deserialize;
+
+/**  An account as "Konten" shows it. */
+export type AccountRow_Deserialize = {
+	id: number,
+	name: string,
+	iban?: string | null,
+	/**  The balance after every booking read, as "1.234,56 €". */
+	balance?: string | null,
+	/**  The bank's last printed balance and its day (ISO). */
+	bankBalance?: string | null,
+	bankDay?: string | null,
+	/**  What does not match, in German. */
+	findings: string[],
+};
+
+/**  An account as "Konten" shows it. */
+export type AccountRow_Serialize = {
+	id: number,
+	name: string,
+	iban: string | null,
+	/**  The balance after every booking read, as "1.234,56 €". */
+	balance: string | null,
+	/**  The bank's last printed balance and its day (ISO). */
+	bankBalance: string | null,
+	bankDay: string | null,
+	/**  What does not match, in German. */
+	findings: string[],
+};
+
 export type AppStatus = {
 	version: string,
 	archive: ArchiveStatus,
@@ -64,6 +107,102 @@ export type AppStatus = {
 
 /**  The state of the archive as the window shows it. */
 export type ArchiveStatus = { state: "ready" } | { state: "damaged"; snapshots: SnapshotInfo[] } | { state: "missing"; snapshots: SnapshotInfo[] };
+
+/**  What "Umsätze" asks for: one account or all, a period, a category, a text in party or purpose. */
+export type BookingFilter = BookingFilter_Serialize | BookingFilter_Deserialize;
+
+/**  What "Umsätze" asks for: one account or all, a period, a category, a text in party or purpose. */
+export type BookingFilter_Deserialize = {
+	account?: number | null,
+	/**  ISO days, both included. */
+	from?: string | null,
+	to?: string | null,
+	category?: number | null,
+	text?: string | null,
+	offset: number,
+	limit: number,
+};
+
+/**  What "Umsätze" asks for: one account or all, a period, a category, a text in party or purpose. */
+export type BookingFilter_Serialize = {
+	account: number | null,
+	/**  ISO days, both included. */
+	from: string | null,
+	to: string | null,
+	category: number | null,
+	text: string | null,
+	offset: number,
+	limit: number,
+};
+
+export type BookingPage = BookingPage_Serialize | BookingPage_Deserialize;
+
+export type BookingPage_Deserialize = {
+	rows: BookingRow_Deserialize[],
+	total: number,
+	/**  Money in and out of the bookings found, moves left out. */
+	income: string,
+	spending: string,
+};
+
+export type BookingPage_Serialize = {
+	rows: BookingRow_Serialize[],
+	total: number,
+	/**  Money in and out of the bookings found, moves left out. */
+	income: string,
+	spending: string,
+};
+
+export type BookingRow = BookingRow_Serialize | BookingRow_Deserialize;
+
+export type BookingRow_Deserialize = {
+	id: number,
+	account: string,
+	day: string,
+	party?: string | null,
+	otherSide?: string | null,
+	purpose: string,
+	kind: string,
+	/**  Money in, not out. The amount itself is the formatted text, cents never cross as a float. */
+	incoming: boolean,
+	amount: string,
+	category?: number | null,
+	/**  Whether the category is the party's, not the booking's own. */
+	categoryByParty: boolean,
+	documents: LinkedDocument[],
+	movement?: MoveOf_Deserialize | null,
+	/**  The statement document it was read from, and the page of its line. */
+	statement?: number | null,
+	page?: number | null,
+};
+
+export type BookingRow_Serialize = {
+	id: number,
+	account: string,
+	day: string,
+	party: string | null,
+	otherSide: string | null,
+	purpose: string,
+	kind: string,
+	/**  Money in, not out. The amount itself is the formatted text, cents never cross as a float. */
+	incoming: boolean,
+	amount: string,
+	category: number | null,
+	/**  Whether the category is the party's, not the booking's own. */
+	categoryByParty: boolean,
+	documents: LinkedDocument[],
+	movement: MoveOf_Serialize | null,
+	/**  The statement document it was read from, and the page of its line. */
+	statement: number | null,
+	page: number | null,
+};
+
+export type CategoryRow = {
+	id: number,
+	name: string,
+	/**  "in" or "out". */
+	direction: string,
+};
 
 /**  One result of a check, as "Warum?" shows it. */
 export type CheckRow = CheckRow_Serialize | CheckRow_Deserialize;
@@ -216,6 +355,35 @@ export type JobRow_Serialize = {
 	stage: string,
 	/**  Why a failed file was not taken, or why a job waits for the model, as a German sentence. */
 	error: string | null,
+};
+
+/**  A document linked to a booking, with the link's rule for "Warum?". */
+export type LinkedDocument = {
+	link: number,
+	document: number,
+	name: string,
+	why: string,
+};
+
+/**  A move a booking is half of. */
+export type MoveOf = MoveOf_Serialize | MoveOf_Deserialize;
+
+/**  A move a booking is half of. */
+export type MoveOf_Deserialize = {
+	pair: number,
+	why: string,
+	/**  The other account, by name. */
+	other?: string | null,
+	made: boolean,
+};
+
+/**  A move a booking is half of. */
+export type MoveOf_Serialize = {
+	pair: number,
+	why: string,
+	/**  The other account, by name. */
+	other: string | null,
+	made: boolean,
 };
 
 /**  The template of one kind, as the owner edits it. */

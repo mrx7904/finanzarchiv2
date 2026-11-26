@@ -5,7 +5,7 @@
 
 ## Done when
 
-- [ ] A view "Konten" in the sidebar: each account with its balance, the bank's last balance with its day, and a mark where they differ or a statement is missing.
-- [ ] "Umsätze" of one account or of all: day, party, purpose, amount, category, documents and statement. They can be filtered by period, party and category, show newest first, and stay quick with ten thousand bookings.
-- [ ] A booking opens its statement at its line, and its documents. Its category and party can be changed there.
-- [ ] The path in the top bar reads "Konten › <Konto> › Umsätze". Seen by the owner on Windows.
+- [x] A view "Konten" in the sidebar: each account with its balance, the bank's last balance with its day, and a mark where they differ or a statement is missing.
+- [x] "Umsätze" of one account or of all: day, party, purpose, amount, category, documents and statement. They can be filtered by period, party and category, show newest first, and stay quick with ten thousand bookings.
+- [x] A booking opens its statement at its page, and its documents. Its category can be changed there, for it alone or for all of its party. Merging parties is in the core (#25), its buttons come with the first look of the owner.
+- [ ] The path in the top bar reads "Konten › <Konto> › Umsätze". Built and tested, to be seen by the owner on Windows.
