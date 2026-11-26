@@ -193,3 +193,35 @@ Issue: #25
 "Konten" shows each account with its balance, the bank's last balance and what does not match. A list shows the bookings of an account or of all, with their statement, their documents and their category, filtered by period, party and category.
 
 Issue: #26
+
+## Stage 4 Coming in by itself
+
+### FA-32 Watched folders and the inbox folder
+
+Folders the owner chooses are watched, and a new file in one of them goes through the intake as if it was dropped. An inbox folder is there from the start. Nothing in a watched folder is moved, renamed or deleted.
+
+Issue: #27
+
+### FA-33 The downloads folder
+
+When the owner switches it on, the downloads folder of the system is watched at its top level, and a file is taken only when it looks like an invoice, a payslip, a receipt or a statement. The files that lay there before are left alone until the owner asks.
+
+Issue: #28
+
+### FA-34 Mailboxes read-only
+
+The owner's mailboxes (Gmail with an app password, Microsoft 365 with OAuth in the system browser) are read in the background and never changed: no mail is moved, deleted, sent or marked as read. Credentials are kept in the keychain of the system, never in a file of the app.
+
+Issue: #29, #30
+
+### FA-35 Invoices from mail
+
+A mail that is an invoice, a receipt or a payslip is found and its PDF attachment, or the mail itself as a PDF without anything it would load from outside, goes through the intake. Every mail is looked at once.
+
+Issue: #31
+
+### FA-36 PayPal and Amazon
+
+A payment mail of PayPal is read by code (payee, amount, day, transaction code) and stands for the payment when no invoice of the seller comes. Two mails of one payment are one. Amazon orders find their invoice where it can be had.
+
+Issue: #32
