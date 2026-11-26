@@ -149,3 +149,47 @@ Issue: #18
 After an import of many documents the app writes a snapshot of the archive at once, not only at the next start.
 
 Issue: #19
+
+## Stage 3 Money
+
+### FA-25 Statements read by code, each proved by its balance
+
+A bank statement as PDF is read by code in the layout of its bank: the account (IBAN, bank), the period, the old and the new balance, and every booking with its day, amount, other side and purpose. Old balance plus the bookings is the new balance to the cent, or the statement waits with the gap. Each IBAN is an account, made the first time it appears.
+
+Issue: #20
+
+### FA-26 Statements as CSV, CSV before PDF
+
+A CSV export of a bank is taken in when it reads as a statement of a known layout, proved by its balances like a PDF. Where a CSV and a PDF cover the same days of an account, the bookings are not doubled, and the CSV counts.
+
+Issue: #21
+
+### FA-27 The balance of each account against the bank
+
+The balance of an account on a day is its opening balance plus its bookings up to that day. It is held against every balance the bank printed, and a difference or a gap between two statements is shown, never hidden.
+
+Issue: #22
+
+### FA-28 Moves between own accounts
+
+A booking whose other side is an own account is a move: it changes both balances and counts as neither income nor spending. The bank itself is no own account.
+
+Issue: #23
+
+### FA-29 Documents linked to their bookings
+
+An invoice, receipt or payslip is linked to the booking that paid it by rules with a stable id (amount, number in the purpose, name, days), each link a decision with "Warum?" and "Rückgängig". A link no rule is sure of is a question in "Prüfen".
+
+Issue: #24
+
+### FA-30 Parties and their categories
+
+The other sides of bookings and the senders of documents are parties, each with its spellings. A category belongs to a party, learned from the owner's choices, and a booking takes the category of its party unless the owner gave it another.
+
+Issue: #25
+
+### FA-31 Accounts and bookings in the window
+
+"Konten" shows each account with its balance, the bank's last balance and what does not match. A list shows the bookings of an account or of all, with their statement, their documents and their category, filtered by period, party and category.
+
+Issue: #26

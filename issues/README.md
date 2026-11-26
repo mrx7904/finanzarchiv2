@@ -45,6 +45,24 @@ Order of work: #01 first. Then #02, #03 and #07 in parallel. Then #04, #05 and #
 
 Order of work: #19 and #10 first, then #11, then #12, #13 and #14, then #15 and #16, then #17 and #18.
 
+## Stage 3 Money
+
+| # | Title | Requirements | Depends on | Status |
+|---|---|---|---|---|
+| [#20](020-statements-by-code.md) | Statements read by code, each proved by its balance | FA-25 | #16 | open |
+| [#21](021-csv-statements.md) | Statements as CSV, CSV before PDF | FA-26 | #20 | open |
+| [#22](022-balance-against-the-bank.md) | The balance of each account against the bank | FA-27 | #20 | open |
+| [#23](023-moves-between-own-accounts.md) | Moves between own accounts | FA-28 | #22 | open |
+| [#24](024-documents-linked-to-bookings.md) | Documents linked to their bookings | FA-29 | #20, #16 | open |
+| [#25](025-parties-and-categories.md) | Parties and their categories | FA-30 | #20 | open |
+| [#26](026-accounts-and-bookings-view.md) | Accounts and bookings in the window | FA-31 | #22, #24, #25 | open |
+
+**Stage 3 is done when every statement of the owner (PDF and CSV) is booked into its account, every account's balance equals the bank's, the moves between own accounts count in no income or spending, and the owner finds each invoice and payslip at the booking that paid it.**
+
+**Status:** Begun on 2026-11-26 on the owner's word ("direkt weiter mit Teil 3") while stage 2 waits for the owner's look at 0.2.1 (the answers "Nein" in "Prüfen" were reworked after the owner tried 0.2.0).
+
+Order of work: #20 first, then #21, #22 and #25, then #23 and #24, then #26.
+
 ## Later stages
 
 Stages 3 to 6 of `spec/concept.md` are cut into issues when their turn comes, with what stage 1 taught.
