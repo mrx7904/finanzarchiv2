@@ -11,6 +11,7 @@ pub mod money;
 pub mod naming;
 pub mod ollama;
 pub mod pages;
+pub mod parties;
 pub mod pdf;
 pub mod previews;
 pub mod readers;

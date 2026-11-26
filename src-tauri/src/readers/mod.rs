@@ -16,7 +16,7 @@ use rusqlite::{Connection, params};
 use crate::money::Cents;
 
 /// Raised when a reader reads differently, so older documents are read again at the next start.
-pub const READERS_VERSION: i64 = 4;
+pub const READERS_VERSION: i64 = 5;
 
 /// A line of a page with its place, as the stage `text` stored it.
 #[derive(Debug, Clone, PartialEq)]
@@ -244,6 +244,8 @@ pub fn read_document(
     // A statement's bookings go to their own tables (#20), a document of another kind keeps none.
     if kind == crate::kinds::Kind::Statement {
         crate::statements::store(conn, document, &input.lines, now)?;
+        // Every booking gets its party (#25).
+        crate::parties::assign(conn, now)?;
     } else {
         crate::statements::forget(conn, document)?;
     }

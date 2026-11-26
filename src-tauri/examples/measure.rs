@@ -1052,6 +1052,42 @@ fn measure_accounts(database: &Path, out: &Path) {
             count(kind, true);
         }
     }
+    // The parties of #25: every booking with another side and every filed document has one.
+    let count = |sql: &str| -> u32 {
+        conn.query_row(sql, [], |row| row.get::<_, u32>(0))
+            .unwrap_or(0)
+    };
+    for (key, right, total) in [
+        (
+            "booking.with party",
+            "SELECT count(*) FROM bookings WHERE party_id IS NOT NULL",
+            "SELECT count(*) FROM bookings WHERE other_side IS NOT NULL",
+        ),
+        (
+            "booking.with category",
+            "SELECT count(*) FROM bookings b LEFT JOIN parties p ON p.id = b.party_id WHERE coalesce(b.category_id, p.category_id) IS NOT NULL",
+            "SELECT count(*) FROM bookings",
+        ),
+        (
+            "document.with party",
+            "SELECT count(*) FROM documents WHERE party_id IS NOT NULL",
+            "SELECT count(*) FROM documents WHERE kind IN ('invoice', 'receipt', 'payslip') AND state = 'filed'",
+        ),
+    ] {
+        tallies.insert(
+            key.to_owned(),
+            Tally {
+                right: count(right),
+                total: count(total),
+            },
+        );
+    }
+    println!(
+        "  {} Parteien, {} Schreibweisen, {} Kategorien",
+        count("SELECT count(*) FROM parties"),
+        count("SELECT count(*) FROM party_aliases"),
+        count("SELECT count(*) FROM categories")
+    );
     let mut result = report("archive", &tallies);
     result["reader"] = json!("accounts");
     write(&out.join("private").join("archive-accounts.json"), &result);

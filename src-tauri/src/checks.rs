@@ -567,6 +567,8 @@ pub fn decide(conn: &Connection, document: i64, now: Timestamp) -> rusqlite::Res
     }
     if verdict.filed() {
         crate::naming::name_document(conn, document)?;
+        // A filed document's sender is a party, as the other side of a booking is (#25).
+        crate::parties::assign(conn, now)?;
     }
     Ok(verdict)
 }
