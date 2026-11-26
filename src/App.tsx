@@ -33,6 +33,8 @@ export function App() {
   // In "Konten": the account whose bookings are shown, or all (null), or none open (undefined).
   const [bookingsOf, setBookingsOf] = useState<{ id: number; name: string } | null | undefined>(undefined);
   const [at, setAt] = useState<ReviewAt>({ group: null, question: null });
+  // A document opened from elsewhere, chosen in "Dokumente".
+  const [focus, setFocus] = useState<number | null>(null);
   const [waiting, setWaiting] = useState(0);
   const countWaiting = () =>
     void commands.reviewGroups().then((result) => {
@@ -111,10 +113,16 @@ export function App() {
           {line?.version ? <p className="text-small text-fg-muted">Version {line.version}</p> : null}
         </header>
         {ready && view === "documents" ? <Intake /> : null}
-        {ready && view === "documents" ? <Documents /> : null}
+        {ready && view === "documents" ? <Documents focus={focus} /> : null}
         {ready && view === "review" ? <Review at={at} onAt={setAt} onAnswered={countWaiting} /> : null}
         {ready && view === "accounts" && bookingsOf === undefined ? <Accounts onOpen={(account) => setBookingsOf(account ? { id: account.id, name: account.name } : null)} /> : null}
-        {ready && view === "accounts" && bookingsOf !== undefined ? <Bookings account={bookingsOf?.id ?? null} /> : null}
+        {ready && view === "accounts" && bookingsOf !== undefined ? <Bookings
+            account={bookingsOf?.id ?? null}
+            onOpenDocument={(document) => {
+              setFocus(document);
+              setView("documents");
+            }}
+          /> : null}
       </main>
     </AppShell>
   );

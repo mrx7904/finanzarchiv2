@@ -53,6 +53,9 @@ export const commands = {
 	renameDocument: (document: number, name: string, options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("rename_document", { document, name }, options)),
 	listAccounts: (options?: InvokeOptions) => typedError<AccountRow_Serialize[], CommandError>(__TAURI_INVOKE("list_accounts", undefined, options)),
 	listBookings: (filter: BookingFilter_Deserialize, options?: InvokeOptions) => typedError<BookingPage_Serialize, CommandError>(__TAURI_INVOKE("list_bookings", { filter }, options)),
+	bookingDetail: (booking: number, options?: InvokeOptions) => typedError<BookingDetail_Serialize, CommandError>(__TAURI_INVOKE("booking_detail", { booking }, options)),
+	/**  The owner links a candidate document to the booking, as the answer of its question in "Prüfen". */
+	linkToBooking: (booking: number, document: number, options?: InvokeOptions) => typedError<BookingDetail_Serialize, CommandError>(__TAURI_INVOKE("link_to_booking", { booking, document }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -133,6 +136,72 @@ export type AppStatus = {
 
 /**  The state of the archive as the window shows it. */
 export type ArchiveStatus = { state: "ready" } | { state: "damaged"; snapshots: SnapshotInfo[] } | { state: "missing"; snapshots: SnapshotInfo[] };
+
+/**  Another booking of the same party. */
+export type BookingBrief = {
+	id: number,
+	account: string,
+	day: string,
+	amount: string,
+	incoming: boolean,
+};
+
+/**
+ *  What a booking shows when it is opened (#26, the owner's word of 2026-11-26): the booking
+ *  itself, the documents that paid it or might, the party over the year, the other half of a move,
+ *  and the statement only as a reference.
+ */
+export type BookingDetail = BookingDetail_Serialize | BookingDetail_Deserialize;
+
+/**
+ *  What a booking shows when it is opened (#26, the owner's word of 2026-11-26): the booking
+ *  itself, the documents that paid it or might, the party over the year, the other half of a move,
+ *  and the statement only as a reference.
+ */
+export type BookingDetail_Deserialize = {
+	id: number,
+	account: string,
+	day: string,
+	valueDay?: string | null,
+	kind: string,
+	party?: string | null,
+	otherSide?: string | null,
+	purpose: string,
+	incoming: boolean,
+	amount: string,
+	documents: DocumentCard_Deserialize[],
+	/**  Documents whose question in "Prüfen" names this booking among its candidates. */
+	candidates: DocumentCard_Deserialize[],
+	partyYear?: PartyYear | null,
+	movement?: MoveOf_Deserialize | null,
+	counterpart?: BookingBrief | null,
+	statement?: StatementRef_Deserialize | null,
+};
+
+/**
+ *  What a booking shows when it is opened (#26, the owner's word of 2026-11-26): the booking
+ *  itself, the documents that paid it or might, the party over the year, the other half of a move,
+ *  and the statement only as a reference.
+ */
+export type BookingDetail_Serialize = {
+	id: number,
+	account: string,
+	day: string,
+	valueDay: string | null,
+	kind: string,
+	party: string | null,
+	otherSide: string | null,
+	purpose: string,
+	incoming: boolean,
+	amount: string,
+	documents: DocumentCard_Serialize[],
+	/**  Documents whose question in "Prüfen" names this booking among its candidates. */
+	candidates: DocumentCard_Serialize[],
+	partyYear: PartyYear | null,
+	movement: MoveOf_Serialize | null,
+	counterpart: BookingBrief | null,
+	statement: StatementRef_Serialize | null,
+};
 
 /**  What "Umsätze" asks for: one account or all, a period, a category, a text in party or purpose. */
 export type BookingFilter = BookingFilter_Serialize | BookingFilter_Deserialize;
@@ -260,6 +329,47 @@ export type CheckRow_Serialize = {
 export type CommandError = {
 	kind: ErrorKind,
 	message: string,
+};
+
+/**  A document as the detail of a booking shows it: what it is and what was read from it. */
+export type DocumentCard = DocumentCard_Serialize | DocumentCard_Deserialize;
+
+/**  A document as the detail of a booking shows it: what it is and what was read from it. */
+export type DocumentCard_Deserialize = {
+	/**  The link, 0 for a candidate not linked yet. */
+	link: number,
+	document: number,
+	name: string,
+	kind: string,
+	fileType: string,
+	sender?: string | null,
+	/**  The invoice number, or the period of a payslip. */
+	number?: string | null,
+	/**  The gross of an invoice or receipt, the Netto of a payslip, as "1.234,56 €". */
+	amount?: string | null,
+	/**  ISO day. */
+	day?: string | null,
+	/**  Why it is linked, empty for a candidate. */
+	why: string,
+};
+
+/**  A document as the detail of a booking shows it: what it is and what was read from it. */
+export type DocumentCard_Serialize = {
+	/**  The link, 0 for a candidate not linked yet. */
+	link: number,
+	document: number,
+	name: string,
+	kind: string,
+	fileType: string,
+	sender: string | null,
+	/**  The invoice number, or the period of a payslip. */
+	number: string | null,
+	/**  The gross of an invoice or receipt, the Netto of a payslip, as "1.234,56 €". */
+	amount: string | null,
+	/**  ISO day. */
+	day: string | null,
+	/**  Why it is linked, empty for a candidate. */
+	why: string,
 };
 
 /**  The checks of a document and the decision that filed it. */
@@ -493,6 +603,18 @@ export type NameTemplates = {
 	placeholders: Placeholder[],
 };
 
+/**  The bookings of one party in the year of a booking. */
+export type PartyYear = {
+	party: string,
+	year: number,
+	count: number,
+	/**  Money in minus money out in that year, moves left out, as "1.234,56 €". */
+	sum: string,
+	incoming: boolean,
+	/**  Up to six other bookings of the party, newest first. */
+	latest: BookingBrief[],
+};
+
 /**  A placeholder with what it stands for. */
 export type Placeholder = {
 	name: string,
@@ -571,6 +693,23 @@ export type SnapshotInfo = {
 	name: string,
 	/**  UTC, ISO 8601. */
 	takenAt: string,
+};
+
+/**  The statement a booking was read from. */
+export type StatementRef = StatementRef_Serialize | StatementRef_Deserialize;
+
+/**  The statement a booking was read from. */
+export type StatementRef_Deserialize = {
+	document: number,
+	name: string,
+	page?: number | null,
+};
+
+/**  The statement a booking was read from. */
+export type StatementRef_Serialize = {
+	document: number,
+	name: string,
+	page: number | null,
 };
 
 /* Tauri Specta runtime */

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { type BookingPage, type BookingRow, type CategoryRow, commands } from "../bindings";
-import { PageImage } from "../documents/PageImage";
 import { useIntakeChanged } from "../intake/useIntakeChanged";
+import { BookingDetail } from "./BookingDetail";
 import { Button, SelectField, TextField, cn } from "../ui";
 import { bookingFilter, bookingWho, formatIsoDay } from "./describe";
 
-// "Umsätze" of #26: the bookings of one account or of all, newest first, 200 at a time, with their
-// category, documents, moves and statement.
-export function Bookings({ account }: { account: number | null }) {
+// "Umsätze" of #26: the bookings of one account or of all, newest first, 200 at a time. An opened
+// booking shows its detail: the document that paid it, the party over the year, a move.
+export function Bookings({ account, onOpenDocument }: { account: number | null; onOpenDocument: (document: number) => void }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [category, setCategory] = useState("");
@@ -70,50 +70,15 @@ export function Bookings({ account }: { account: number | null }) {
               <span className={cn("shrink-0 tabular-nums", booking.incoming ? "text-ok" : "text-fg")}>{booking.amount}</span>
             </button>
             {open === booking.id ? (
-              <div className="flex flex-col gap-2 pl-27 text-small">
-                {account === null ? <p className="text-fg-muted">Konto: {booking.account}</p> : null}
-                <p className="text-fg-muted">
-                  {booking.kind}
-                  {booking.purpose ? ` · ${booking.purpose}` : ""}
-                </p>
-                <div className="flex flex-wrap items-end gap-2">
-                  <SelectField
-                    label={booking.categoryByParty ? "Kategorie (von der Partei)" : "Kategorie"}
-                    value={booking.category === null ? "" : String(booking.category)}
-                    onChange={(value) => void choose(booking, value, false)}
-                    options={[{ value: "", label: "Keine" }, ...categories.map((row) => ({ value: String(row.id), label: row.name }))]}
-                  />
-                  {booking.party && booking.category !== null ? (
-                    <Button size="small" kind="plain" onClick={() => void choose(booking, String(booking.category), true)}>
-                      Für alle von {booking.party}
-                    </Button>
-                  ) : null}
-                </div>
-                {booking.documents.map((document) => (
-                  <div key={document.link} className="flex items-center justify-between gap-2">
-                    <span>
-                      Bezahlt: <span className="font-medium">{document.name}</span> <span className="text-fg-muted">— Warum? {document.why}</span>
-                    </span>
-                    <Button size="small" kind="plain" onClick={() => void commands.undoLink(document.link).then(() => load(0))}>
-                      Rückgängig
-                    </Button>
-                  </div>
-                ))}
-                {booking.movement ? (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-fg-muted">
-                      Warum Umbuchung? {booking.movement.why}
-                      {booking.movement.made ? " Die Gegenbuchung hat das Archiv angelegt." : ""}
-                    </span>
-                    <Button size="small" kind="plain" onClick={() => void commands.undoMove(booking.movement?.pair ?? 0).then(() => load(0))}>
-                      Rückgängig
-                    </Button>
-                  </div>
-                ) : null}
-                {typeof booking.statement === "number" ? (
-                  <PageImage document={booking.statement} page={booking.page ?? 1} width={640} label="Seite des Kontoauszugs" className="max-w-md rounded-control" />
-                ) : null}
-              </div>
+              <BookingDetail
+                booking={booking.id}
+                categories={categories}
+                category={booking.category ?? null}
+                categoryByParty={booking.categoryByParty}
+                onCategory={(value, forParty) => void choose(booking, value, forParty)}
+                onChanged={() => void load(0)}
+                onOpenDocument={onOpenDocument}
+              />
             ) : null}
           </li>
         ))}

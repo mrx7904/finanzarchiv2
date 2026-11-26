@@ -303,6 +303,312 @@ pub fn list_bookings(
     })
 }
 
+/// A document as the detail of a booking shows it: what it is and what was read from it.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentCard {
+    /// The link, 0 for a candidate not linked yet.
+    pub link: u32,
+    pub document: u32,
+    pub name: String,
+    pub kind: String,
+    pub file_type: String,
+    pub sender: Option<String>,
+    /// The invoice number, or the period of a payslip.
+    pub number: Option<String>,
+    /// The gross of an invoice or receipt, the Netto of a payslip, as "1.234,56 €".
+    pub amount: Option<String>,
+    /// ISO day.
+    pub day: Option<String>,
+    /// Why it is linked, empty for a candidate.
+    pub why: String,
+}
+
+/// Another booking of the same party.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BookingBrief {
+    pub id: u32,
+    pub account: String,
+    pub day: String,
+    pub amount: String,
+    pub incoming: bool,
+}
+
+/// The bookings of one party in the year of a booking.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PartyYear {
+    pub party: String,
+    pub year: i32,
+    pub count: u32,
+    /// Money in minus money out in that year, moves left out, as "1.234,56 €".
+    pub sum: String,
+    pub incoming: bool,
+    /// Up to six other bookings of the party, newest first.
+    pub latest: Vec<BookingBrief>,
+}
+
+/// The statement a booking was read from.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct StatementRef {
+    pub document: u32,
+    pub name: String,
+    pub page: Option<u32>,
+}
+
+/// What a booking shows when it is opened (#26, the owner's word of 2026-11-26): the booking
+/// itself, the documents that paid it or might, the party over the year, the other half of a move,
+/// and the statement only as a reference.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BookingDetail {
+    pub id: u32,
+    pub account: String,
+    pub day: String,
+    pub value_day: Option<String>,
+    pub kind: String,
+    pub party: Option<String>,
+    pub other_side: Option<String>,
+    pub purpose: String,
+    pub incoming: bool,
+    pub amount: String,
+    pub documents: Vec<DocumentCard>,
+    /// Documents whose question in "Prüfen" names this booking among its candidates.
+    pub candidates: Vec<DocumentCard>,
+    pub party_year: Option<PartyYear>,
+    pub movement: Option<MoveOf>,
+    pub counterpart: Option<BookingBrief>,
+    pub statement: Option<StatementRef>,
+}
+
+fn card(
+    conn: &rusqlite::Connection,
+    link: i64,
+    document: i64,
+    why_text: String,
+) -> Result<DocumentCard, CommandError> {
+    let (name, kind, file_type): (String, String, String) = conn
+        .query_row(
+            "SELECT coalesce(name, original_name), kind, file_type FROM documents WHERE id = ?1",
+            [document],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .map_err(database)?;
+    let chosen = crate::checks::chosen(&crate::checks::values(conn, document).map_err(database)?);
+    let text = |field: &str| chosen.get(field).map(|seen| seen.printed.clone());
+    let payslip = kind == "payslip";
+    let amount = chosen
+        .get(if payslip { "netto" } else { "gross" })
+        .and_then(|seen| seen.value.parse::<i64>().ok())
+        .map(|cents| Cents::new(cents).to_string());
+    Ok(DocumentCard {
+        link: id32(link)?,
+        document: id32(document)?,
+        name,
+        kind,
+        file_type,
+        sender: text(if payslip { "employer" } else { "sender" }),
+        number: text(if payslip { "period" } else { "invoice_number" }),
+        amount,
+        day: chosen
+            .get(if payslip { "period" } else { "invoice_date" })
+            .map(|seen| seen.value.clone())
+            .filter(|value| value.len() == 10),
+        why: why_text,
+    })
+}
+
+const MOVED: &str = "EXISTS (SELECT 1 FROM booking_pairs m WHERE (m.out_booking = b.id OR m.in_booking = b.id) AND m.undone_at IS NULL)";
+
+fn brief(row: &rusqlite::Row<'_>) -> rusqlite::Result<(i64, String, String, i64)> {
+    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+}
+
+fn to_brief(
+    (id, account, day, cents): (i64, String, String, i64),
+) -> Result<BookingBrief, CommandError> {
+    Ok(BookingBrief {
+        id: id32(id)?,
+        account,
+        day,
+        amount: Cents::new(cents).to_string(),
+        incoming: cents > 0,
+    })
+}
+
+/// The detail of one booking.
+pub fn detail_of(conn: &rusqlite::Connection, booking: i64) -> Result<BookingDetail, CommandError> {
+    type Head = (
+        String,
+        String,
+        Option<String>,
+        String,
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+        String,
+        i64,
+        Option<i64>,
+        Option<i64>,
+        Option<String>,
+    );
+    let (account, day, value_day, kind, party_id, party, other_side, purpose, cents, statement, page, statement_name): Head = conn
+        .query_row(
+            "SELECT a.name, b.day, b.value_day, b.kind, b.party_id, p.name, b.other_side, b.purpose, b.amount_cents,
+                    s.document_id, b.page, (SELECT coalesce(d.name, d.original_name) FROM documents d WHERE d.id = s.document_id)
+             FROM bookings b JOIN accounts a ON a.id = b.account_id LEFT JOIN parties p ON p.id = b.party_id
+             LEFT JOIN statements s ON s.id = b.statement_id WHERE b.id = ?1",
+            [booking],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?, row.get(9)?, row.get(10)?, row.get(11)?)),
+        )
+        .map_err(|_| CommandError::not_found())?;
+    let linked: Vec<(i64, i64, String)> = conn
+        .prepare("SELECT id, document_id, rule FROM links WHERE booking_id = ?1 AND undone_at IS NULL ORDER BY id")
+        .map_err(database)?
+        .query_map([booking], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .map_err(database)?
+        .collect::<rusqlite::Result<_>>()
+        .map_err(database)?;
+    let documents = linked
+        .into_iter()
+        .map(|(link, document, rule)| card(conn, link, document, why(&rule)))
+        .collect::<Result<Vec<_>, _>>()?;
+    let asking: Vec<(i64, String)> = conn
+        .prepare("SELECT document_id, candidates FROM link_questions WHERE answered_at IS NULL")
+        .map_err(database)?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(database)?
+        .collect::<rusqlite::Result<_>>()
+        .map_err(database)?;
+    let candidates = asking
+        .into_iter()
+        .filter(|(_, list)| {
+            serde_json::from_str::<Vec<i64>>(list)
+                .unwrap_or_default()
+                .contains(&booking)
+        })
+        .map(|(document, _)| card(conn, 0, document, String::new()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let year: i32 = day.get(..4).and_then(|year| year.parse().ok()).unwrap_or(0);
+    let party_year = match (party_id, party) {
+        (Some(party_id), Some(party)) => {
+            let (count, sum): (u32, i64) = conn
+                .query_row(
+                    &format!("SELECT count(*), coalesce(sum(b.amount_cents), 0) FROM bookings b WHERE b.party_id = ?1 AND b.replaced_by IS NULL AND substr(b.day, 1, 4) = ?2 AND NOT {MOVED}"),
+                    params![party_id, format!("{year:04}")],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .map_err(database)?;
+            let latest = conn
+                .prepare("SELECT b.id, a.name, b.day, b.amount_cents FROM bookings b JOIN accounts a ON a.id = b.account_id WHERE b.party_id = ?1 AND b.id <> ?2 AND b.replaced_by IS NULL ORDER BY b.day DESC, b.id DESC LIMIT 6")
+                .map_err(database)?
+                .query_map(params![party_id, booking], brief)
+                .map_err(database)?
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(database)?
+                .into_iter()
+                .map(to_brief)
+                .collect::<Result<Vec<_>, _>>()?;
+            Some(PartyYear {
+                party,
+                year,
+                count,
+                sum: Cents::new(sum.abs()).to_string(),
+                incoming: sum > 0,
+                latest,
+            })
+        }
+        _ => None,
+    };
+    let pair: Option<(i64, String, i64, bool)> = conn
+        .query_row(
+            "SELECT m.id, m.rule, CASE WHEN m.out_booking = ?1 THEN m.in_booking ELSE m.out_booking END,
+                    (SELECT made_by IS NOT NULL FROM bookings o WHERE o.id = CASE WHEN m.out_booking = ?1 THEN m.in_booking ELSE m.out_booking END)
+             FROM booking_pairs m WHERE (m.out_booking = ?1 OR m.in_booking = ?1) AND m.undone_at IS NULL",
+            [booking],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get::<_, Option<bool>>(3)?.unwrap_or(false))),
+        )
+        .ok();
+    let counterpart = match &pair {
+        Some((_, _, other, _)) => conn
+            .query_row(
+                "SELECT b.id, a.name, b.day, b.amount_cents FROM bookings b JOIN accounts a ON a.id = b.account_id WHERE b.id = ?1",
+                [other],
+                brief,
+            )
+            .ok()
+            .map(to_brief)
+            .transpose()?,
+        None => None,
+    };
+    let movement = pair
+        .map(|(pair, rule, _, made)| {
+            Ok::<_, CommandError>(MoveOf {
+                pair: id32(pair)?,
+                why: why(&rule),
+                other: counterpart.as_ref().map(|other| other.account.clone()),
+                made,
+            })
+        })
+        .transpose()?;
+    Ok(BookingDetail {
+        id: id32(booking)?,
+        account,
+        day,
+        value_day,
+        kind,
+        party: party_year.as_ref().map(|year| year.party.clone()),
+        other_side,
+        purpose,
+        incoming: cents > 0,
+        amount: Cents::new(cents).to_string(),
+        documents,
+        candidates,
+        party_year,
+        movement,
+        counterpart,
+        statement: match (statement, statement_name) {
+            (Some(document), Some(name)) => Some(StatementRef {
+                document: id32(document)?,
+                name,
+                page: page.and_then(|page| u32::try_from(page).ok()),
+            }),
+            _ => None,
+        },
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn booking_detail(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    booking: u32,
+) -> Result<BookingDetail, CommandError> {
+    with_ready(&archive, |conn| detail_of(conn, i64::from(booking)))
+}
+
+/// The owner links a candidate document to the booking, as the answer of its question in "Prüfen".
+#[tauri::command]
+#[specta::specta]
+pub fn link_to_booking(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    booking: u32,
+    document: u32,
+) -> Result<BookingDetail, CommandError> {
+    with_ready(&archive, |conn| {
+        crate::links::answer(
+            conn,
+            i64::from(document),
+            Some(i64::from(booking)),
+            jiff::Timestamp::now(),
+        )
+        .map_err(database)?;
+        detail_of(conn, i64::from(booking))
+    })
+}
+
 #[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CategoryRow {
@@ -425,3 +731,6 @@ pub fn undo_move(archive: State<'_, Arc<Mutex<Opened>>>, pair: u32) -> Result<()
             .map_err(database)
     })
 }
+
+#[cfg(test)]
+mod tests;

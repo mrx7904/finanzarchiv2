@@ -39,3 +39,14 @@ export function moneyPath(account: string | null, bookings: boolean, back: { toA
   }
   return path;
 }
+
+/** The heading of a party's year in an opened booking: "Testhaus Energie in 2026: 4 Umsätze, zusammen 254,00 € aus". */
+export function partyYearLine(year: { party: string; year: number; count: number; sum: string; incoming: boolean }): string {
+  const bookings = year.count === 1 ? "1 Umsatz" : `${year.count} Umsätze`;
+  return `${year.party} in ${year.year}: ${bookings}, zusammen ${year.sum} ${year.incoming ? "ein" : "aus"}`;
+}
+
+/** The line of a document card: kind, number, day, amount, whichever were read. */
+export function cardLine(kind: string, number: string | null | undefined, day: string | null | undefined, amount: string | null | undefined): string {
+  return [kind, number ? `Nr. ${number}` : null, day ? formatIsoDay(day) : null, amount].filter(Boolean).join(" · ");
+}
