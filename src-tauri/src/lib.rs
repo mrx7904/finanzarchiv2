@@ -6,6 +6,7 @@ pub mod checks;
 pub mod commands;
 pub mod documents;
 pub mod downloads;
+pub mod evaluations;
 pub mod folders;
 pub mod intake;
 pub mod kinds;
