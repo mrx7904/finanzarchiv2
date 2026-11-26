@@ -246,6 +246,8 @@ pub fn read_document(
         crate::statements::store(conn, document, &input.lines, now)?;
         // Every booking gets its party (#25).
         crate::parties::assign(conn, now)?;
+        // And the moves between own accounts are paired (#23).
+        crate::moves::find(conn, now)?;
     } else {
         crate::statements::forget(conn, document)?;
     }

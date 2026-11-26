@@ -1082,6 +1082,45 @@ fn measure_accounts(database: &Path, out: &Path) {
             },
         );
     }
+    for rule in [
+        finanzarchiv2_lib::moves::RULE_OWN_IBAN,
+        finanzarchiv2_lib::moves::RULE_MARKED,
+        finanzarchiv2_lib::moves::RULE_SAME_DAY,
+    ] {
+        let pairs = conn
+            .query_row(
+                "SELECT count(*) FROM booking_pairs WHERE rule = ?1 AND undone_at IS NULL",
+                [rule],
+                |row| row.get::<_, u32>(0),
+            )
+            .unwrap_or(0);
+        tallies.insert(
+            format!("move.{rule}"),
+            Tally {
+                right: pairs,
+                total: pairs,
+            },
+        );
+    }
+    let made = count("SELECT count(*) FROM bookings WHERE made_by IS NOT NULL");
+    tallies.insert(
+        "move.halves made".to_owned(),
+        Tally {
+            right: made,
+            total: made,
+        },
+    );
+    let marked = count("SELECT count(*) FROM bookings WHERE lower(kind) LIKE '%umbuchung%'");
+    let marked_paired = count(
+        "SELECT count(*) FROM bookings b WHERE lower(b.kind) LIKE '%umbuchung%' AND EXISTS (SELECT 1 FROM booking_pairs p WHERE (p.out_booking = b.id OR p.in_booking = b.id) AND p.undone_at IS NULL)",
+    );
+    tallies.insert(
+        "move.marked bookings paired".to_owned(),
+        Tally {
+            right: marked_paired,
+            total: marked,
+        },
+    );
     println!(
         "  {} Parteien, {} Schreibweisen, {} Kategorien",
         count("SELECT count(*) FROM parties"),

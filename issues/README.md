@@ -52,7 +52,7 @@ Order of work: #19 and #10 first, then #11, then #12, #13 and #14, then #15 and 
 | [#20](020-statements-by-code.md) | Statements read by code, each proved by its balance | FA-25 | #16 | done |
 | [#21](021-csv-statements.md) | Statements as CSV, CSV before PDF | FA-26 | #20 | done |
 | [#22](022-balance-against-the-bank.md) | The balance of each account against the bank | FA-27 | #20 | done |
-| [#23](023-moves-between-own-accounts.md) | Moves between own accounts | FA-28 | #22 | open |
+| [#23](023-moves-between-own-accounts.md) | Moves between own accounts | FA-28 | #22 | done (buttons with #26) |
 | [#24](024-documents-linked-to-bookings.md) | Documents linked to their bookings | FA-29 | #20, #16 | open |
 | [#25](025-parties-and-categories.md) | Parties and their categories | FA-30 | #20 | done (dialog with #26) |
 | [#26](026-accounts-and-bookings-view.md) | Accounts and bookings in the window | FA-31 | #22, #24, #25 | open |

@@ -207,6 +207,12 @@ pub fn store(
     }
     join_twins(conn, account, id, statement.layout == layout_b::NAME)?;
     crate::accounts::refresh_opening(conn, account)?;
+    crate::moves::give_way(
+        conn,
+        account,
+        &statement.opening_day.to_string(),
+        &statement.closing_day.to_string(),
+    )?;
     Ok(Some(id))
 }
 
