@@ -1,45 +1,99 @@
 {
   "bookings": [
     {
-      "cents": 34319,
-      "date": "05.03.2026",
-      "party": "Beispiel Arbeitgeber GmbH",
-      "printed": "343,19"
+      "cents": -78215,
+      "date": "06.03.2026",
+      "kind": "Kartenzahlung girocard",
+      "party": "Fiktiv Telekom GmbH",
+      "printed": "782,15"
     },
     {
-      "cents": -65408,
-      "date": "17.03.2026",
+      "cents": -73155,
+      "date": "11.03.2026",
+      "kind": "Überweisungsauftrag",
       "party": "Demo Online-Shop GmbH",
-      "printed": "-654,08"
+      "printed": "731,55"
     },
     {
-      "cents": 378867,
+      "cents": -30634,
+      "date": "12.03.2026",
+      "kind": "Dauerauftragsbelast",
+      "party": "Fiktiv Telekom GmbH",
+      "printed": "306,34"
+    },
+    {
+      "cents": -43973,
+      "date": "14.03.2026",
+      "kind": "Basislastschrift",
+      "party": "Probe Handwerk GmbH",
+      "printed": "439,73"
+    },
+    {
+      "cents": -803,
+      "date": "15.03.2026",
+      "kind": "Überweisungsauftrag",
+      "party": "Exempel Fitness GmbH",
+      "printed": "8,03"
+    },
+    {
+      "cents": -12126,
       "date": "19.03.2026",
+      "kind": "Kartenzahlung girocard",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "121,26"
+    },
+    {
+      "cents": 335973,
+      "date": "23.03.2026",
+      "kind": "Lohn/Gehalt",
       "party": "Beispiel Arbeitgeber GmbH",
-      "printed": "3.788,67"
+      "printed": "3.359,73"
     },
     {
-      "cents": -34420,
-      "date": "22.03.2026",
-      "party": "Erfunden Möbel KG",
-      "printed": "-344,20"
+      "cents": -3521,
+      "date": "24.03.2026",
+      "kind": "Kartenzahlung girocard",
+      "party": "Fiktiv Telekom GmbH",
+      "printed": "35,21"
     },
     {
-      "cents": -15233,
-      "date": "28.03.2026",
-      "party": "Modell Werkstatt e.K.",
-      "printed": "-152,33"
+      "cents": -33411,
+      "date": "25.03.2026",
+      "kind": "Basislastschrift",
+      "party": "Demo Online-Shop GmbH",
+      "printed": "334,11"
+    },
+    {
+      "cents": -10504,
+      "date": "26.03.2026",
+      "kind": "Dauerauftragsbelast",
+      "party": "Fiktiv Telekom GmbH",
+      "printed": "105,04"
+    },
+    {
+      "cents": -72926,
+      "date": "27.03.2026",
+      "kind": "Dauerauftragsbelast",
+      "party": "Muster Versicherung AG",
+      "printed": "729,26"
+    },
+    {
+      "cents": 393084,
+      "date": "27.03.2026",
+      "kind": "Lohn/Gehalt",
+      "party": "Beispiel Arbeitgeber GmbH",
+      "printed": "3.930,84"
     }
   ],
   "cents": {
-    "closing": 1174530,
-    "opening": 876405
+    "closing": 1050974,
+    "opening": 681185
   },
   "fields": {
-    "closing": "11.745,30",
+    "closing": "10.509,74",
     "iban": "DE54 8910 0936 4537 2693 31",
-    "opening": "8.764,05",
-    "period_from": "01.03.2026",
+    "opening": "6.811,85",
+    "period_from": "28.02.2026",
     "period_to": "31.03.2026"
   },
   "kind": "statement",

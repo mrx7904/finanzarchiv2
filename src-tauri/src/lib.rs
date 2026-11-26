@@ -14,6 +14,7 @@ pub mod pdf;
 pub mod previews;
 pub mod readers;
 pub mod review;
+pub mod statements;
 #[cfg(test)]
 mod testing;
 
@@ -56,6 +57,11 @@ pub fn run() -> ExitCode {
                     }
                     if readers::read_outdated(ready.connection(), jiff::Timestamp::now()).is_err() {
                         eprintln!("Ältere Dokumente ließen sich nicht neu lesen");
+                    }
+                    if checks::supersede_statement_rule(ready.connection(), jiff::Timestamp::now())
+                        .is_err()
+                    {
+                        eprintln!("Die Kontoauszüge ließen sich nicht neu prüfen");
                     }
                     let root = documents::archive_root(ready.path());
                     if checks::requeue_unchecked(ready.connection(), &root, jiff::Timestamp::now())

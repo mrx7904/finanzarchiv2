@@ -754,6 +754,7 @@ fn measure_checks(pdfium: &Pdfium, model_name: &str, database: &Path, out: &Path
     let _ = documents::classify_missing(conn);
     let _ = readers::e_invoice::extract_missing(conn, &root, pdfium);
     let _ = readers::read_outdated(conn, now);
+    let _ = finanzarchiv2_lib::checks::supersede_statement_rule(conn, now);
     let _ = finanzarchiv2_lib::checks::requeue_unchecked(conn, &root, now);
     let archive = std::sync::Mutex::new(finanzarchiv2_lib::archive::Opened::Ready(opened));
     let started = std::time::Instant::now();
@@ -847,6 +848,123 @@ fn measure_checks(pdfium: &Pdfium, model_name: &str, database: &Path, out: &Path
     write(&out.join("private").join("archive-checks.json"), &result);
 }
 
+/// The reader `statements` (#20): on the corpus, every statement of a known layout read with its
+/// balances and every booking right, and one of an unknown layout read as none. On a copy of the
+/// owner's database, how many statements are read, how many add up, and how many bookings.
+fn measure_statements(pdfium: &Pdfium, corpus: &Path, archive: Option<&str>, out: &Path) {
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    let mut count = |key: &str, right: bool| {
+        let tally = tallies.entry(key.to_owned()).or_default();
+        tally.total += 1;
+        tally.right += u32::from(right);
+    };
+    let name = if let Some(database) = archive {
+        let Ok(conn) = rusqlite::Connection::open_with_flags(
+            database,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        ) else {
+            eprintln!("Die Kopie ließ sich nicht öffnen");
+            std::process::exit(1);
+        };
+        let ids: Vec<i64> = conn
+            .prepare("SELECT id FROM documents ORDER BY id")
+            .and_then(|mut statement| statement.query_map([], |row| row.get(0))?.collect())
+            .unwrap_or_default();
+        let mut bookings = 0_u32;
+        for id in ids {
+            let texts = documents::lines_of(&conn, id).unwrap_or_default();
+            if kinds::classify(texts.iter().map(String::as_str)).kind != kinds::Kind::Statement {
+                continue;
+            }
+            let read = finanzarchiv2_lib::statements::read(
+                &readers::lines_of(&conn, id).unwrap_or_default(),
+            );
+            count("statement.read", read.is_some());
+            if let Some(statement) = read {
+                count(
+                    "statement.adds up",
+                    statement.difference() == Some(finanzarchiv2_lib::money::Cents::ZERO),
+                );
+                count("statement.has bookings", !statement.bookings.is_empty());
+                bookings += u32::try_from(statement.bookings.len()).unwrap_or(0);
+                for booking in &statement.bookings {
+                    count("booking.with other side", booking.other_side.is_some());
+                }
+            }
+        }
+        println!("  {bookings} Buchungen");
+        "archive"
+    } else {
+        for (pdf, truth) in documents(corpus) {
+            if truth["kind"] != "statement" {
+                continue;
+            }
+            let read = finanzarchiv2_lib::statements::read(&reader_lines(pdfium, &pdf));
+            let known = truth["layout"].is_string();
+            count("statement.layout known", read.is_some() == known);
+            let Some(statement) = read else { continue };
+            count(
+                "statement.opening",
+                statement.opening.value() == truth["cents"]["opening"].as_i64().unwrap_or(i64::MIN),
+            );
+            count(
+                "statement.closing",
+                statement.closing.value() == truth["cents"]["closing"].as_i64().unwrap_or(i64::MIN),
+            );
+            count(
+                "statement.iban",
+                statement.iban
+                    == truth["fields"]["iban"]
+                        .as_str()
+                        .unwrap_or("")
+                        .replace(' ', ""),
+            );
+            count(
+                "statement.adds up",
+                statement.difference() == Some(finanzarchiv2_lib::money::Cents::ZERO),
+            );
+            let expected = truth["bookings"].as_array().cloned().unwrap_or_default();
+            count(
+                "statement.booking count",
+                expected.len() == statement.bookings.len(),
+            );
+            for (index, want) in expected.iter().enumerate() {
+                let got = statement.bookings.get(index);
+                count(
+                    "booking.day",
+                    got.is_some_and(|got| {
+                        got.day.strftime("%d.%m.%Y").to_string()
+                            == want["date"].as_str().unwrap_or("")
+                    }),
+                );
+                count(
+                    "booking.amount",
+                    got.is_some_and(|got| {
+                        got.amount.value() == want["cents"].as_i64().unwrap_or(i64::MIN)
+                    }),
+                );
+                count(
+                    "booking.other side",
+                    got.is_some_and(|got| got.other_side.as_deref() == want["party"].as_str()),
+                );
+                count(
+                    "booking.kind",
+                    got.is_some_and(|got| Some(got.kind.as_str()) == want["kind"].as_str()),
+                );
+            }
+        }
+        "synthetic"
+    };
+    let mut result = report(name, &tallies);
+    result["reader"] = json!("statements");
+    let path = if archive.is_some() {
+        out.join("private").join("archive-statements.json")
+    } else {
+        out.join("synthetic-statements.json")
+    };
+    write(&path, &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -886,6 +1004,10 @@ fn main() {
         std::process::exit(1);
     };
     let reader = value("--reader").unwrap_or_else(|| "text-layer".into());
+    if reader == "statements" {
+        measure_statements(pdfium, &corpus, value("--archive").as_deref(), &out);
+        return;
+    }
     if reader == "checks" {
         let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
         let Some(database) = value("--archive") else {

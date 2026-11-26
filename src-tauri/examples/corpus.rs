@@ -431,6 +431,18 @@ fn payslips(rng: &mut Rng, out: &Writer) {
     }
 }
 
+/// The kinds of booking a statement of layout A prints, with the direction of their money.
+const BOOKING_KINDS: [(&str, bool); 5] = [
+    ("Basislastschrift", false),
+    ("Kartenzahlung girocard", false),
+    ("Überweisungsauftrag", false),
+    ("Dauerauftragsbelast", false),
+    ("Lohn/Gehalt", true),
+];
+
+/// Statements of one invented account. The odd months are in layout A (the table of the owner's
+/// bank: "Bu-Tag Wert Vorgang", amounts with S and H, the other side and purpose below, carried over
+/// between pages), the even months in a layout no reader knows, which must wait.
 fn statements(rng: &mut Rng, out: &Writer) {
     let account = iban(rng);
     let mut balance = rng.cents(50_000, 500_000);
@@ -438,10 +450,20 @@ fn statements(rng: &mut Rng, out: &Writer) {
         let opening = balance;
         let from = date(2026, number, 1);
         let to = from.last_of_month();
+        let before = from.yesterday().unwrap_or(from);
         let mut bookings = Vec::new();
-        for _ in 0..(4 + rng.below(5)) {
+        // January carries a booking of the last day of December: its year comes from the period.
+        if number == 1 {
+            bookings.push((
+                before,
+                "Testhaus Energie AG",
+                -rng.cents(500, 20_000),
+                "Basislastschrift",
+            ));
+        }
+        for _ in 0..(4 + rng.below(14)) {
             let on = date(2026, number, i8::try_from(1 + rng.below(28)).unwrap_or(1));
-            let income = rng.below(5) == 0;
+            let (kind, income) = BOOKING_KINDS[usize::try_from(rng.below(5)).unwrap_or(0)];
             let amount = if income {
                 rng.cents(10_000, 400_000)
             } else {
@@ -452,98 +474,235 @@ fn statements(rng: &mut Rng, out: &Writer) {
             } else {
                 SENDERS[usize::try_from(rng.below(10)).unwrap_or(0)]
             };
-            bookings.push((on, party, amount));
+            bookings.push((on, party, amount, kind));
         }
         bookings.sort_by_key(|booking| booking.0);
         balance = opening + bookings.iter().map(|booking| booking.2).sum::<i64>();
-        let layout_b = number % 2 == 0;
-        let mut texts = vec![
-            text(60, 780, 14, BANK),
-            text(
-                60,
-                756,
-                12,
-                if layout_b {
-                    format!("Umsatzübersicht {number}/2026")
-                } else {
-                    format!("Kontoauszug Nr. {number}/2026")
-                },
-            ),
-            text(60, 738, 10, format!("IBAN {account}")),
-            text(
-                60,
-                722,
-                10,
-                format!("Zeitraum {} bis {}", day(from), day(to)),
-            ),
-            text(
-                60,
-                700,
-                10,
-                if layout_b {
-                    "Saldo alt"
-                } else {
-                    "Alter Kontostand"
-                },
-            ),
-            text(420, 700, 10, statement_amount(opening, layout_b)),
-        ];
-        for (index, (on, party, amount)) in bookings.iter().enumerate() {
-            let y = 670 - 18 * i64::try_from(index).unwrap_or(0);
-            if layout_b {
-                texts.push(text(60, y, 9, party.to_string()));
-                texts.push(text(300, y, 9, day(*on)));
-            } else {
-                texts.push(text(60, y, 9, day(*on)));
-                texts.push(text(140, y, 9, party.to_string()));
-            }
-            texts.push(text(420, y, 9, statement_amount(*amount, layout_b)));
-        }
-        let last = 670 - 18 * i64::try_from(bookings.len()).unwrap_or(0) - 10;
-        texts.push(text(
-            60,
-            last,
-            10,
-            if layout_b {
-                "Saldo neu"
-            } else {
-                "Neuer Kontostand"
-            },
-        ));
-        texts.push(text(420, last, 10, statement_amount(balance, layout_b)));
+        let layout_a = number % 2 == 1;
+        let pages = if layout_a {
+            layout_a_pages(&account, number, before, to, opening, balance, &bookings)
+        } else {
+            vec![unknown_layout(
+                &account, number, from, to, opening, balance, &bookings,
+            )]
+        };
         let truth = json!({
             "kind": "statement",
             "text_layer": true,
-            "layout": if layout_b { "B" } else { "A" },
+            "layout": if layout_a { json!("A") } else { json!(null) },
             "fields": {
-                "iban": account, "period_from": day(from), "period_to": day(to),
-                "opening": statement_amount(opening, layout_b), "closing": statement_amount(balance, layout_b),
+                "iban": account, "period_from": day(before), "period_to": day(to),
+                "opening": printed(opening), "closing": printed(balance),
             },
-            "bookings": bookings.iter().map(|(on, party, amount)| json!({
-                "date": day(*on), "party": party, "printed": statement_amount(*amount, layout_b), "cents": amount,
+            "bookings": bookings.iter().map(|(on, party, amount, kind)| json!({
+                "date": day(*on), "party": party, "kind": kind, "printed": printed(amount.abs()), "cents": amount,
             })).collect::<Vec<_>>(),
             "cents": { "opening": opening, "closing": balance },
         });
         out.write(
             "kontoauszuege",
             &format!("kontoauszug-2026-{number:02}"),
-            &bytes(text_pdf(&texts)),
+            &bytes(pages_pdf(&pages)),
             truth,
         );
     }
 }
 
-/// Layout A prints a sign ("-12,34"), layout B the German S for Soll and H for Haben ("12,34 S").
-fn statement_amount(cents: i64, layout_b: bool) -> String {
-    if layout_b {
-        format!(
-            "{} {}",
-            printed(cents.abs()),
-            if cents < 0 { "S" } else { "H" }
-        )
-    } else {
-        printed(cents)
+/// "1.234,56 H" for money in, "1.234,56 S" for money out, as layout A prints a balance or booking.
+fn soll_haben(cents: i64) -> String {
+    format!(
+        "{} {}",
+        printed(cents.abs()),
+        if cents < 0 { "S" } else { "H" }
+    )
+}
+
+/// The head layout A prints on every page.
+fn layout_a_head(
+    account: &str,
+    number: i8,
+    printed_on: Date,
+    page: usize,
+    pages: usize,
+) -> Vec<Text> {
+    vec![
+        text(125, 800, 9, format!("{BANK} eG")),
+        text(126, 788, 8, "Beispielweg 1, 12345 Musterstadt"),
+        text(336, 770, 9, format!("Kontoauszug Nr. {number}/2026")),
+        text(
+            335,
+            758,
+            8,
+            format!(
+                "erstellt am {} 08:00 Blatt {page} von {pages}",
+                day(printed_on)
+            ),
+        ),
+        text(336, 746, 8, format!("IBAN: {account} BIC: MUSTDEXXXXX")),
+        text(40, 700, 8, "Bu-Tag Wert Vorgang"),
+    ]
+}
+
+fn layout_a_pages(
+    account: &str,
+    number: i8,
+    before: Date,
+    to: Date,
+    opening: i64,
+    closing: i64,
+    bookings: &[(Date, &str, i64, &str)],
+) -> Vec<Vec<Text>> {
+    const PER_PAGE: usize = 8;
+    let chunks: Vec<&[(Date, &str, i64, &str)]> = bookings.chunks(PER_PAGE).collect();
+    let pages = chunks.len().max(1);
+    let mut carried = opening;
+    let mut out = Vec::new();
+    for (index, chunk) in chunks.iter().enumerate() {
+        let mut texts = layout_a_head(account, number, to, index + 1, pages);
+        let mut y = 684;
+        if index == 0 {
+            texts.push(text(
+                234,
+                y,
+                9,
+                format!(
+                    "alter Kontostand vom {} {}",
+                    day(before),
+                    soll_haben(opening)
+                ),
+            ));
+        } else {
+            texts.push(text(
+                278,
+                y,
+                9,
+                format!("Übertrag von Blatt {index} {}", soll_haben(carried)),
+            ));
+        }
+        y -= 18;
+        for (on, party, amount, kind) in chunk.iter() {
+            let short = on.strftime("%d.%m.").to_string();
+            texts.push(text(40, y, 9, format!("{short} {short} {kind}")));
+            texts.push(text(470, y, 9, soll_haben(*amount)));
+            texts.push(text(116, y - 11, 8, party.to_string()));
+            texts.push(text(
+                116,
+                y - 22,
+                8,
+                format!("Verwendungszweck {}", rng_free_purpose(*amount)),
+            ));
+            y -= 40;
+            carried += amount;
+        }
+        if index + 1 < pages {
+            texts.push(text(
+                278,
+                y,
+                9,
+                format!("Übertrag auf Blatt {} {}", index + 2, soll_haben(carried)),
+            ));
+        } else {
+            texts.push(text(
+                234,
+                y,
+                9,
+                format!("neuer Kontostand vom {} {}", day(to), soll_haben(closing)),
+            ));
+        }
+        // The codes of the form at the left edge are no part of the table.
+        texts.push(text(2, 60, 6, "9999"));
+        out.push(texts);
     }
+    out
+}
+
+/// A purpose that follows from the amount, so the corpus stays the same for a seed.
+fn rng_free_purpose(amount: i64) -> String {
+    format!("Vertrag {:06}", amount.unsigned_abs() % 1_000_000)
+}
+
+/// A layout no reader knows: sums with a sign, no table head.
+fn unknown_layout(
+    account: &str,
+    number: i8,
+    from: Date,
+    to: Date,
+    opening: i64,
+    closing: i64,
+    bookings: &[(Date, &str, i64, &str)],
+) -> Vec<Text> {
+    let mut texts = vec![
+        text(60, 780, 14, BANK),
+        text(60, 756, 12, format!("Umsatzübersicht {number}/2026")),
+        text(60, 738, 10, format!("IBAN {account}")),
+        text(
+            60,
+            722,
+            10,
+            format!("Zeitraum {} bis {}", day(from), day(to)),
+        ),
+        text(60, 700, 10, "Saldo alt"),
+        text(420, 700, 10, printed(opening)),
+    ];
+    for (index, (on, party, amount, _)) in bookings.iter().enumerate() {
+        let y = 670 - 18 * i64::try_from(index).unwrap_or(0);
+        texts.push(text(60, y, 9, party.to_string()));
+        texts.push(text(300, y, 9, day(*on)));
+        texts.push(text(420, y, 9, printed(*amount)));
+    }
+    let last = 670 - 18 * i64::try_from(bookings.len()).unwrap_or(0) - 10;
+    texts.push(text(60, last, 10, "Saldo neu"));
+    texts.push(text(420, last, 10, printed(closing)));
+    texts
+}
+
+/// A PDF of several A4 pages, each with its texts, as `text_pdf` makes one.
+fn pages_pdf(pages: &[Vec<Text>]) -> Document {
+    let mut doc = Document::with_version("1.7");
+    let pages_id = doc.new_object_id();
+    let font = doc.add_object(dictionary! {
+        "Type" => "Font", "Subtype" => "Type1", "BaseFont" => "Helvetica", "Encoding" => "WinAnsiEncoding",
+    });
+    let resources = doc.add_object(dictionary! { "Font" => dictionary! { "F1" => font } });
+    let mut kids: Vec<Object> = Vec::new();
+    for texts in pages {
+        let mut operations = Vec::new();
+        for item in texts {
+            operations.extend([
+                Operation::new("BT", vec![]),
+                Operation::new("Tf", vec!["F1".into(), item.size.into()]),
+                Operation::new("Td", vec![item.x.into(), item.y.into()]),
+                Operation::new(
+                    "Tj",
+                    vec![Object::String(latin1(&item.text), StringFormat::Literal)],
+                ),
+                Operation::new("ET", vec![]),
+            ]);
+        }
+        let content = doc.add_object(Stream::new(
+            dictionary! {},
+            Content { operations }.encode().unwrap_or_default(),
+        ));
+        kids.push(
+            doc.add_object(
+                dictionary! { "Type" => "Page", "Parent" => pages_id, "Contents" => content },
+            )
+            .into(),
+        );
+    }
+    let count = i64::try_from(kids.len()).unwrap_or(1);
+    doc.objects.insert(
+        pages_id,
+        Object::Dictionary(dictionary! {
+            "Type" => "Pages", "Kids" => kids, "Count" => count, "Resources" => resources,
+            "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+        }),
+    );
+    let catalog = doc.add_object(dictionary! { "Type" => "Catalog", "Pages" => pages_id });
+    doc.trailer.set("Root", catalog);
+    let id = Object::String(b"finanzarchiv2-corpus".to_vec(), StringFormat::Hexadecimal);
+    doc.trailer.set("ID", vec![id.clone(), id]);
+    doc
 }
 
 /// Writes the whole corpus for a seed into `root`, which it empties first.

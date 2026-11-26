@@ -135,18 +135,80 @@ fn undo_lets_the_document_wait_and_it_is_not_filed_again() {
 }
 
 #[test]
-fn a_statement_is_filed_without_checks_and_an_unclear_kind_waits() {
+fn a_statement_waits_until_its_balance_holds_and_an_unclear_kind_waits() {
     let dir = tempfile::tempdir().unwrap();
     let ready = ready(dir.path());
     let conn = ready.connection();
     let statement = document(conn, 1, Kind::Statement);
+    let verdict = decide(conn, statement, testing::t0()).unwrap();
+    assert_eq!(
+        failed(&verdict),
+        [BALANCE],
+        "no bookings read, an unknown layout"
+    );
+    let account = crate::statements::account_of(
+        conn,
+        "DE89370400440532013000",
+        Some("Beispielbank eG"),
+        testing::t0(),
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO statements (document_id, account_id, layout, opening_day, closing_day, opening_cents, closing_cents, bookings_cents, read_at)
+         VALUES (?1, ?2, 'A', '2026-01-31', '2026-02-28', 10000, 7000, -3000, 'x')",
+        params![statement, account],
+    )
+    .unwrap();
     assert_eq!(
         decide(conn, statement, testing::t0()).unwrap().rule,
-        Some(RULE_STATEMENT)
+        Some(RULE_CHECKED)
+    );
+    conn.execute("UPDATE statements SET closing_cents = 7001", [])
+        .unwrap();
+    let verdict = decide(conn, statement, testing::t0()).unwrap();
+    assert_eq!(failed(&verdict), [BALANCE]);
+    assert!(
+        verdict
+            .outcomes
+            .iter()
+            .any(|outcome| outcome.detail.contains("gedruckt ist 70,01 €"))
     );
     let other = document(conn, 2, Kind::Other);
     let verdict = decide(conn, other, testing::t0()).unwrap();
     assert_eq!(failed(&verdict), [KIND]);
+}
+
+#[test]
+fn the_statements_filed_in_stage_2_are_checked_again() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let statement = document(conn, 1, Kind::Statement);
+    conn.execute(
+        "INSERT INTO decisions (document_id, rule, inputs, change, undo, decided_at) VALUES (?1, ?2, '{}', '{}', '{}', 'x')",
+        params![statement, RULE_STATEMENT],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE documents SET state = 'filed' WHERE id = ?1",
+        [statement],
+    )
+    .unwrap();
+    assert_eq!(supersede_statement_rule(conn, testing::t0()).unwrap(), 1);
+    assert_eq!(supersede_statement_rule(conn, testing::t0()).unwrap(), 0);
+    let state: String = conn
+        .query_row(
+            "SELECT state FROM documents WHERE id = ?1",
+            [statement],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(state, "open");
+    let verdict = judge(conn, statement).unwrap();
+    assert!(
+        !failed(&verdict).contains(&UNDONE),
+        "a superseded rule is no undo of the owner"
+    );
 }
 
 #[test]

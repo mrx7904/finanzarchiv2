@@ -112,6 +112,7 @@ const LEGAL_FORMS: &[&str] = &[
     "ag",
     "kg",
     "ohg",
+    "eg",
     "gbr",
     "e.v.",
     "e. v.",

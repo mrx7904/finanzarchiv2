@@ -16,7 +16,7 @@ use rusqlite::{Connection, params};
 use crate::money::Cents;
 
 /// Raised when a reader reads differently, so older documents are read again at the next start.
-pub const READERS_VERSION: i64 = 3;
+pub const READERS_VERSION: i64 = 4;
 
 /// A line of a page with its place, as the stage `text` stored it.
 #[derive(Debug, Clone, PartialEq)]
@@ -201,6 +201,7 @@ pub fn for_kind(kind: crate::kinds::Kind) -> Vec<Box<dyn Reader>> {
             ]
         }
         crate::kinds::Kind::Payslip => vec![Box::new(payslip::PayslipCode)],
+        crate::kinds::Kind::Statement => vec![Box::new(crate::statements::StatementCode)],
         _ => Vec::new(),
     }
 }
@@ -239,6 +240,12 @@ pub fn read_document(
                 now.to_string()
             ],
         )?;
+    }
+    // A statement's bookings go to their own tables (#20), a document of another kind keeps none.
+    if kind == crate::kinds::Kind::Statement {
+        crate::statements::store(conn, document, &input.lines, now)?;
+    } else {
+        crate::statements::forget(conn, document)?;
     }
     let names: Vec<String> = readers.iter().map(|reader| reader.name()).collect();
     let values: Vec<(String, Value)> = readers

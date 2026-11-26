@@ -30,6 +30,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | choose, measure or change the local model, or touch `model.name` | [`knowledge/decision-model.md`](./knowledge/decision-model.md) |
 | touch a check, filing by itself, `decisions`, "Warum?", "Rückgängig" or "Prüfen" | [`knowledge/decision-checks.md`](./knowledge/decision-checks.md) |
 | touch the name of a document, its templates or "Umbenennen" | [`knowledge/decision-names.md`](./knowledge/decision-names.md) |
+| touch a statement, its layouts, `accounts`, `statements` or `bookings` | [`knowledge/decision-statements.md`](./knowledge/decision-statements.md) |
 | generate the corpus, measure a reader or add test documents | [`knowledge/decision-corpus.md`](./knowledge/decision-corpus.md) |
 | touch the intake queue, its stages, workers or the pause | [`knowledge/decision-intake.md`](./knowledge/decision-intake.md) |
 | open, check or read a PDF, or touch PDFium and how it ships | [`knowledge/decision-pdf.md`](./knowledge/decision-pdf.md) |

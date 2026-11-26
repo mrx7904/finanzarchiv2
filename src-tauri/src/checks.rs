@@ -13,8 +13,8 @@ use crate::money::Cents;
 
 /// The rule that files a document whose checks all passed.
 pub const RULE_CHECKED: &str = "file.checks-passed:1";
-/// The rule that files a statement without checks, the owner's choice of 2026-11-25. Its bookings
-/// are read in stage 3.
+/// The rule that filed a statement without checks in stage 2, the owner's choice of 2026-11-25.
+/// Since #20 a statement passes `check:balance` instead, and these decisions are superseded.
 pub const RULE_STATEMENT: &str = "file.statement:1";
 
 /// The rule that files a document after the owner answered for what a check could not see (#17).
@@ -39,6 +39,7 @@ pub const AGREE: &str = "check:agree";
 pub const SUM: &str = "check:sum";
 pub const DUPLICATE: &str = "check:duplicate";
 pub const UNDONE: &str = "check:undone";
+pub const BALANCE: &str = "check:balance";
 
 /// Readers in the order their value counts: the owner, the sender's own data, code, the text
 /// model, the image.
@@ -390,8 +391,8 @@ pub fn judge(conn: &Connection, document: i64) -> rusqlite::Result<Verdict> {
     let chosen = chosen(&values);
     let undone: bool = conn
         .query_row(
-            "SELECT 1 FROM decisions WHERE document_id = ?1 AND undone_at IS NOT NULL LIMIT 1",
-            [document],
+            "SELECT 1 FROM decisions WHERE document_id = ?1 AND undone_at IS NOT NULL AND rule <> ?2 LIMIT 1",
+            params![document, RULE_STATEMENT],
             |_| Ok(true),
         )
         .optional()?
@@ -412,9 +413,36 @@ pub fn judge(conn: &Connection, document: i64) -> rusqlite::Result<Verdict> {
                 KIND,
                 None,
                 true,
-                "Ein Kontoauszug wird ohne Rückfrage abgelegt, seine Buchungen liest Stufe 3."
-                    .into(),
+                "Das Dokument ist ein Kontoauszug.".into(),
             ));
+            // #20: a statement is filed when its bookings lead from the old to the new balance.
+            outcomes.push(match crate::statements::difference_of(conn, document)? {
+                None => Outcome::of(
+                    BALANCE,
+                    None,
+                    false,
+                    "Den Aufbau dieses Kontoauszugs kennt das Archiv nicht, seine Buchungen ließen sich nicht lesen.".into(),
+                ),
+                Some((opening, sum, closing, count)) => {
+                    let reached = opening.checked_add(sum);
+                    if reached == Some(closing) {
+                        Outcome::of(
+                            BALANCE,
+                            None,
+                            true,
+                            format!("Alter Kontostand {opening} und {count} Buchungen ergeben den neuen Kontostand {closing}."),
+                        )
+                    } else {
+                        let reached = reached.map_or_else(|| "zu viel".to_owned(), |reached| reached.to_string());
+                        Outcome::of(
+                            BALANCE,
+                            None,
+                            false,
+                            format!("Alter Kontostand {opening} und {count} Buchungen ergeben {reached}, gedruckt ist {closing}."),
+                        )
+                    }
+                }
+            });
         }
         Kind::Invoice | Kind::Receipt | Kind::Payslip => {
             outcomes.push(Outcome::of(
@@ -484,9 +512,7 @@ pub fn judge(conn: &Connection, document: i64) -> rusqlite::Result<Verdict> {
         }
     }
     let passed = outcomes.iter().all(|outcome| outcome.passed);
-    let rule = passed.then_some(if kind == Kind::Statement {
-        RULE_STATEMENT
-    } else if values.keys().any(|field| field.starts_with(ACCEPT)) {
+    let rule = passed.then_some(if values.keys().any(|field| field.starts_with(ACCEPT)) {
         RULE_OWNER
     } else {
         RULE_CHECKED
@@ -565,6 +591,31 @@ pub fn undo(conn: &Connection, document: i64, now: Timestamp) -> rusqlite::Resul
     }
     tx.commit()?;
     Ok(changed > 0)
+}
+
+/// The statements stage 2 filed without checks (`file.statement:1`) are checked again once their
+/// bookings are read (#20): the old decision is marked undone, which the check `check:undone` does
+/// not count, and the document waits for a job at the stage `read`. Returns how many.
+pub fn supersede_statement_rule(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
+    let tx = conn.unchecked_transaction()?;
+    let documents: Vec<i64> = tx
+        .prepare(
+            "SELECT DISTINCT document_id FROM decisions WHERE rule = ?1 AND undone_at IS NULL",
+        )?
+        .query_map([RULE_STATEMENT], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    tx.execute(
+        "UPDATE decisions SET undone_at = ?2 WHERE rule = ?1 AND undone_at IS NULL",
+        params![RULE_STATEMENT, now.to_string()],
+    )?;
+    for document in &documents {
+        tx.execute(
+            "UPDATE documents SET state = 'open' WHERE id = ?1",
+            [document],
+        )?;
+    }
+    tx.commit()?;
+    Ok(documents.len())
 }
 
 /// The documents of an older archive that were never checked get a job at the stage `read`, so the
