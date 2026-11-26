@@ -42,7 +42,7 @@ It keeps
 2. **Reading and review.** Fixed readers, the model, the checks, automatic filing, the review as questions, naming by template.
 3. **Money.** Accounts, bank statements as PDF and CSV, bookings, links, transfers, the balance against the bank, categories per party.
 4. **Coming in by itself.** Watched folders, the downloads, mailboxes (Gmail, Microsoft 365) read-only in the background, invoice links, PayPal and Amazon.
-5. **Understanding.** Start with the next steps, evaluations, taxes for the return, the chat over the archive.
+5. **Understanding.** Start with the next steps, evaluations, savings hints (the owner, 2026-11-26), taxes for the return, the chat over the archive.
 6. **Around the archive.** Snapshots and restore, moving the archive, updates, profiles, achievements, styles, feedback and ideas.
 
 ## Not in scope
