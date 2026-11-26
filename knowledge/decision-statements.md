@@ -73,3 +73,28 @@
 ### Measured on 2026-11-26
 
 The owner's archive (a copy, migrated and read again, counts only): all 3 accounts without a finding, each one's balance equal to the bank's last.
+
+## Moves between own accounts (#23)
+
+- A move is a pair of bookings in `booking_pairs` (migration 0014): the booking out of one own account and the booking into another. It records the rule, the values it saw, the time, and `undone_at`. A move counts in both balances and as neither income nor spending (`moves::is_move`).
+- The rules, the surest first:
+  - `move.own-iban:1`: the other side or purpose names the IBAN (with a valid check sum) of another own account. Its other half is that account's booking of the same day and the opposite amount. Where no statement of that account covers the day, the app makes the half, marked `made_by`.
+  - `move.marked:1`: the bank marks the booking as "Umbuchung". Its other half is the one booking of the opposite amount on another own account that day.
+  - `move.same-day:1`: out of one own account and the same amount into another of the same bank on the same day.
+- A pair found by `marked` or `same-day` must be clear from both sides: each half sees only the other. Two equal bookings on the same day make no pair.
+- The bank itself is never an own account. A booking whose other side is the bank of its account (a fee, a dividend of a share of the bank) is no move, even when its purpose names an own IBAN (lesson of 1.0).
+- The moves are found after every statement read (`moves::find`). When the statement of an account arrives, a half the app made for its days gives way to the statement's own booking, and the move is found again (`moves::give_way`). Without this, the order in which statements were read made 35 halves on the owner's archive where the statements had the real ones.
+- "Rückgängig" (`moves::undo`) marks the pair undone, and the rules do not pair those bookings again. A half the app made stays for the record but counts no more. "Warum?" and "Rückgängig" in the window come with the views of #26.
+
+### Measured on 2026-11-26
+
+The owner's archive (a copy, counts only):
+
+| What | Count |
+|---|---|
+| Moves | 97 (37 by own IBAN, 1 marked, 59 same day) |
+| Halves made | 0 |
+| Bookings marked "Umbuchung" that are paired | 73 of 99 |
+| Accounts without a finding, each balance the bank's last | 3 of 3 |
+
+The other 26 marked bookings most likely go to accounts at another bank, whose CSV files are not in the archive yet.

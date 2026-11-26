@@ -24,6 +24,7 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
         13,
         include_str!("../../migrations/0013_parties_and_categories.sql"),
     ),
+    (14, include_str!("../../migrations/0014_moves.sql")),
 ];
 
 #[derive(Debug, thiserror::Error)]
