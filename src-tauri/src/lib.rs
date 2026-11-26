@@ -86,6 +86,11 @@ pub fn run() -> ExitCode {
                     {
                         eprintln!("Dokumente aus Mails ließen sich nicht neu einordnen");
                     }
+                    if checks::recheck_missing_tax(ready.connection(), jiff::Timestamp::now())
+                        .is_err()
+                    {
+                        eprintln!("Wartende Belege ließen sich nicht neu prüfen");
+                    }
                     (
                         intake::jobs::workers(ready.connection()),
                         readers::model::configured(ready.connection()),

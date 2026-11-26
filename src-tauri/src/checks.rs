@@ -246,7 +246,9 @@ fn decisive_checks(field: &'static str, seen: Option<&Vec<Seen>>) -> Vec<Outcome
     outcomes
 }
 
-/// Net plus VAT is the gross to the cent, and the VAT fits the rate within a cent.
+/// Net plus VAT is the gross to the cent, and the VAT fits the rate within a cent. A net equal to
+/// the gross without any VAT is a document that shows no tax, such as a receipt of a payment, and
+/// adds up as well (#31: the model gives such a net where only the gross is printed).
 pub fn invoice_sum(
     net: Option<Cents>,
     vat: Option<Cents>,
@@ -258,6 +260,10 @@ pub fn invoice_sum(
         (None, None) => outcome(
             true,
             "Netto und Steuer sind nicht ausgewiesen, es zählt der Bruttobetrag.".into(),
+        ),
+        (Some(net), None) if net == gross => outcome(
+            true,
+            "Keine Steuer ausgewiesen, Netto und Brutto sind gleich.".into(),
         ),
         (Some(net), Some(vat)) => {
             if net.checked_add(vat) != Some(gross) {
@@ -620,6 +626,28 @@ pub fn supersede_statement_rule(conn: &Connection, now: Timestamp) -> rusqlite::
     }
     tx.commit()?;
     Ok(documents.len())
+}
+
+/// The waiting documents whose sum failed only for want of a tax are decided again with the rule
+/// that a net equal to the gross needs none (#31). A document the owner holds is left. Returns how
+/// many were filed.
+pub fn recheck_missing_tax(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
+    let documents: Vec<i64> = conn
+        .prepare(
+            "SELECT DISTINCT c.document_id FROM field_checks c JOIN documents d ON d.id = c.document_id
+             WHERE d.state = 'waiting' AND c.check_id = ?1 AND c.passed = 0 AND c.detail LIKE 'Netto oder Steuer fehlt%'
+             AND NOT EXISTS (SELECT 1 FROM field_values v WHERE v.document_id = d.id AND v.reader = 'owner' AND v.field = 'hold' AND v.value = '1')
+             AND NOT EXISTS (SELECT 1 FROM intake_jobs j WHERE j.document_id = d.id AND j.stage NOT IN ('filed', 'waiting', 'failed'))",
+        )?
+        .query_map([SUM], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut filed = 0;
+    for document in documents {
+        if decide(conn, document, now)?.filed() {
+            filed += 1;
+        }
+    }
+    Ok(filed)
 }
 
 /// The documents of an older archive that were never checked get a job at the stage `read`, so the

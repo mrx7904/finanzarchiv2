@@ -365,3 +365,79 @@ fn a_filed_document_is_named_by_its_template_and_the_owners_name_stays() {
         "empty gives it back to the template"
     );
 }
+
+#[test]
+fn a_net_equal_to_the_gross_without_tax_adds_up() {
+    let gross = Cents::new(1200);
+    let same = invoice_sum(Some(gross), None, gross, None);
+    assert!(same.passed, "{}", same.detail);
+    assert_eq!(
+        same.detail,
+        "Keine Steuer ausgewiesen, Netto und Brutto sind gleich."
+    );
+    assert!(
+        !invoice_sum(Some(Cents::new(1000)), None, gross, None).passed,
+        "a net below the gross needs its tax"
+    );
+    assert!(!invoice_sum(None, Some(Cents::new(190)), gross, None).passed);
+}
+
+#[test]
+fn a_receipt_waiting_only_for_a_tax_is_filed_at_start_and_a_held_one_is_left() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let receipt = |number: u8| {
+        let id = document(conn, number, Kind::Receipt);
+        for reader in ["code:3", "model:beispiel"] {
+            value(conn, id, reader, "gross", "12,00", "1200", true);
+        }
+        value(conn, id, "model:beispiel", "net", "12,00", "1200", true);
+        value(
+            conn,
+            id,
+            "model:beispiel",
+            "sender",
+            "Beispiel Verein",
+            "Beispiel Verein",
+            true,
+        );
+        value(
+            conn,
+            id,
+            "code:3",
+            "sender",
+            "Beispiel Verein",
+            "Beispiel Verein",
+            true,
+        );
+        let day = format!("2026-11-{:02}", number);
+        value(conn, id, "code:3", "invoice_date", &day, &day, true);
+        // As the rule before #31 judged it.
+        conn.execute(
+            "INSERT INTO field_checks (document_id, field, check_id, passed, detail, checked_at) VALUES (?1, 'gross', ?2, 0, 'Netto oder Steuer fehlt, die Summe lässt sich nicht prüfen.', 'x')",
+            params![id, SUM],
+        )
+        .unwrap();
+        conn.execute("UPDATE documents SET state = 'waiting' WHERE id = ?1", [id])
+            .unwrap();
+        id
+    };
+    let open = receipt(1);
+    let held = receipt(2);
+    value(conn, held, "owner", "hold", "1", "1", false);
+    let before = judge(conn, open).unwrap();
+    assert!(before.filed(), "{:?}", before.outcomes);
+    assert_eq!(recheck_missing_tax(conn, testing::t0()).unwrap(), 1);
+    let state = |id: i64| -> String {
+        conn.query_row("SELECT state FROM documents WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })
+        .unwrap()
+    };
+    assert_eq!(
+        (state(open).as_str(), state(held).as_str()),
+        ("filed", "waiting")
+    );
+    assert_eq!(recheck_missing_tax(conn, testing::t0()).unwrap(), 0, "once");
+}

@@ -8,7 +8,7 @@
 - Each check has a stable id and is stored in `field_checks` with its field and a German sentence, passed or not, so "Warum?" shows the passed ones and the waiting list the failed ones:
   - `check:kind`: the kind is an invoice, receipt, payslip or statement.
   - `check:present`, `check:source`, `check:agree`, per decisive value (the gross of an invoice or receipt, the Brutto and the Netto of a payslip): it was found, it stands in the text or the XML (a value read only from the page image does not), and two independent readers give the same value while none gives another. Readers count by family: the owner, the e-invoice, code, the model, the image. A value the owner confirmed passes alone.
-  - `check:sum`: net plus VAT is the gross to the cent and the VAT fits the rate within one cent (an invoice without net and VAT passes, one with only one of them does not). Brutto minus the seven deductions is the Netto to the cent.
+  - `check:sum`: net plus VAT is the gross to the cent and the VAT fits the rate within one cent (an invoice without net and VAT passes, one with only one of them does not, except a net equal to the gross without VAT: a document that shows no tax, as a receipt of a payment, 2026-11-26, #31). Brutto minus the seven deductions is the Netto to the cent.
   - `check:duplicate`: no other document of the kind has the same sender, number (or date) and gross, or the same employer and month. Both of two such documents wait, the owner decides.
   - `check:undone`: the owner undid the automatic filing.
 - The value that counts for a field is the one of the strongest reader: the owner, the e-invoice, code, the model, the image.
@@ -41,3 +41,7 @@
 - What the owner accepts is a value of the owner under `accept:<check>`. It turns that failed check into a passed one, "Von dir bestätigt: …". A document filed after such an answer gets the rule `file.owner-answered:1`. A value of the owner counts alone and stands above every reading, the readings beside it no longer disagree.
 - After every answer the checks run again (`checks::decide`): the document is filed or waits with what is left, and "Prüfen" moves on to the next document of the group.
 - Keys: J and K move in a list, Enter opens, 1 and 2 pick a reading once "Nein" opened them, Escape goes back (`src/review/keys.ts`, tested in `keys.test.ts`).
+
+## The net equal to the gross (2026-11-26, #31)
+
+On the owner's mail, 51 of 52 mail texts that failed `check:sum` were receipts that print only the paid amount: no net, no tax, none of the words Netto, Steuer, MwSt or USt. The model gave a net there, in 50 of them equal to the gross. A net equal to the gross without any VAT now adds up ("Keine Steuer ausgewiesen, Netto und Brutto sind gleich."), since it changes no gross and says the tax is nil. `checks::recheck_missing_tax` decides the waiting documents again at start whose sum failed only for want of a tax, a held one is left. Tried on a copy of the owner's archive: 71 of 159 waiting documents filed, 91 of 119 mail texts filed.
