@@ -2,6 +2,7 @@
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
 pub mod documents;
+pub mod names;
 pub mod review;
 
 use std::sync::{Arc, Mutex};
@@ -146,6 +147,9 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             review::review_groups,
             review::review_questions,
             review::answer_question,
+            names::name_templates,
+            names::set_name_template,
+            names::rename_document,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

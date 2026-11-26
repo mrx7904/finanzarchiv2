@@ -5,6 +5,7 @@ import { useIntakeChanged } from "../intake/useIntakeChanged";
 import { Button, EmptyState, List, ListRow } from "../ui";
 import { formatDay, kindLabel, stateLabel, textStateLabel } from "./describe";
 import { Filing } from "./Filing";
+import { DocumentName, TemplatesDialog } from "./Names";
 import { PageImage } from "./PageImage";
 
 // The documents of #04 in the pieces of the design system (#07), imports through the queue of #05,
@@ -14,6 +15,7 @@ export function Documents() {
   const [chosen, setChosen] = useState<number | null>(null);
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [naming, setNaming] = useState(false);
 
   const reload = useCallback(async () => {
     const listed = await commands.listDocuments();
@@ -40,6 +42,10 @@ export function Documents() {
       <Button icon="folder" disabled={busy} onClick={() => void pick("folder")}>
         Ordner importieren …
       </Button>
+      <Button kind="plain" onClick={() => setNaming(true)}>
+        Namensvorlagen …
+      </Button>
+      <TemplatesDialog open={naming} onClose={() => setNaming(false)} onChanged={() => void reload()} />
     </div>
   );
   const selected = rows.find((row) => row.id === chosen) ?? null;
@@ -67,7 +73,7 @@ export function Documents() {
             {selected ? (
               <>
                 <PageImage key={selected.id} document={selected.id} width={640} label={`Erste Seite von ${selected.name}`} className="rounded-control" />
-                <p className="text-body font-medium">{selected.name}</p>
+                <DocumentName document={selected.id} name={selected.name} originalName={selected.originalName} byOwner={selected.nameByOwner} onChanged={() => void reload()} />
                 <p className="text-small text-fg-muted">{textStateLabel(selected.textState, selected.pages)}</p>
                 <Filing key={`${selected.id}-${selected.state}`} document={selected.id} onChanged={() => void reload()} />
               </>

@@ -35,6 +35,15 @@ export const commands = {
 	reviewQuestions: (key: string, options?: InvokeOptions) => typedError<ReviewQuestion_Serialize[], CommandError>(__TAURI_INVOKE("review_questions", { key }, options)),
 	/**  Takes the owner's answer and returns the document's new state, `filed` or `waiting`. */
 	answerQuestion: (document: number, key: string, answer: ReviewAnswer, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("answer_question", { document, key, answer }, options)),
+	/**  The templates of the names with their placeholders. */
+	nameTemplates: (options?: InvokeOptions) => typedError<NameTemplates, CommandError>(__TAURI_INVOKE("name_templates", undefined, options)),
+	/**
+	 *  Stores the owner's template of a kind (empty restores the default) and names the filed
+	 *  documents of that kind again, those the owner named excepted.
+	 */
+	setNameTemplate: (kind: string, template: string, options?: InvokeOptions) => typedError<NameTemplates, CommandError>(__TAURI_INVOKE("set_name_template", { kind, template }, options)),
+	/**  The owner's name of a document, kept from now on. Empty gives it back to its template. */
+	renameDocument: (document: number, name: string, options?: InvokeOptions) => typedError<string | null, CommandError>(__TAURI_INVOKE("rename_document", { document, name }, options)),
 };
 
 /** Events */
@@ -122,6 +131,10 @@ export type DocumentRow_Deserialize = {
 	textState?: string | null,
 	/**  open (not checked yet), filed or waiting (#16). */
 	state: string,
+	/**  The name of the file as it came in, which the preview keeps beside the name (#18). */
+	originalName: string,
+	/**  Whether the owner typed the name. */
+	nameByOwner: boolean,
 };
 
 export type DocumentRow_Serialize = {
@@ -136,6 +149,10 @@ export type DocumentRow_Serialize = {
 	textState: string | null,
 	/**  open (not checked yet), filed or waiting (#16). */
 	state: string,
+	/**  The name of the file as it came in, which the preview keeps beside the name (#18). */
+	originalName: string,
+	/**  Whether the owner typed the name. */
+	nameByOwner: boolean,
 };
 
 export type ErrorKind = 
@@ -194,6 +211,24 @@ export type JobRow_Serialize = {
 	stage: string,
 	/**  Why a failed file was not taken, or why a job waits for the model, as a German sentence. */
 	error: string | null,
+};
+
+/**  The template of one kind, as the owner edits it. */
+export type NameTemplate = {
+	kind: string,
+	template: string,
+	defaultTemplate: string,
+};
+
+export type NameTemplates = {
+	templates: NameTemplate[],
+	placeholders: Placeholder[],
+};
+
+/**  A placeholder with what it stands for. */
+export type Placeholder = {
+	name: string,
+	meaning: string,
 };
 
 /**  How many files an import put into the queue. */

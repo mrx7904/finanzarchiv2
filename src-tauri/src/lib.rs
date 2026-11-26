@@ -7,6 +7,7 @@ pub mod documents;
 pub mod intake;
 pub mod kinds;
 pub mod money;
+pub mod naming;
 pub mod ollama;
 pub mod pages;
 pub mod pdf;

@@ -329,11 +329,13 @@ pub struct Listed {
     /// text, scan or image, None until the stage text ran.
     pub text_state: Option<String>,
     pub state: String,
+    pub original_name: String,
+    pub name_by_owner: bool,
 }
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
     let mut statement = conn.prepare(
-        "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state, state
+        "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state, state, original_name, name_by_owner
          FROM documents ORDER BY imported_at DESC, id DESC",
     )?;
     statement
@@ -347,6 +349,8 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
                 imported_at: row.get(5)?,
                 text_state: row.get(6)?,
                 state: row.get(7)?,
+                original_name: row.get(8)?,
+                name_by_owner: row.get(9)?,
             })
         })?
         .collect()
