@@ -23,3 +23,7 @@ The owner allowed the repository to be public and asked that this is respected (
 ## Test data are invented
 
 **Decided:** 2026-11-25, after a near miss: a probe IBAN for the self-test was built from the digits of the owner's real account, read from a file name in a screenshot. It was caught before any commit and replaced. Test values are invented from scratch (bank code `12345678`, account `0000004711`) or are public examples of a standard, never taken from anything the owner showed or the archive holds. The self-test builds its probe IBAN at run time, so no file holds one.
+
+## Bank names stay out
+
+**Decided:** 2026-11-26 by the owner, for stage 3. The readers of statements are named by their layout ("Layout A", "Layout B"), never by the bank, and the generated statements of the corpus carry invented bank names. The bank of a statement is recognized at run time from the document. No bank name of the owner enters a tracked file, a test or a commit message, because the banks tell where the owner keeps their money.
