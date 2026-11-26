@@ -61,6 +61,17 @@ export const commands = {
 	undoLink: (link: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("undo_link", { link }, options)),
 	/**  "Rückgängig" for a move between own accounts. */
 	undoMove: (pair: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("undo_move", { pair }, options)),
+	listFolders: (options?: InvokeOptions) => typedError<FolderRow_Serialize[], CommandError>(__TAURI_INVOKE("list_folders", undefined, options)),
+	/**  Asks for a folder and watches it. */
+	addFolder: (options?: InvokeOptions) => typedError<FolderRow_Serialize[], CommandError>(__TAURI_INVOKE("add_folder", undefined, options)),
+	removeFolder: (folder: number, options?: InvokeOptions) => typedError<FolderRow_Serialize[], CommandError>(__TAURI_INVOKE("remove_folder", { folder }, options)),
+	/**  Asks for another place of the inbox. */
+	moveInbox: (options?: InvokeOptions) => typedError<FolderRow_Serialize[], CommandError>(__TAURI_INVOKE("move_inbox", undefined, options)),
+	/**
+	 *  Opens a watched folder in the file manager of the system. It takes the id, so the window can
+	 *  open no other path.
+	 */
+	openFolder: (folder: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("open_folder", { folder }, options)),
 };
 
 /** Events */
@@ -308,6 +319,27 @@ export type ErrorKind =
 "notFound" | 
 /**  The owner's answer was not taken, the message says why (#17). */
 "refused";
+
+/**  A watched folder as "Ordner" shows it. */
+export type FolderRow = FolderRow_Serialize | FolderRow_Deserialize;
+
+/**  A watched folder as "Ordner" shows it. */
+export type FolderRow_Deserialize = {
+	id: number,
+	path: string,
+	isInbox: boolean,
+	/**  Why the folder is not watched right now, in German. */
+	problem?: string | null,
+};
+
+/**  A watched folder as "Ordner" shows it. */
+export type FolderRow_Serialize = {
+	id: number,
+	path: string,
+	isInbox: boolean,
+	/**  Why the folder is not watched right now, in German. */
+	problem: string | null,
+};
 
 /**  Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched. */
 export type IntakeChanged = null;

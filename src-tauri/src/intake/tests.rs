@@ -124,7 +124,7 @@ fn every_job_ends_filed_or_failed_with_its_reason() {
             .error
             .as_deref()
             .unwrap()
-            .contains("PDF, PNG, JPEG und WebP")
+            .contains("PDF, PNG, JPEG, WebP")
     );
 }
 

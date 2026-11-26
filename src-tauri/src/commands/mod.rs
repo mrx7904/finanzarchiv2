@@ -2,6 +2,7 @@
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
 pub mod documents;
+pub mod folders;
 pub mod money;
 pub mod names;
 pub mod review;
@@ -161,6 +162,11 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             money::choose_category,
             money::undo_link,
             money::undo_move,
+            folders::list_folders,
+            folders::add_folder,
+            folders::remove_folder,
+            folders::move_inbox,
+            folders::open_folder,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

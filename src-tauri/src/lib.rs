@@ -5,6 +5,7 @@ pub mod archive;
 pub mod checks;
 pub mod commands;
 pub mod documents;
+pub mod folders;
 pub mod intake;
 pub mod kinds;
 pub mod links;
@@ -96,8 +97,22 @@ pub fn run() -> ExitCode {
             if workers > 0 {
                 intake.start(workers, pdfium);
             }
+            // The inbox folder and every watched folder (#27): made at start, read once, then watched.
+            if let Ok(documents_dir) = app.path().document_dir()
+                && let Ok(guard) = archive.lock()
+                && let archive::Opened::Ready(ready) = &*guard
+                && folders::ensure_inbox(ready.connection(), &documents_dir, jiff::Timestamp::now())
+                    .is_err()
+            {
+                eprintln!("Der Eingangsordner ließ sich nicht anlegen");
+            }
+            let watcher = folders::Watcher::new(Arc::clone(&archive), Arc::clone(&intake));
+            if workers > 0 {
+                watcher.start();
+            }
             app.manage(archive);
             app.manage(intake);
+            app.manage(watcher);
             Ok(())
         })
         .on_window_event(|window, event| {

@@ -64,6 +64,10 @@ impl FileType {
 pub enum Source {
     Drop,
     Dialog,
+    /// A watched folder (#27).
+    Folder,
+    /// A mailbox (#31).
+    Mail,
 }
 
 impl Source {
@@ -71,6 +75,8 @@ impl Source {
         match self {
             Self::Drop => "drop",
             Self::Dialog => "dialog",
+            Self::Folder => "folder",
+            Self::Mail => "mail",
         }
     }
 
@@ -78,6 +84,8 @@ impl Source {
         match code {
             "drop" => Some(Self::Drop),
             "dialog" => Some(Self::Dialog),
+            "folder" => Some(Self::Folder),
+            "mail" => Some(Self::Mail),
             _ => None,
         }
     }
@@ -88,7 +96,9 @@ impl Source {
 pub enum Refusal {
     #[error("Die Datei ist leer.")]
     Empty,
-    #[error("Dateien dieser Art nimmt das Archiv nicht an. Möglich sind PDF, PNG, JPEG und WebP.")]
+    #[error(
+        "Dateien dieser Art nimmt das Archiv nicht an. Möglich sind PDF, PNG, JPEG, WebP und Kontoauszüge als CSV."
+    )]
     UnknownType,
     #[error("Die PDF ist beschädigt und lässt sich nicht öffnen.")]
     Damaged,
@@ -102,6 +112,9 @@ pub enum Refusal {
     Unreadable,
     #[error("Die Datei ließ sich nicht im Archiv ablegen.")]
     NotStored,
+    /// A watched folder or a mailbox does not bring back what the owner deleted (#27).
+    #[error("Diese Datei hast du aus dem Archiv gelöscht, sie wird nicht wieder aufgenommen.")]
+    DeletedBefore,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -208,6 +221,11 @@ pub fn store(
 ) -> Result<Outcome, Refusal> {
     if let Some(id) = find_by_hash(conn, &prepared.sha256).map_err(|_| Refusal::NotStored)? {
         return Ok(Outcome::Known { id });
+    }
+    if matches!(source, Source::Folder | Source::Mail)
+        && was_deleted(conn, &prepared.sha256).map_err(|_| Refusal::NotStored)?
+    {
+        return Err(Refusal::DeletedBefore);
     }
     write_once(
         &stored_path(root, &prepared.sha256, prepared.file_type),
@@ -392,6 +410,11 @@ pub fn delete(conn: &Connection, root: &Path, id: i64) -> rusqlite::Result<Optio
         tx.execute(&format!("DELETE FROM {table} WHERE document_id = ?1"), [id])?;
     }
     tx.execute("DELETE FROM documents WHERE id = ?1", [id])?;
+    // A watched folder or a mailbox does not bring it back (#27).
+    tx.execute(
+        "INSERT OR IGNORE INTO deleted_sources (sha256, deleted_at) VALUES (?1, ?2)",
+        rusqlite::params![sha256, Timestamp::now().to_string()],
+    )?;
     tx.commit()?;
     let Some((path, _)) = stored.filter(|(path, _)| path.exists()) else {
         return Ok(None);
@@ -415,6 +438,18 @@ pub fn delete(conn: &Connection, root: &Path, id: i64) -> rusqlite::Result<Optio
         return Ok(Some(target));
     }
     Ok(None)
+}
+
+/// Whether the owner deleted a document of this hash before.
+pub fn was_deleted(conn: &Connection, sha256: &str) -> rusqlite::Result<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM deleted_sources WHERE sha256 = ?1",
+            [sha256],
+            |_| Ok(true),
+        )
+        .optional()?
+        .is_some())
 }
 
 /// Where the original of a document lies and what it is.

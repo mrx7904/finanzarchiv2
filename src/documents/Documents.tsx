@@ -5,6 +5,7 @@ import { useIntakeChanged } from "../intake/useIntakeChanged";
 import { Button, EmptyState, List, ListRow } from "../ui";
 import { formatDay, kindLabel, stateLabel, textStateLabel } from "./describe";
 import { Filing } from "./Filing";
+import { Folders } from "./Folders";
 import { DocumentName, TemplatesDialog } from "./Names";
 import { PageImage } from "./PageImage";
 
@@ -16,6 +17,7 @@ export function Documents() {
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [naming, setNaming] = useState(false);
+  const [folders, setFolders] = useState(false);
 
   const reload = useCallback(async () => {
     const listed = await commands.listDocuments();
@@ -42,6 +44,10 @@ export function Documents() {
       <Button icon="folder" disabled={busy} onClick={() => void pick("folder")}>
         Ordner importieren …
       </Button>
+      <Button kind="plain" icon="folder" onClick={() => setFolders(true)}>
+        Ordner …
+      </Button>
+      <Folders open={folders} onClose={() => setFolders(false)} />
       <Button kind="plain" onClick={() => setNaming(true)}>
         Namensvorlagen …
       </Button>
