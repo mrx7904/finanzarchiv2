@@ -158,18 +158,7 @@ pub fn store(
     lines: &[Line],
     now: Timestamp,
 ) -> rusqlite::Result<Option<i64>> {
-    let earlier: Option<i64> = conn
-        .query_row(
-            "SELECT id FROM statements WHERE document_id = ?1",
-            [document],
-            |row| row.get(0),
-        )
-        .optional()?;
-    if let Some(earlier) = earlier {
-        release(conn, earlier)?;
-        conn.execute("DELETE FROM bookings WHERE statement_id = ?1", [earlier])?;
-        conn.execute("DELETE FROM statements WHERE id = ?1", [earlier])?;
-    }
+    forget(conn, document)?;
     let Some(statement) = read(lines) else {
         return Ok(None);
     };
@@ -217,6 +206,7 @@ pub fn store(
         ])?;
     }
     join_twins(conn, account, id, statement.layout == layout_b::NAME)?;
+    crate::accounts::refresh_opening(conn, account)?;
     Ok(Some(id))
 }
 
@@ -287,6 +277,13 @@ pub fn forget(conn: &Connection, document: i64) -> rusqlite::Result<()> {
             |row| row.get(0),
         )
         .optional()?;
+    let account: Option<i64> = conn
+        .query_row(
+            "SELECT account_id FROM statements WHERE document_id = ?1",
+            [document],
+            |row| row.get(0),
+        )
+        .optional()?;
     if let Some(earlier) = earlier {
         release(conn, earlier)?;
     }
@@ -295,6 +292,9 @@ pub fn forget(conn: &Connection, document: i64) -> rusqlite::Result<()> {
         [document],
     )?;
     conn.execute("DELETE FROM statements WHERE document_id = ?1", [document])?;
+    if let Some(account) = account {
+        crate::accounts::refresh_opening(conn, account)?;
+    }
     Ok(())
 }
 
