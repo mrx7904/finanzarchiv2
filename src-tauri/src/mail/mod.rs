@@ -7,9 +7,9 @@
 mod fake;
 pub mod guard;
 pub mod reader;
-pub mod render;
 pub mod round;
 pub mod secrets;
+pub mod text;
 
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};

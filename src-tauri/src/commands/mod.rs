@@ -145,6 +145,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             documents::dismiss_failed,
             documents::list_documents,
             documents::page_image,
+            documents::mail_text,
             documents::document_checks,
             documents::undo_filing,
             review::review_groups,

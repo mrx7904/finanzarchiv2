@@ -76,6 +76,16 @@ pub fn run() -> ExitCode {
                     {
                         eprintln!("Ungeprüfte Dokumente ließen sich nicht in den Eingang legen");
                     }
+                    // #31: mails taken as a PDF are taken again as their text, files of mails get
+                    // the kind of their mail where code could not tell.
+                    if mail::reader::replace_mail_pdfs(ready.connection(), &root).is_err() {
+                        eprintln!("Die PDFs von Mails ließen sich nicht ersetzen");
+                    }
+                    if mail::reader::apply_hints(ready.connection(), jiff::Timestamp::now())
+                        .is_err()
+                    {
+                        eprintln!("Dokumente aus Mails ließen sich nicht neu einordnen");
+                    }
                     (
                         intake::jobs::workers(ready.connection()),
                         readers::model::configured(ready.connection()),
@@ -121,7 +131,6 @@ pub fn run() -> ExitCode {
             let mail_reader = mail::reader::Reader::new(
                 Arc::clone(&archive),
                 Arc::clone(&intake),
-                pdfium,
                 intake.model(),
                 Box::new(mail::secrets::Keychain),
             );

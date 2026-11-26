@@ -1235,7 +1235,7 @@ fn measure_downloads(pdfium: &Pdfium, model_name: &str, folder: &Path, out: &Pat
 /// One round through each mailbox of a copy of the owner's database (#31), over the last days,
 /// read only: the addresses from the copy, the app passwords from the keychain. Nothing is staged
 /// or kept, only the verdicts are counted. The model unloaded afterwards, within the GPU budget.
-fn measure_mail(pdfium: &'static Pdfium, model_name: &str, database: &Path, days: i64, out: &Path) {
+fn measure_mail(model_name: &str, database: &Path, days: i64, out: &Path) {
     use finanzarchiv2_lib::mail::{self, round, secrets::Secrets};
     let Ok(conn) =
         rusqlite::Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -1296,14 +1296,13 @@ fn measure_mail(pdfium: &'static Pdfium, model_name: &str, database: &Path, days
                     &password,
                     &round::Place::default(),
                     since,
-                    Some(pdfium),
                     model.as_ref().map(|model| model as &dyn LocalModel),
                     &|_| false,
                     &mut |looked| {
                         let how = if looked.files.is_empty() {
                             format!("left: {}", looked.verdict.split(" (").next().unwrap_or(""))
-                        } else if looked.verdict.contains("PDF der Mail") {
-                            "taken: the mail as a PDF".to_owned()
+                        } else if looked.verdict.contains("Text der Mail") {
+                            "taken: the mail as its text".to_owned()
                         } else {
                             "taken: PDF attachments".to_owned()
                         };
@@ -1406,7 +1405,7 @@ fn main() {
             .and_then(|days| days.parse().ok())
             .unwrap_or(30);
         let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
-        measure_mail(pdfium, &model, Path::new(&database), days, &out);
+        measure_mail(&model, Path::new(&database), days, &out);
         return;
     }
     if reader == "downloads" {

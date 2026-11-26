@@ -16,8 +16,8 @@ use super::{MailError, MailboxError};
 use crate::archive::Opened;
 use crate::documents::Source;
 use crate::intake::Intake;
+use crate::kinds::Kind;
 use crate::ollama::LocalModel;
-use crate::pdf::Pdfium;
 
 /// The folder beside the archive where the PDFs of mails wait for the intake.
 pub const STAGING: &str = "Mail-Eingang";
@@ -75,15 +75,16 @@ pub fn keep(
         }
     }
     conn.execute(
-        "INSERT INTO mail_messages (mailbox_id, message_hash, received_at, looked_at, verdict, taken)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT (message_hash) DO NOTHING",
+        "INSERT INTO mail_messages (mailbox_id, message_hash, received_at, looked_at, verdict, taken, kind)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT (message_hash) DO NOTHING",
         params![
             mailbox,
             looked.hash,
             looked.received_at,
             now.to_string(),
             looked.verdict,
-            i64::try_from(paths.len()).unwrap_or(0)
+            i64::try_from(paths.len()).unwrap_or(0),
+            looked.kind.map(Kind::code)
         ],
     )?;
     Ok(paths)
@@ -127,7 +128,6 @@ pub fn totals(conn: &Connection, mailbox: i64) -> rusqlite::Result<(u32, u32)> {
 pub struct Reader {
     archive: Arc<Mutex<Opened>>,
     intake: Arc<Intake>,
-    pdfium: Option<&'static Pdfium>,
     model: Option<Arc<dyn LocalModel>>,
     secrets: Box<dyn Secrets>,
     busy: AtomicBool,
@@ -137,14 +137,12 @@ impl Reader {
     pub fn new(
         archive: Arc<Mutex<Opened>>,
         intake: Arc<Intake>,
-        pdfium: Option<&'static Pdfium>,
         model: Option<Arc<dyn LocalModel>>,
         secrets: Box<dyn Secrets>,
     ) -> Arc<Self> {
         Arc::new(Self {
             archive,
             intake,
-            pdfium,
             model,
             secrets,
             busy: AtomicBool::new(false),
@@ -217,7 +215,6 @@ impl Reader {
             &password,
             &place,
             since,
-            self.pdfium,
             self.model.as_deref(),
             &known,
             &mut note,
@@ -247,3 +244,113 @@ impl Reader {
         });
     }
 }
+
+/// The kind the model gave the mail a file of the intake came from (#31), as a hint for when code
+/// cannot tell: always for the text of a mail, for an attachment only when it was the mail's only
+/// file, so terms or a revocation sent beside an invoice do not become one.
+pub fn hint_for(conn: &Connection, staged: &Path) -> rusqlite::Result<Option<Kind>> {
+    let Some(prefix) = staged
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        .filter(|name| name.len() == 16)
+    else {
+        return Ok(None);
+    };
+    let found: Option<(Option<String>, i64, String)> = conn
+        .query_row(
+            "SELECT kind, taken, verdict FROM mail_messages WHERE substr(message_hash, 1, 16) = ?1",
+            [prefix],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    Ok(found.and_then(|(kind, taken, verdict)| {
+        let text = verdict.starts_with("Übernommen als Text der Mail");
+        (text || taken == 1)
+            .then(|| kind.map(|kind| Kind::from_code(&kind)))
+            .flatten()
+            .filter(|kind| crate::downloads::money(*kind))
+    }))
+}
+
+/// The signal a kind from the mail's verdict is stored with.
+pub const HINT_SIGNAL: &str = "mail:model";
+
+/// Documents from mail whose kind code could not tell, read again with the kind of their mail.
+/// Runs at start, so documents taken before the hint existed get it too. Returns how many.
+pub fn apply_hints(conn: &Connection, now: Timestamp) -> rusqlite::Result<usize> {
+    let candidates: Vec<(i64, String, String)> = conn
+        .prepare(
+            "SELECT d.id, j.path, d.original_name FROM documents d
+             JOIN intake_jobs j ON j.document_id = d.id AND j.source = 'mail'
+             WHERE d.source = 'mail' AND d.kind IN ('other', 'unknown') AND d.state <> 'filed'
+             AND NOT EXISTS (SELECT 1 FROM intake_jobs a WHERE a.document_id = d.id AND a.stage NOT IN ('filed', 'waiting', 'failed'))
+             GROUP BY d.id",
+        )?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut changed = 0;
+    for (id, path, name) in candidates {
+        let Some(kind) = hint_for(conn, Path::new(&path))? else {
+            continue;
+        };
+        let tx = conn.unchecked_transaction()?;
+        crate::documents::set_kind(&tx, id, kind, &[HINT_SIGNAL])?;
+        tx.execute(
+            "INSERT INTO intake_jobs (source, path, name, stage, document_id, created_at, updated_at) VALUES ('mail', ?1, ?2, 'classified', ?3, ?4, ?4)",
+            params![path, name, id, now.to_string()],
+        )?;
+        tx.commit()?;
+        changed += 1;
+    }
+    Ok(changed)
+}
+
+/// The mails that 0.4.0 took as a PDF of their text are taken again as their text (the owner's
+/// word of 2026-11-26): their documents go to the Papierkorb beside the archive, their staged
+/// files and jobs go, and the mail is forgotten. The mailboxes then read from the start of their
+/// reach again, where every other mail is known by its hash. Returns how many mails.
+pub fn replace_mail_pdfs(conn: &Connection, root: &Path) -> rusqlite::Result<usize> {
+    let mails: Vec<String> = conn
+        .prepare(
+            "SELECT message_hash FROM mail_messages WHERE verdict LIKE 'Übernommen als PDF der Mail%'",
+        )?
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut replaced = 0;
+    for hash in &mails {
+        let prefix = &hash[..16];
+        let jobs: Vec<(i64, String, Option<i64>)> = conn
+            .prepare("SELECT id, path, document_id FROM intake_jobs WHERE source = 'mail' AND instr(path, ?1) > 0")?
+            .query_map([prefix], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut kept = false;
+        for (_, _, document) in &jobs {
+            if let Some(document) = document
+                && crate::documents::delete(conn, root, *document).is_err()
+            {
+                kept = true;
+            }
+        }
+        if kept {
+            continue;
+        }
+        for (job, path, _) in &jobs {
+            conn.execute("DELETE FROM intake_jobs WHERE id = ?1", [job])?;
+            let path = Path::new(path);
+            let _ = std::fs::remove_file(path);
+            if let Some(dir) = path.parent() {
+                let _ = std::fs::remove_dir(dir);
+            }
+        }
+        conn.execute("DELETE FROM mail_messages WHERE message_hash = ?1", [hash])?;
+        replaced += 1;
+    }
+    if replaced > 0 {
+        conn.execute("UPDATE mailboxes SET last_uid = 0", [])?;
+    }
+    Ok(replaced)
+}
+
+#[cfg(test)]
+mod tests;

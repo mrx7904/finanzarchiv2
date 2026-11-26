@@ -96,38 +96,43 @@ fn the_head_tells_a_word_of_an_invoice_and_attachments() {
 }
 
 #[test]
-fn a_mail_becomes_a_pdf_of_its_text_with_its_head_on_top() {
-    let head = [
-        "Von: Beispiel GmbH <rechnung@example.com>".to_owned(),
-        "Datum: 26.11.2026 10:15".to_owned(),
-        "Betreff: Ihre Rechnung R-2026-11".to_owned(),
-    ];
-    let long = "Wort ".repeat(60);
-    let pdf = crate::mail::render::mail_pdf(
-        testing::pdfium(),
-        &head,
-        &format!("Rechnungsbetrag 23,80 €\n\n\n\nGrüße aus Köln\n{long}"),
-    )
-    .unwrap();
-    let pages = crate::pages::read(testing::pdfium(), &pdf).unwrap();
-    let lines: Vec<String> = pages
-        .iter()
-        .flat_map(|page| page.lines.iter().map(|line| line.text.clone()))
-        .collect();
-    assert_eq!(lines[0], "Von: Beispiel GmbH <rechnung@example.com>");
-    assert_eq!(lines[2], "Betreff: Ihre Rechnung R-2026-11");
-    assert!(
-        lines.contains(&"Rechnungsbetrag 23,80 €".to_owned()),
-        "{lines:?}"
+fn an_html_mail_becomes_lines_as_a_printed_invoice_reads() {
+    let html = r#"<html><head><style>td { color: red }</style><title>Rechnung</title></head><body>
+<div style="display:none">Vorschau&zwnj;&nbsp;&zwnj;&nbsp;</div>
+<p>Hallo&nbsp;Max,<br>vielen Dank f&uuml;r Ihre Bestellung.</p>
+<table><tr><td>Artikel</td><td>Menge</td><td>Preis</td></tr>
+<tr><td>Kaffee</td><td>2</td><td>19,98&nbsp;&euro;</td></tr>
+<tr><th>Gesamt</th><td></td><td><b>23,80 &euro;</b></td></tr></table>
+<p><a href="https://example.com/track?id=1"><img src="https://example.com/logo.png" alt="Logo"></a></p>
+<!-- ein Kommentar --><script>alert(1)</script>
+<p>-----------</p><p>Mehr unter https://example.com/konto &amp; www.example.com</p></body></html>"#;
+    assert_eq!(
+        crate::mail::text::html_to_text(html),
+        "Hallo Max,\nvielen Dank für Ihre Bestellung.\n\nArtikel Menge Preis\nKaffee 2 19,98 €\nGesamt 23,80 €\n\nMehr unter &"
     );
-    assert!(lines.contains(&"Grüße aus Köln".to_owned()), "{lines:?}");
-    assert!(
-        lines.iter().filter(|line| line.starts_with("Wort")).count() >= 3,
-        "a long line is wrapped"
+}
+
+#[test]
+fn a_mail_file_carries_its_head_and_text_and_is_known_by_its_mark() {
+    let file = crate::mail::text::mail_file(
+        &[
+            "Von: Beispiel GmbH <info@example.com>".to_owned(),
+            "Betreff: Ihre\u{200b} Rechnung".to_owned(),
+        ],
+        "Gesamt 23,80 €",
     );
     assert_eq!(
-        crate::mail::render::wrap("a\n\n\n\n\nb"),
-        ["a", "", "", "b"]
+        file,
+        "FINANZARCHIV-MAIL 1\nVon: Beispiel GmbH <info@example.com>\nBetreff: Ihre Rechnung\n\nGesamt 23,80 €\n"
+    );
+    assert_eq!(
+        crate::documents::FileType::detect(file.as_bytes()),
+        Some(crate::documents::FileType::Mail)
+    );
+    assert_eq!(
+        crate::documents::FileType::detect(b"FINANZARCHIV-MAIL 10\nx"),
+        None,
+        "only the mark itself"
     );
 }
 
@@ -142,7 +147,6 @@ async fn a_round_takes_invoices_and_looks_at_every_mail_once() {
         "app-passwort",
         &Place::default(),
         since(),
-        Some(testing::pdfium()),
         Some(&model),
         &|_| false,
         &mut |looked| noted.push(looked.clone()),
@@ -173,16 +177,22 @@ async fn a_round_takes_invoices_and_looks_at_every_mail_once() {
         [
             "Kein Zeichen einer Rechnung, nicht übernommen.",
             "Übernommen: der PDF-Anhang (laut Modell eine Rechnung).",
-            "Übernommen als PDF der Mail (laut Modell eine Rechnung).",
+            "Übernommen als Text der Mail (laut Modell eine Rechnung).",
             "Laut Modell kein Beleg, nicht übernommen.",
             "Kein Zeichen einer Rechnung, nicht übernommen.",
         ]
     );
     assert_eq!(noted[1].files, [("R-1.pdf".to_owned(), invoice_pdf())]);
     let (name, made) = &noted[2].files[0];
-    assert_eq!(name, "Ihre Rechnung R-2026-11.pdf");
-    let pages = crate::pages::read(testing::pdfium(), made).unwrap();
-    assert_eq!(pages[0].lines[2].text, "Betreff: Ihre Rechnung R-2026-11");
+    assert_eq!(name, "Ihre Rechnung R-2026-11.txt");
+    assert_eq!(
+        String::from_utf8(made.clone()).unwrap(),
+        "FINANZARCHIV-MAIL 1\nVon: Beispiel GmbH <info@example.com>\nAn: test@example.com\nDatum: 26.11.2026 10:15\nBetreff: Ihre Rechnung R-2026-11\n\nRechnungsbetrag 23,80 EUR\nZahlbar bis 10.12.2026. Grüße aus Köln.\n"
+    );
+    assert_eq!(
+        (noted[1].kind, noted[2].kind, noted[3].kind),
+        (Some(Kind::Invoice), Some(Kind::Invoice), None)
+    );
     assert_eq!(
         noted[0].received_at.as_deref(),
         Some("2026-11-26T10:15:00+01:00")
@@ -211,7 +221,6 @@ async fn a_round_takes_invoices_and_looks_at_every_mail_once() {
         "app-passwort",
         &place,
         since(),
-        Some(testing::pdfium()),
         Some(&again),
         &|_| false,
         &mut |_| panic!("nothing is new"),
@@ -232,7 +241,6 @@ async fn without_the_model_the_rest_waits_and_a_known_mail_is_not_asked_about() 
         "app-passwort",
         &Place::default(),
         since(),
-        Some(testing::pdfium()),
         None,
         &|_| false,
         &mut |_| noted += 1,
@@ -248,7 +256,6 @@ async fn without_the_model_the_rest_waits_and_a_known_mail_is_not_asked_about() 
         "app-passwort",
         &Place::default(),
         since(),
-        Some(testing::pdfium()),
         Some(&model),
         &|_| true,
         &mut |_| panic!("every mail is known"),
@@ -275,7 +282,8 @@ fn a_mail_is_kept_once_and_its_staged_pdfs_go_once_the_intake_took_them() {
     let looked = Looked {
         hash: head.hash.clone(),
         received_at: head.received_at.clone(),
-        verdict: "Übernommen".into(),
+        verdict: "Übernommen: der PDF-Anhang (laut Modell eine Rechnung).".into(),
+        kind: Some(Kind::Invoice),
         files: vec![("R-1.pdf".into(), invoice_pdf())],
     };
     assert!(!reader::is_known(conn, &head.hash).unwrap());
@@ -295,7 +303,13 @@ fn a_mail_is_kept_once_and_its_staged_pdfs_go_once_the_intake_took_them() {
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .unwrap();
-    assert_eq!(stored, ("Übernommen".into(), 1));
+    assert_eq!(
+        stored,
+        (
+            "Übernommen: der PDF-Anhang (laut Modell eine Rechnung).".into(),
+            1
+        )
+    );
 
     crate::intake::jobs::enqueue(conn, &paths, crate::documents::Source::Mail, testing::t0())
         .unwrap();

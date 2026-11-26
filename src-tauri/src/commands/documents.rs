@@ -225,6 +225,31 @@ pub fn dismiss_failed(intake: State<'_, Arc<Intake>>) -> Result<(), CommandError
 
 /// A page of a document as an image for the window, as a data URL. The width is rounded up to
 /// one of `previews::WIDTHS`.
+/// The text of a mail kept as its text (#31), for the preview: its head and text, without the mark.
+#[tauri::command]
+#[specta::specta]
+pub fn mail_text(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    document: u32,
+) -> Result<String, CommandError> {
+    let original = {
+        let opened = archive.lock().map_err(|_| CommandError::internal())?;
+        let Opened::Ready(ready) = &*opened else {
+            return Err(CommandError::archive_not_ready());
+        };
+        let root = documents::archive_root(ready.path());
+        match documents::stored_of(ready.connection(), &root, i64::from(document))
+            .map_err(|_| CommandError::internal())?
+        {
+            Some((path, documents::FileType::Mail)) => path,
+            _ => return Err(CommandError::not_found()),
+        }
+    };
+    let bytes = std::fs::read(original).map_err(|_| CommandError::not_found())?;
+    let text = String::from_utf8_lossy(&bytes);
+    Ok(text.lines().skip(1).collect::<Vec<_>>().join("\n"))
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn page_image(
