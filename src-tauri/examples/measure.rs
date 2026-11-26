@@ -1167,6 +1167,69 @@ fn measure_accounts(database: &Path, out: &Path) {
     write(&out.join("private").join("archive-accounts.json"), &result);
 }
 
+/// The selector of the downloads (#28) on a folder, read only: for each file at its top level,
+/// taken or left out and why. Counts only, the model unloaded afterwards, within the GPU budget.
+fn measure_downloads(pdfium: &Pdfium, model_name: &str, folder: &Path, out: &Path) {
+    let model = ollama::Ollama::from_env(model_name).ok();
+    let started = std::time::Instant::now();
+    let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
+    let mut files: Vec<PathBuf> = fs::read_dir(folder)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && finanzarchiv2_lib::folders::wanted(path))
+        .collect();
+    files.sort();
+    let mut stopped = None;
+    for path in &files {
+        if started.elapsed() > MODEL_BUDGET {
+            stopped = Some("Zeitbudget erreicht");
+            break;
+        }
+        let verdict = finanzarchiv2_lib::downloads::select(
+            Some(pdfium),
+            model.as_ref().map(|model| model as &dyn LocalModel),
+            path,
+        );
+        // The reason without the kind's word, so the count groups by the way of the decision.
+        let reason = verdict
+            .reason
+            .split(" (")
+            .next()
+            .unwrap_or(&verdict.reason)
+            .to_owned();
+        let how = if verdict.take {
+            format!(
+                "taken: {}",
+                verdict
+                    .reason
+                    .trim_start_matches("Aus den Downloads übernommen ")
+                    .trim_matches(['(', ')', '.'])
+            )
+        } else {
+            format!("left: {reason}")
+        };
+        let tally = tallies.entry(how).or_default();
+        tally.total += 1;
+        tally.right += 1;
+    }
+    if let Some(model) = &model {
+        let _ = model.unload();
+    }
+    let mut result = report("downloads", &tallies);
+    result["reader"] = json!("downloads");
+    result["files"] = json!(files.len());
+    result["seconds"] = json!(started.elapsed().as_secs());
+    result["stopped"] = json!(stopped);
+    println!(
+        "  {} Dateien, {} s",
+        files.len(),
+        started.elapsed().as_secs()
+    );
+    write(&out.join("private").join("files-downloads.json"), &result);
+}
+
 fn report(name: &str, tallies: &BTreeMap<String, Tally>) -> Value {
     println!("{name}");
     let mut fields = serde_json::Map::new();
@@ -1212,6 +1275,15 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "downloads" {
+        let Some(folder) = value("--files") else {
+            eprintln!("--reader downloads braucht --files <Ordner>");
+            std::process::exit(1);
+        };
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        measure_downloads(pdfium, &model, Path::new(&folder), &out);
         return;
     }
     if reader == "csv" {

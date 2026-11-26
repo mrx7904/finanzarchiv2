@@ -30,6 +30,7 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
         16,
         include_str!("../../migrations/0016_watched_folders.sql"),
     ),
+    (17, include_str!("../../migrations/0017_downloads.sql")),
 ];
 
 #[derive(Debug, thiserror::Error)]

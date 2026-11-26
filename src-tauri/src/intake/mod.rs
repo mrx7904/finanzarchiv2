@@ -534,6 +534,11 @@ impl Intake {
         })
     }
 
+    /// The local model, when one was set.
+    pub fn model(&self) -> Option<Arc<dyn LocalModel>> {
+        self.model.get().cloned()
+    }
+
     /// The local model the workers ask for the fields code left empty. Set once, before `start`.
     pub fn set_model(&self, model: Arc<dyn LocalModel>) {
         let _ = self.model.set(model);

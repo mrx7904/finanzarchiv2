@@ -72,6 +72,8 @@ pub struct DocumentRow {
     pub original_name: String,
     /// Whether the owner typed the name.
     pub name_by_owner: bool,
+    /// Why the downloads folder took it (#28), null for every other way in.
+    pub arrival: Option<String>,
 }
 
 /// One result of a check, as "Warum?" shows it.
@@ -282,6 +284,7 @@ pub fn list_documents(
                 state: row.state,
                 original_name: row.original_name,
                 name_by_owner: row.name_by_owner,
+                arrival: row.arrival,
             })
         })
         .collect()

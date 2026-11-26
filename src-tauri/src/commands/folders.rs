@@ -151,3 +151,88 @@ pub fn open_folder(
         .map(|_| ())
         .map_err(|_| CommandError::internal())
 }
+
+/// The downloads as "Ordner" shows them: switched on or not, and what they gave.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadsState {
+    pub on: bool,
+    pub taken: u32,
+    pub left_out: u32,
+    /// Files that lay there when the downloads were switched on, not looked at yet.
+    pub lying: u32,
+}
+
+fn downloads_state_of(archive: &Mutex<Opened>) -> Result<DownloadsState, CommandError> {
+    let opened = archive.lock().map_err(|_| CommandError::internal())?;
+    let Opened::Ready(ready) = &*opened else {
+        return Err(CommandError::archive_not_ready());
+    };
+    let conn = ready.connection();
+    let on = crate::downloads::is_on(conn).map_err(|_| CommandError::internal())?;
+    let (taken, left_out, lying) =
+        crate::downloads::counts(conn).map_err(|_| CommandError::internal())?;
+    Ok(DownloadsState {
+        on,
+        taken,
+        left_out,
+        lying,
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn downloads_state(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+) -> Result<DownloadsState, CommandError> {
+    downloads_state_of(&archive)
+}
+
+/// "Downloads beobachten": on watches the downloads of the system and leaves what lies there.
+#[tauri::command]
+#[specta::specta]
+pub fn set_downloads(
+    app: AppHandle,
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    watcher: State<'_, Arc<Watcher>>,
+    on: bool,
+) -> Result<DownloadsState, CommandError> {
+    use tauri::Manager;
+    {
+        let opened = archive.lock().map_err(|_| CommandError::internal())?;
+        let Opened::Ready(ready) = &*opened else {
+            return Err(CommandError::archive_not_ready());
+        };
+        if on {
+            let dir = app
+                .path()
+                .download_dir()
+                .map_err(|_| CommandError::not_found())?;
+            crate::downloads::switch_on(ready.connection(), &dir, jiff::Timestamp::now())
+                .map_err(|_| CommandError::internal())?;
+        } else {
+            crate::downloads::switch_off(ready.connection())
+                .map_err(|_| CommandError::internal())?;
+        }
+    }
+    watcher.refresh();
+    downloads_state_of(&archive)
+}
+
+/// "Vorhandene prüfen": the files that lay in the downloads are looked at with the same rule.
+#[tauri::command]
+#[specta::specta]
+pub fn recheck_downloads(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    watcher: State<'_, Arc<Watcher>>,
+) -> Result<DownloadsState, CommandError> {
+    {
+        let opened = archive.lock().map_err(|_| CommandError::internal())?;
+        let Opened::Ready(ready) = &*opened else {
+            return Err(CommandError::archive_not_ready());
+        };
+        crate::downloads::recheck(ready.connection()).map_err(|_| CommandError::internal())?;
+    }
+    watcher.refresh();
+    downloads_state_of(&archive)
+}

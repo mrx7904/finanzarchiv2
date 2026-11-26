@@ -356,13 +356,18 @@ pub struct Listed {
     pub state: String,
     pub original_name: String,
     pub name_by_owner: bool,
+    /// Why the downloads folder took it (#28), None for every other way in.
+    pub arrival: Option<String>,
 }
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
     let mut statement = conn.prepare(
         "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state,
                 CASE WHEN state = 'waiting' AND EXISTS (SELECT 1 FROM field_values v WHERE v.document_id = documents.id AND v.reader = 'owner' AND v.field = 'hold' AND v.value = '1') THEN 'held' ELSE state END,
-                original_name, name_by_owner
+                original_name, name_by_owner,
+                (SELECT s.verdict FROM intake_jobs j JOIN seen_files s ON s.path = j.path
+                  JOIN watched_folders w ON w.id = s.folder_id AND w.is_downloads = 1
+                  WHERE j.document_id = documents.id AND j.source = 'folder' ORDER BY j.id DESC LIMIT 1)
          FROM documents ORDER BY imported_at DESC, id DESC",
     )?;
     statement
@@ -378,6 +383,7 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
                 state: row.get(7)?,
                 original_name: row.get(8)?,
                 name_by_owner: row.get(9)?,
+                arrival: row.get(10)?,
             })
         })?
         .collect()

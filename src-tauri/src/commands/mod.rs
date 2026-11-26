@@ -167,6 +167,9 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             folders::remove_folder,
             folders::move_inbox,
             folders::open_folder,
+            folders::downloads_state,
+            folders::set_downloads,
+            folders::recheck_downloads,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
