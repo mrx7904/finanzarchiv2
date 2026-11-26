@@ -1344,7 +1344,17 @@ fn measure_mail(model_name: &str, database: &Path, days: i64, out: &Path) {
 
 /// Invented parties with the category they belong to (#43). Names of shops and services are public,
 /// the rest is made up. "keine" is the right answer for a payment service and a private person.
-const INVENTED_PARTIES: &[(&str, i64, u32, &str, &[&str], &str)] = &[
+/// Name, typical cents, bookings, rhythm, purposes, the right category.
+type InventedParty = (
+    &'static str,
+    i64,
+    u32,
+    &'static str,
+    &'static [&'static str],
+    &'static str,
+);
+
+const INVENTED_PARTIES: &[InventedParty] = &[
     (
         "Beispiel Software GmbH",
         385_000,
