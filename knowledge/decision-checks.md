@@ -27,3 +27,13 @@
 
 - 122 of 132 documents are filed by themselves: the 110 statements, 11 of 18 invoices and the 1 receipt. 10 wait, 7.6 %, within the owner's limit of 10 %.
 - Why they wait (a document can fail more than one check): code and model read a different gross 4, the kind is unclear 3 (the 2 documents of kind `other` and the scan, which the image named `other`), another document with the same sender, number and gross 2, the gross read only from the page image 2, net plus VAT is not the gross 2.
+
+## "Prüfen": the review as questions (#17)
+
+- The app has a sidebar (`SidebarRow` of the design system) with "Dokumente" and "Prüfen", which counts what waits. The path in the top bar reads "Prüfen › <group> › <document>", each earlier segment leads back.
+- A waiting document belongs to the group of its first failed check, in the order undone, kind, present, source, agree, sum, duplicate (`review::groups`). A group lists its documents oldest first with their question.
+- A question names the value, who read it and the sender, for example "Ist 49,99 € der Bruttobetrag von „Beispiel Stadtwerke GmbH“?". The page lies beside it with the line of the first reading marked.
+- "Ja" stores the value as a value of the owner (reader `owner`, with the page and line of the reading). "Nein" shows the different readings beside each other and a field for the right value. A typed amount goes through `Cents::parse_de`, a refused one shows its reason. An unclear kind is answered by picking the kind. A failed sum, a possible duplicate and an undone filing are answered with "Ja" (accepted) or "Nein" (it keeps waiting).
+- What the owner accepts is a value of the owner under `accept:<check>`. It turns that failed check into a passed one, "Von dir bestätigt: …". A document filed after such an answer gets the rule `file.owner-answered:1`. A value of the owner counts alone and stands above every reading, the readings beside it no longer disagree.
+- After every answer the checks run again (`checks::decide`): the document is filed or waits with what is left, and "Prüfen" moves on to the next document of the group.
+- Keys: J and K move in a list, Enter opens, 1 and 2 pick a reading once "Nein" opened them, Escape goes back (`src/review/keys.ts`, tested in `keys.test.ts`).

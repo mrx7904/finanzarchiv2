@@ -2,6 +2,7 @@
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
 pub mod documents;
+pub mod review;
 
 use std::sync::{Arc, Mutex};
 
@@ -28,9 +29,18 @@ pub enum ErrorKind {
     ArchiveNotReady,
     /// What was asked for is not in the archive.
     NotFound,
+    /// The owner's answer was not taken, the message says why (#17).
+    Refused,
 }
 
 impl CommandError {
+    pub(crate) fn refused(message: String) -> Self {
+        Self {
+            kind: ErrorKind::Refused,
+            message,
+        }
+    }
+
     pub(crate) fn internal() -> Self {
         Self {
             kind: ErrorKind::Internal,
@@ -133,6 +143,9 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             documents::page_image,
             documents::document_checks,
             documents::undo_filing,
+            review::review_groups,
+            review::review_questions,
+            review::answer_question,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
