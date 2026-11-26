@@ -1,0 +1,12 @@
+{
+  "corpus": "categories",
+  "fields": {
+    "categories": {
+      "right": 31,
+      "total": 31
+    }
+  },
+  "reader": "categories",
+  "seconds": 18,
+  "wrong": []
+}

@@ -31,7 +31,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | touch a check, filing by itself, `decisions`, "Warum?", "Rückgängig" or "Prüfen" | [`knowledge/decision-checks.md`](./knowledge/decision-checks.md) |
 | touch the name of a document, its templates or "Umbenennen" | [`knowledge/decision-names.md`](./knowledge/decision-names.md) |
 | touch a statement, its layouts, `accounts`, `statements`, `bookings` or the balance of an account | [`knowledge/decision-statements.md`](./knowledge/decision-statements.md) |
-| touch a party, its spellings, a category or a correction | [`knowledge/decision-parties.md`](./knowledge/decision-parties.md) |
+| touch a party, its spellings, a category, the categories by the model, the payee of a PayPal booking or a correction | [`knowledge/decision-parties.md`](./knowledge/decision-parties.md) |
 | touch a watched folder, the inbox folder or the downloads | [`knowledge/decision-folders.md`](./knowledge/decision-folders.md) |
 | touch a mailbox, IMAP, the app password, "Postfächer" or invoices from mail | [`knowledge/decision-mail.md`](./knowledge/decision-mail.md) |
 | touch PayPal payments, a receipt paired with its invoice, Amazon orders or "Bestellungen" | [`knowledge/decision-payments.md`](./knowledge/decision-payments.md) |

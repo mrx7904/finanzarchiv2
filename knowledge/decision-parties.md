@@ -26,3 +26,31 @@ The owner's archive (a copy, migrated and read again, counts only):
 | Filed documents with a party | 19 of 19 |
 | Categories | 28 |
 | Bookings with a category | 0, until the owner chooses |
+
+# Decision: the model gives the parties their categories
+
+**Decided:** 2026-11-26 (#43, FA-46), the owner: "Sorge dafür dass das Modell gut die Kategorien zuordnen kann", no explanations in the window · applies to `src-tauri/src/categorize.rs`, `parties::payee_of`, `parties::payees`, `parties.category_by` and `parties.category_asked_at` (migration 0022)
+
+## Decision
+
+- **Asked per party, once.** A party without a category, never asked and with bookings, is asked: its name, the count of bookings in and out, a typical amount, the rhythm (weekly to yearly), the kinds of booking, up to six purposes and the senders of its documents (`categorize::context_of`). The model answers one category of the list or "keine". `category_asked_at` marks it asked, so a "keine" is not asked again.
+- **The owner wins.** A category the owner chose, also none, is `category_by = 'owner'` and the model never touches it; categories from before the migration count as the owner's. The model's own are `'model'`.
+- **The code checks the model.** A category against the direction of most of the party's bookings (an income category for a party that is paid) is dropped. Payment services (PayPal, Klarna, Amazon Pay and the like) get none without asking: their payee tells.
+- **A payment service's payee is the party.** A bank prints the payee into the purpose of a PayPal booking ("… .PP/. Beispiel Musik, Ihr Einkauf bei Beispiel Musik"). `parties::payee_of` reads it, and the booking's party is that payee, when it is read and once at start for the bookings read before (`parties::payees`), unless the booking has a category of its own.
+- **In the background.** A pass a minute and a half after start, then every ten minutes, 40 parties at a time, the archive locked only to read and to keep. The window shows only the category, no reason.
+
+## Measured on 2026-11-26
+
+`categorize::tests` with invented parties and a stub model: the owner's choice stays, a "keine" is not asked again, a category against the direction is dropped, a payment service is not asked, a payee is read from both shapes of purpose.
+
+`examples/measure.rs --reader categories`, 31 invented parties of public shops and services, a payment service and a private person: 31 of 31 right with `gemma4:12b-it-qat`.
+
+A copy of the owner's archive, counts only, the model unloaded afterwards:
+
+| What | Count |
+|---|---|
+| PayPal bookings given their payee as party | 478, 477 of them with a category after the pass |
+| Parties asked | 264 in 128 s |
+| Parties with a category by the model | 248 |
+| Parties without one | 64: 45 only moves between own accounts, 6 payment services, 13 others |
+| Counted bookings without a category | 398 of 1,730 (875 before #43) |

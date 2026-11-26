@@ -281,3 +281,9 @@ Issue: #41
 The owner asks the archive in words. The local model reaches data only through fixed tools on a connection that cannot write, code formats and checks every number of an answer, and the sources of an answer are the documents and bookings the tools returned. Taken over from 1.0 (`decision-chat.md` there).
 
 Issue: #42
+
+### FA-46 Categories by the model
+
+Every party without a category gets one from the local model, from its name, its bookings and its documents. A category the owner chose is never changed by the model, and the window shows no explanation of the choice (the owner, 2026-11-26: "nicht so textlastig").
+
+Issue: #43
