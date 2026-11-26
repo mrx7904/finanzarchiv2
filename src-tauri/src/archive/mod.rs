@@ -96,6 +96,8 @@ fn open_with(
         snapshots::take(&conn, path, snapshots::Reason::BeforeMigration, now)?;
     }
     migrations::apply(&mut conn, &pending)?;
+    // The categories of #25 start with their list once, in a new archive and in one of before.
+    crate::parties::seed_categories(&conn)?;
     if existed && snapshots::daily_due(&snapshots::list(path)?, now) {
         snapshots::take(&conn, path, snapshots::Reason::Daily, now)?;
     }
