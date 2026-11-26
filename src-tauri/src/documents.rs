@@ -335,7 +335,9 @@ pub struct Listed {
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
     let mut statement = conn.prepare(
-        "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state, state, original_name, name_by_owner
+        "SELECT id, coalesce(name, original_name), kind, file_type, pages, imported_at, text_state,
+                CASE WHEN state = 'waiting' AND EXISTS (SELECT 1 FROM field_values v WHERE v.document_id = documents.id AND v.reader = 'owner' AND v.field = 'hold' AND v.value = '1') THEN 'held' ELSE state END,
+                original_name, name_by_owner
          FROM documents ORDER BY imported_at DESC, id DESC",
     )?;
     statement
@@ -354,6 +356,58 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
             })
         })?
         .collect()
+}
+
+/// The folder beside the archive where the original of a deleted document goes, so a wrong click
+/// can be undone by hand until the owner empties it (#17).
+pub const TRASH_FOLDER: &str = "Papierkorb";
+
+/// Removes a document from the archive: its row and every row about it, in one transaction. The
+/// original moves to `Papierkorb` beside the archive folder under its hash and original name.
+/// Returns where the original went, `None` when it was already missing.
+pub fn delete(conn: &Connection, root: &Path, id: i64) -> rusqlite::Result<Option<PathBuf>> {
+    let (sha256, original): (String, String) = conn.query_row(
+        "SELECT sha256, original_name FROM documents WHERE id = ?1",
+        [id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let stored = stored_of(conn, root, id)?;
+    let tx = conn.unchecked_transaction()?;
+    for table in [
+        "field_values",
+        "field_checks",
+        "page_lines",
+        "pages",
+        "decisions",
+        "e_invoices",
+        "intake_jobs",
+    ] {
+        tx.execute(&format!("DELETE FROM {table} WHERE document_id = ?1"), [id])?;
+    }
+    tx.execute("DELETE FROM documents WHERE id = ?1", [id])?;
+    tx.commit()?;
+    let Some((path, _)) = stored.filter(|(path, _)| path.exists()) else {
+        return Ok(None);
+    };
+    let trash = root
+        .parent()
+        .map_or_else(|| PathBuf::from(TRASH_FOLDER), |dir| dir.join(TRASH_FOLDER));
+    let safe_name: String = original
+        .chars()
+        .map(|c| {
+            if "/\\:*?\"<>|".contains(c) || c.is_control() {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+    let target = trash.join(format!("{}_{safe_name}", &sha256[..sha256.len().min(12)]));
+    // The rows are gone. A file that cannot be moved stays where it was, unused.
+    if std::fs::create_dir_all(&trash).is_ok() && std::fs::rename(&path, &target).is_ok() {
+        return Ok(Some(target));
+    }
+    Ok(None)
 }
 
 /// Where the original of a document lies and what it is.

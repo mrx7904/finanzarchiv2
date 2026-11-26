@@ -30,6 +30,7 @@ describe("the filing of #16", () => {
     expect(stateLabel("filed")).toBe("abgelegt");
     expect(stateLabel("waiting")).toBe("wartet auf dich");
     expect(stateLabel("open")).toBe("noch nicht geprüft");
+    expect(stateLabel("held")).toBe("zurückgehalten");
   });
 
   it("names the rule that filed it and when", () => {

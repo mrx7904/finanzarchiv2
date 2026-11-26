@@ -38,6 +38,8 @@ export function stateLabel(state: string): string {
       return "abgelegt";
     case "waiting":
       return "wartet auf dich";
+    case "held":
+      return "zurückgehalten";
     default:
       return "noch nicht geprüft";
   }
@@ -50,5 +52,6 @@ export function filingLine(state: string, rule: string | null, decidedAt: string
   }
   if (state === "filed") return "Abgelegt.";
   if (state === "waiting") return "Wartet auf dich, weil:";
+  if (state === "held") return "Von dir zurückgehalten, es wird nicht von selbst abgelegt.";
   return "Noch nicht geprüft.";
 }

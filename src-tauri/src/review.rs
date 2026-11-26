@@ -66,8 +66,16 @@ fn first_reason(conn: &Connection, document: i64) -> rusqlite::Result<Option<Str
     }))
 }
 
+/// The field under which the owner sets a document aside: it stays unfiled and leaves "Prüfen".
+pub const HOLD: &str = "hold";
+
+/// The documents that wait for the owner, those set aside excepted.
 fn waiting(conn: &Connection) -> rusqlite::Result<Vec<i64>> {
-    conn.prepare("SELECT id FROM documents WHERE state = 'waiting' ORDER BY imported_at, id")?
+    conn.prepare(
+        "SELECT id FROM documents d WHERE state = 'waiting' AND NOT EXISTS (
+             SELECT 1 FROM field_values v WHERE v.document_id = d.id AND v.reader = 'owner' AND v.field = 'hold' AND v.value = '1')
+         ORDER BY imported_at, id",
+    )?
         .query_map([], |row| row.get(0))?
         .collect()
 }
@@ -393,7 +401,10 @@ pub fn answer(
         }
         (KIND, _) => return Err(Refused::Mismatch.into()),
         (UNDONE | DUPLICATE, Answer::Yes) => accept(&tx)?,
-        (UNDONE | DUPLICATE, Answer::No) => {}
+        // "Nein, nicht ablegen": the document is set aside, unfiled, and leaves "Prüfen".
+        (UNDONE, Answer::No) => store_owner(&tx, document, HOLD, "zurückgehalten", "1", None, now)?,
+        // A duplicate is answered with "Nein" by deleting it, `delete_duplicate`.
+        (DUPLICATE, _) => return Err(Refused::Mismatch.into()),
         (SUM, Answer::Yes) => accept(&tx)?,
         (_, Answer::No) => {}
         (_, answer) => {
@@ -432,6 +443,30 @@ pub fn answer(
     } else {
         "waiting".into()
     })
+}
+
+/// "Nein, das ist ein Doppel": the document leaves the archive (its original goes to the
+/// `Papierkorb`), and the documents that waited as its duplicate are checked again.
+pub fn delete_duplicate(
+    conn: &Connection,
+    root: &std::path::Path,
+    document: i64,
+    now: Timestamp,
+) -> Result<Option<std::path::PathBuf>, AnswerError> {
+    if first_reason(conn, document)?.as_deref() != Some(DUPLICATE) {
+        return Err(Refused::Mismatch.into());
+    }
+    let moved = crate::documents::delete(conn, root, document)?;
+    let twins: Vec<i64> = conn
+        .prepare(
+            "SELECT DISTINCT document_id FROM field_checks WHERE check_id = ?1 AND passed = 0",
+        )?
+        .query_map([DUPLICATE], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    for twin in twins {
+        checks::decide(conn, twin, now)?;
+    }
+    Ok(moved)
 }
 
 #[cfg(test)]

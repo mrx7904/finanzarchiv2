@@ -181,3 +181,29 @@ pub fn answer_question(
         })
     })
 }
+
+/// "Nein, das ist ein Doppel": deletes the document, its original goes to the `Papierkorb` beside
+/// the archive. The documents that waited as its duplicate are checked again.
+#[tauri::command]
+#[specta::specta]
+pub fn delete_duplicate(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    document: u32,
+) -> Result<(), CommandError> {
+    let opened = archive.lock().map_err(|_| CommandError::internal())?;
+    let Opened::Ready(ready) = &*opened else {
+        return Err(CommandError::archive_not_ready());
+    };
+    let root = crate::documents::archive_root(ready.path());
+    review::delete_duplicate(
+        ready.connection(),
+        &root,
+        i64::from(document),
+        jiff::Timestamp::now(),
+    )
+    .map(|_| ())
+    .map_err(|error| match error {
+        AnswerError::Refused(refused) => CommandError::refused(refused.to_string()),
+        AnswerError::Database(_) => CommandError::internal(),
+    })
+}
