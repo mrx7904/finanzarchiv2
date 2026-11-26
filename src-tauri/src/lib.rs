@@ -117,9 +117,21 @@ pub fn run() -> ExitCode {
             if workers > 0 {
                 watcher.start();
             }
+            // The mailboxes (#31): a round a minute after start, then every 15 minutes.
+            let mail_reader = mail::reader::Reader::new(
+                Arc::clone(&archive),
+                Arc::clone(&intake),
+                pdfium,
+                intake.model(),
+                Box::new(mail::secrets::Keychain),
+            );
+            if workers > 0 {
+                mail_reader.start();
+            }
             app.manage(archive);
             app.manage(intake);
             app.manage(watcher);
+            app.manage(mail_reader);
             Ok(())
         })
         .on_window_event(|window, event| {

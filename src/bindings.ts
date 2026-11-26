@@ -78,11 +78,13 @@ export const commands = {
 	/**  "Vorhandene prüfen": the files that lay in the downloads are looked at with the same rule. */
 	recheckDownloads: (options?: InvokeOptions) => typedError<DownloadsState, CommandError>(__TAURI_INVOKE("recheck_downloads", undefined, options)),
 	listMailboxes: (options?: InvokeOptions) => typedError<MailboxRow_Serialize[], CommandError>(__TAURI_INVOKE("list_mailboxes", undefined, options)),
-	/**  Logs in once and adds the mailbox only when that worked. */
+	/**  Logs in once and adds the mailbox only when that worked. Its first round starts at once. */
 	addMailbox: (address: string, password: string, options?: InvokeOptions) => typedError<MailboxRow_Serialize[], CommandError>(__TAURI_INVOKE("add_mailbox", { address, password }, options)),
 	/**  Tries the login again. A failed login is shown with the mailbox, not as a failure. */
 	testMailbox: (id: number, options?: InvokeOptions) => typedError<MailboxRow_Serialize[], CommandError>(__TAURI_INVOKE("test_mailbox", { id }, options)),
 	removeMailbox: (id: number, options?: InvokeOptions) => typedError<MailboxRow_Serialize[], CommandError>(__TAURI_INVOKE("remove_mailbox", { id }, options)),
+	/**  Reads every mailbox now, as the round every 15 minutes would. */
+	readMailNow: (options?: InvokeOptions) => typedError<MailboxRow_Serialize[], CommandError>(__TAURI_INVOKE("read_mail_now", undefined, options)),
 };
 
 /** Events */
@@ -432,6 +434,12 @@ export type MailboxRow_Deserialize = {
 	checkedAt?: string | null,
 	/**  Why the last login failed, in German, null when it worked. */
 	problem?: string | null,
+	/**  When the last round through it ended, UTC, ISO 8601. */
+	readAt?: string | null,
+	/**  Mails looked at so far (#31). */
+	looked: number,
+	/**  Mails that gave the archive a document. */
+	taken: number,
 };
 
 /**  A mailbox as "Postfächer" shows it. */
@@ -442,6 +450,12 @@ export type MailboxRow_Serialize = {
 	checkedAt: string | null,
 	/**  Why the last login failed, in German, null when it worked. */
 	problem: string | null,
+	/**  When the last round through it ended, UTC, ISO 8601. */
+	readAt: string | null,
+	/**  Mails looked at so far (#31). */
+	looked: number,
+	/**  Mails that gave the archive a document. */
+	taken: number,
 };
 
 /**  A move a booking is half of. */

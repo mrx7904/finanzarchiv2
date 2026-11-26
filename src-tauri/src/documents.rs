@@ -274,7 +274,7 @@ fn write_once(target: &Path, bytes: &[u8]) -> std::io::Result<()> {
     fs::rename(&partial, target)
 }
 
-fn hex(bytes: &[u8]) -> String {
+pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
