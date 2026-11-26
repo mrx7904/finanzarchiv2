@@ -225,3 +225,59 @@ Issue: #31
 A payment mail of PayPal is read by code (payee, amount, day, transaction code) and stands for the payment when no invoice of the seller comes. Two mails of one payment are one. Amazon orders find their invoice where it can be had.
 
 Issue: #32
+
+## Stage 5 Understanding
+
+### FA-37 Income and spending
+
+The archive tells its income and spending per month and per year from the bookings, the only source of money, with the moves between own accounts left out and a refund lowering what it refunds. Every sum opens the bookings behind it, by category and by party.
+
+Issue: #33
+
+### FA-38 Recurring payments
+
+Payments that come again (subscriptions, contracts, insurances, rent) are found from the bookings by their party, their rhythm and their amount, with the next one expected and a change of the amount named.
+
+Issue: #34
+
+### FA-39 Salary from the payslips
+
+Brutto, Netto and the deductions of every month come from the payslips, a month without a payslip within the archived range is named as missing, never counted as zero.
+
+Issue: #35
+
+### FA-40 Balances over time
+
+The balance of each account and of all of them is told for every day of the archived range, from the bookings and the balances the banks printed.
+
+Issue: #36
+
+### FA-41 The evaluations in the window
+
+A view "Auswertungen" shows the figures of FA-37 to FA-40 for a year the owner picks, in a look the owner chose from variants at real size with the archive's own numbers, light and dark.
+
+Issue: #37, #38
+
+### FA-42 Savings hints
+
+Observations from the archive that can save money: a recurring payment whose amount rose, two recurring payments of the same kind, fees, a category above the year before. Each says what it rests on with its numbers and opens the bookings, and none is financial or investment advice.
+
+Issue: #39
+
+### FA-43 The start view
+
+A view "Start" says in a sentence what waits and lists the next steps, each with one button that does it: documents in "Prüfen", orders without an invoice, a mailbox or a folder with a problem, a statement missing in an account, the local model out of reach. A few key figures of the running year stand beside them.
+
+Issue: #40
+
+### FA-44 Taxes for the return
+
+What is relevant for the owner's own tax return is assigned to invoices and bookings, never copied, and summed per tax year by the day it was paid, with the values the law fixes per year from checked sources. It names form and section, never computes a refund and never presents a matter as settled. Taken over from 1.0 (`decision-tax.md` there, 2026-10-31), the owner's situation unchanged (2026-11-26).
+
+Issue: #41
+
+### FA-45 The chat over the archive
+
+The owner asks the archive in words. The local model reaches data only through fixed tools on a connection that cannot write, code formats and checks every number of an answer, and the sources of an answer are the documents and bookings the tools returned. Taken over from 1.0 (`decision-chat.md` there).
+
+Issue: #42

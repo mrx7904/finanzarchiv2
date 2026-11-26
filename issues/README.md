@@ -80,6 +80,27 @@ Order of work: #20 first, then #21, #22 and #25, then #23 and #24, then #26.
 
 Order of work: #27 first, then #28 and #29, then #30 and #31, then #32.
 
+## Stage 5 Understanding
+
+| # | Title | Requirements | Depends on | Status |
+|---|---|---|---|---|
+| [#33](033-income-and-spending.md) | Income and spending from the bookings | FA-37 | #23, #25 | open |
+| [#34](034-recurring-payments.md) | Recurring payments | FA-38 | #33 | open |
+| [#35](035-salary-from-payslips.md) | Salary from the payslips | FA-39 | #13 | open |
+| [#36](036-balances-over-time.md) | Balances over time | FA-40 | #22 | open |
+| [#37](037-evaluation-variants.md) | Variants of the evaluations, chosen by the owner | FA-41 | #33, #34, #35, #36 | open |
+| [#38](038-evaluations-view.md) | The view "Auswertungen" | FA-41 | #37 | open |
+| [#39](039-savings-hints.md) | Savings hints | FA-42 | #34, #33 | open |
+| [#40](040-start-view.md) | The start view | FA-43 | #38, #39 | open |
+| [#41](041-taxes.md) | Taxes for the return | FA-44 | #33, #24 | open |
+| [#42](042-chat.md) | The chat over the archive | FA-45 | #33, #34, #35, #41 | open |
+
+**Stage 5 is done when the owner sees on "Start" what to do, reads what a year brought in "Auswertungen" with every figure leading to its bookings, collects the return in "Steuern" and gets right numbers from the chat, all on the real archive.**
+
+**Status:** Cut on 2026-11-26 with the owner's answers (all four parts, savings hints added by the owner, the tax situation as in 1.0, the look from variants at real size) and begun on the owner's word ("weiter mit Stufe 5") while stage 4 waits for the owner's look.
+
+Order of work: #33 first, then #34, #35 and #36, then #37 and #38, then #39 and #40, then #41, then #42.
+
 ## Later stages
 
-Stages 3 to 6 of `spec/concept.md` are cut into issues when their turn comes, with what stage 1 taught.
+Stage 6 of `spec/concept.md` is cut into issues when its turn comes.
