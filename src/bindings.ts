@@ -23,7 +23,7 @@ export const commands = {
 	pageImage: (document: number, page: number, width: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("page_image", { document, page, width }, options)),
 	/**
 	 *  A page of a document as an image for the window, as a data URL. The width is rounded up to
-	 *  one of `previews::WIDTHS`.
+	 *  one of `previews::WIDTHS` (160 to 2560 px).
 	 *  The text of a mail kept as its text (#31), for the preview: its head and text, without the mark.
 	 */
 	mailText: (document: number, options?: InvokeOptions) => typedError<string, CommandError>(__TAURI_INVOKE("mail_text", { document }, options)),
