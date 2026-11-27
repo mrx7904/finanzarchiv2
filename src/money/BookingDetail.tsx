@@ -3,7 +3,8 @@ import { type BookingDetail as Detail, type CategoryRow, type DocumentCard, comm
 import { MailMark } from "../documents/MailText";
 import { PageImage } from "../documents/PageImage";
 import { kindLabel } from "../documents/describe";
-import { Button, SelectField, cn } from "../ui";
+import { AssignTax } from "../taxes/Taxes";
+import { Button, SelectField } from "../ui";
 import { cardLine, formatIsoDay, partyYearLine } from "./describe";
 
 // An opened booking of "Umsätze" (#26, the owner's word of 2026-11-26): the booking itself, the
@@ -28,6 +29,7 @@ export function BookingDetail({
 }) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [page, setPage] = useState(false);
+  const [taxing, setTaxing] = useState(false);
 
   useEffect(() => {
     void commands.bookingDetail(booking).then((result) => {
@@ -67,7 +69,10 @@ export function BookingDetail({
             {detail.valueDay && detail.valueDay !== detail.day ? `, Wert ${formatIsoDay(detail.valueDay)}` : ""} · {detail.account}
           </span>
         </div>
-        <span className={cn("text-title font-semibold tabular-nums", detail.incoming ? "text-ok" : "text-fg")}>{detail.amount}</span>
+        <span className="text-title font-semibold text-fg tabular-nums">
+          {detail.incoming ? "+" : ""}
+          {detail.amount}
+        </span>
       </div>
 
       {detail.purpose ? <p className="whitespace-pre-wrap break-words text-fg">{detail.purpose}</p> : null}
@@ -84,6 +89,10 @@ export function BookingDetail({
             Für alle von {detail.party}
           </Button>
         ) : null}
+        <Button size="small" kind="plain" onClick={() => setTaxing(true)}>
+          Für die Steuer …
+        </Button>
+        <AssignTax open={taxing} booking={detail.id} onClose={() => setTaxing(false)} />
       </div>
 
       <section className="flex flex-col gap-2" aria-label="Beleg">
@@ -135,7 +144,10 @@ export function BookingDetail({
                 <span className="text-fg-muted">
                   {formatIsoDay(brief.day)} · {brief.account}
                 </span>
-                <span className={brief.incoming ? "text-ok" : "text-fg"}>{brief.amount}</span>
+                <span className="text-fg tabular-nums">
+                  {brief.incoming ? "+" : ""}
+                  {brief.amount}
+                </span>
               </li>
             ))}
           </ul>
