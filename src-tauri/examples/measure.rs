@@ -1017,6 +1017,145 @@ fn measure_csv(folder: &Path, out: &Path) {
     write(&out.join("private").join("files-csv.json"), &result);
 }
 
+/// What a chat question should bring: an amount the core computes, or the fixed sentence.
+enum Expected {
+    Cents(i64),
+    Nothing,
+}
+
+/// The chat on a writable copy of the owner's archive (#42), migrated first, then asked on a
+/// read-only connection: whether each answer names the amount the core computes, or the fixed
+/// sentence where there is nothing, and the time per answer. Counts only; the answers go to
+/// `private/`. The model unloaded afterwards, within the GPU budget.
+fn measure_chat(model_name: &str, database: &Path, out: &Path) {
+    use finanzarchiv2_lib::evaluations::{self, Side};
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let conn = ready.connection();
+    let Ok(model) = ollama::Ollama::from_env(model_name) else {
+        eprintln!("Ollama ist nicht erreichbar");
+        std::process::exit(1);
+    };
+    let today = jiff::tz::Offset::UTC
+        .to_datetime(jiff::Timestamp::now())
+        .date();
+    let year = |y: i32| evaluations::year(conn, y).ok();
+    let category = |y: i32, name: &str| {
+        year(y).and_then(|e| {
+            e.categories
+                .iter()
+                .find(|p| p.name.as_deref() == Some(name))
+                .map(|p| p.sum.cents)
+        })
+    };
+    let total = finanzarchiv2_lib::balances::all(conn)
+        .ok()
+        .and_then(|(_, total)| total.last().map(|(_, c)| c.value()));
+    let mut questions: Vec<(&str, Option<Expected>)> = vec![
+        (
+            "Wie viel habe ich 2025 insgesamt ausgegeben?",
+            year(2025).map(|e| Expected::Cents(e.total(Side::Spending).cents)),
+        ),
+        (
+            "Was kam 2025 an Einnahmen herein?",
+            year(2025).map(|e| Expected::Cents(e.total(Side::Income).cents)),
+        ),
+        (
+            "Wie viel habe ich im März 2026 ausgegeben?",
+            year(2026).map(|e| Expected::Cents(e.spending[2].cents)),
+        ),
+        (
+            "Was habe ich im Oktober 2025 ausgegeben?",
+            year(2025).map(|e| Expected::Cents(e.spending[9].cents)),
+        ),
+        (
+            "Was habe ich 2025 für Lebensmittel ausgegeben?",
+            category(2025, "Lebensmittel").map(Expected::Cents),
+        ),
+        (
+            "Wie viel ging 2024 an Bankgebühren?",
+            category(2024, "Bankgebühren").map(Expected::Cents),
+        ),
+        (
+            "Wie hoch sind meine Ausgaben für Restaurant und Café 2025?",
+            category(2025, "Restaurant und Café").map(Expected::Cents),
+        ),
+        (
+            "Wie ist mein letzter Kontostand über alle Konten?",
+            total.map(Expected::Cents),
+        ),
+        (
+            "Wie viel Netto habe ich laut Lohnabrechnungen 2025 bekommen?",
+            Some(Expected::Nothing),
+        ),
+        (
+            "Habe ich ein Dokument zu einem Segelboot?",
+            Some(Expected::Nothing),
+        ),
+    ];
+    questions.retain(|(_, expected)| expected.is_some());
+    let path = ready.path().to_path_buf();
+    let Ok(read_only) = finanzarchiv2_lib::chat::read_only(&path) else {
+        eprintln!("Die Kopie ließ sich nicht lesend öffnen");
+        std::process::exit(1);
+    };
+    let started = std::time::Instant::now();
+    let mut right = 0;
+    let mut asked = 0;
+    let mut seconds = Vec::new();
+    let mut answers = Vec::new();
+    for (question, expected) in &questions {
+        if started.elapsed() > MODEL_BUDGET {
+            break;
+        }
+        let one = std::time::Instant::now();
+        let answer = finanzarchiv2_lib::chat::answer(&read_only, &model, question, &[], today);
+        seconds.push(one.elapsed().as_secs_f64());
+        asked += 1;
+        let (text, lookups) = match &answer {
+            Ok(answer) => (answer.text.clone(), answer.lookups.clone()),
+            Err(error) => (format!("Fehler: {error}"), Vec::new()),
+        };
+        let ok = match expected {
+            Some(Expected::Cents(cents)) => {
+                let wanted = finanzarchiv2_lib::money::Cents::new(cents.abs())
+                    .to_string()
+                    .replace(' ', "");
+                text.replace([' ', '\u{a0}'], "").contains(&wanted)
+            }
+            Some(Expected::Nothing) => {
+                text == finanzarchiv2_lib::chat::NOTHING_FOUND || !text.contains(" €")
+            }
+            None => false,
+        };
+        right += u32::from(ok);
+        println!(
+            "  {}: {} in {:.1} s",
+            if ok { "richtig" } else { "falsch" },
+            lookups.len(),
+            seconds.last().unwrap_or(&0.0)
+        );
+        answers
+            .push(json!({ "question": question, "answer": text, "lookups": lookups, "right": ok }));
+    }
+    let _ = model.unload();
+    let mean =
+        seconds.iter().sum::<f64>() / f64::from(u32::try_from(seconds.len().max(1)).unwrap_or(1));
+    println!("  {right} von {asked} richtig, im Schnitt {mean:.1} s");
+    write(
+        &out.join("private").join("chat.json"),
+        &json!({ "reader": "chat", "model": model_name, "asked": asked, "right": right, "mean_seconds": mean }),
+    );
+    write(
+        &out.join("private").join("chat-answers.json"),
+        &json!(answers),
+    );
+}
+
 /// The savings hints on a writable copy of the owner's archive (#39): how many of each kind, with
 /// the categories the archive has (a copy after a pass of #43 for real ones). Counts only; the lines
 /// go to a sample in `private/` for the owner to check.
@@ -1960,6 +2099,15 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "chat" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader chat braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        let model = value("--model").unwrap_or_else(|| readers::model::DEFAULT_MODEL.into());
+        measure_chat(&model, Path::new(&database), &out);
         return;
     }
     if reader == "hints" {

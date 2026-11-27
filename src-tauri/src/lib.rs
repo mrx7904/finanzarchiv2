@@ -4,6 +4,7 @@ pub mod accounts;
 pub mod archive;
 pub mod balances;
 pub mod categorize;
+pub mod chat;
 pub mod checks;
 pub mod commands;
 pub mod documents;

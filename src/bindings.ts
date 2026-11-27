@@ -83,6 +83,11 @@ export const commands = {
 	assignTax: (input: TaxAssignmentInput_Deserialize, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("assign_tax", { input }, options)),
 	unassignTax: (document: number | null, booking: number | null, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("unassign_tax", { document, booking }, options)),
 	setTaxProfile: (year: number, profile: TaxProfileRow, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_tax_profile", { year, profile }, options)),
+	listChats: (options?: InvokeOptions) => typedError<ChatRow[], CommandError>(__TAURI_INVOKE("list_chats", undefined, options)),
+	chatMessages: (chat: number, options?: InvokeOptions) => typedError<ChatMessageRow_Serialize[], CommandError>(__TAURI_INVOKE("chat_messages", { chat }, options)),
+	deleteChat: (chat: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_chat", { chat }, options)),
+	/**  Asks the archive, in a new chat or one that exists. The answer is checked before it is kept. */
+	askChat: (chat: number | null, question: string, options?: InvokeOptions) => typedError<ChatAnswer_Serialize, CommandError>(__TAURI_INVOKE("ask_chat", { chat, question }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -377,6 +382,56 @@ export type CategoryRow = {
 	name: string,
 	/**  "in" or "out". */
 	direction: string,
+};
+
+export type ChatAnswer = ChatAnswer_Serialize | ChatAnswer_Deserialize;
+
+export type ChatAnswer_Deserialize = {
+	chat: number,
+	answer: ChatMessageRow_Deserialize,
+};
+
+export type ChatAnswer_Serialize = {
+	chat: number,
+	answer: ChatMessageRow_Serialize,
+};
+
+export type ChatMessageRow = ChatMessageRow_Serialize | ChatMessageRow_Deserialize;
+
+export type ChatMessageRow_Deserialize = {
+	id: number,
+	/**  "owner" or "archive". */
+	role: string,
+	text: string,
+	sources: ChatSource_Deserialize[],
+	askedAt: string,
+};
+
+export type ChatMessageRow_Serialize = {
+	id: number,
+	/**  "owner" or "archive". */
+	role: string,
+	text: string,
+	sources: ChatSource_Serialize[],
+	askedAt: string,
+};
+
+export type ChatRow = {
+	id: number,
+	title: string,
+	createdAt: string,
+};
+
+export type ChatSource = ChatSource_Serialize | ChatSource_Deserialize;
+
+export type ChatSource_Deserialize = {
+	document?: number | null,
+	booking?: number | null,
+};
+
+export type ChatSource_Serialize = {
+	document: number | null,
+	booking: number | null,
 };
 
 /**  One result of a check, as "Warum?" shows it. */
