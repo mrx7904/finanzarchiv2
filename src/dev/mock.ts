@@ -148,6 +148,17 @@ const internals = {
 };
 
 (window as unknown as { __TAURI_INTERNALS__: typeof internals }).__TAURI_INTERNALS__ = internals;
+
+// `&rail`, `&fold` and `&size=klein|gross` set what the owner fits (#53) for the check of the views (#51).
+{
+  const params = new URLSearchParams(window.location.search);
+  const set = (key: string, value: string | null) => (value === null ? window.localStorage.removeItem("finanzarchiv.layout." + key) : window.localStorage.setItem("finanzarchiv.layout." + key, value));
+  set("rail", params.has("rail") ? "1" : null);
+  set("documents.values", params.has("fold") ? "0" : null);
+  set("bookings.detail.shown", params.has("fold") ? "0" : null);
+  const size = params.get("size");
+  set("size", size === "klein" || size === "gross" ? size : null);
+}
 (window as unknown as { __TAURI_EVENT_PLUGIN_INTERNALS__: object }).__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => undefined };
 
 export {};

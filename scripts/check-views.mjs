@@ -35,6 +35,9 @@ const VIEWS = [
 ];
 const LISTS = ["view=documents", "view=documents&orders", "view=review", "view=accounts", "view=accounts&bookings=all"];
 const STATES = ["empty", "error", "slow"];
+/** What the owner fits (#53): the rail, a column folded, the sizes Klein and Groß, on the views with columns. */
+const FITS = ["rail", "fold", "size=klein", "size=gross"];
+const FITTED = ["view=documents", "view=accounts&bookings=all", "view=review", "view=evaluations", "view=chat"];
 /** The words of rule 11, "ohne Bank" that #48 added for an account without a balance of its bank, "gestiegen" of #52. */
 const WORDS = ["prüfen", "doppelt?", "fehlt", "bestätigt", "stimmt", "vollständig", "gelesen", "läuft", "beendet", "ohne Bank", "gestiegen"];
 
@@ -203,6 +206,12 @@ async function main() {
             await open(`mock&${view}`, size, theme);
             for (const found of await rules()) findings.push(`${view} ${size.join("×")} ${theme}: ${found}`);
           }
+        }
+      }
+      for (const view of FITTED) {
+        for (const fit of FITS) {
+          await open(`mock&${view}&${fit}`, [1440, 900], "light");
+          for (const found of await rules()) findings.push(`${view} ${fit}: ${found}`);
         }
       }
       for (const view of LISTS) {

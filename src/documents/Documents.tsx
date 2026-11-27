@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { type DocumentDetail, type DocumentRow_Serialize as DocumentRow, commands } from "../bindings";
 import { queuedLine } from "../intake/describe";
 import { useIntakeChanged } from "../intake/useIntakeChanged";
-import { BarActions, Button, Consequences, Dialog, EmptyState, Icon, List, ListRow, LoadingRows, Menu, SelectField, TextField, ValueRow, type ValueSource } from "../ui";
+import { BarActions, Button, columnStyle, Consequences, readFlag, useColumn, writeLayout, Dialog, EmptyState, Icon, List, ListRow, LoadingRows, Menu, SelectField, TextField, ValueRow, type ValueSource } from "../ui";
 import { countsLine, filterRows, kindLabel, rowDetail, rowState } from "./describe";
 import { Filing } from "./Filing";
 import { MailMark, MailText } from "./MailText";
@@ -40,6 +40,13 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [large, setLarge] = useState(false);
+  // What the owner fits (#53): the width of the list, and whether the values show.
+  const [listWidth, listDivider] = useColumn({ key: "documents.list", initial: 360, least: 280, most: 560, label: "Breite der Liste" });
+  const [valuesShown, setValuesShown] = useState(() => readFlag("documents.values", true));
+  const showValues = (shown: boolean) => {
+    setValuesShown(shown);
+    writeLayout("documents.values", shown ? null : false);
+  };
   useEffect(() => {
     if (focus !== null) setChosenHere(focus);
   }, [focus]);
@@ -69,6 +76,9 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
 
   const barActions = (
     <BarActions>
+      <Button kind="plain" aria-pressed={valuesShown} className={valuesShown ? "bg-selected" : undefined} onClick={() => showValues(!valuesShown)}>
+        Angaben
+      </Button>
       <Menu
         align="end"
         entries={[
@@ -118,19 +128,34 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
     );
   }
 
-  const shown = rows ? filterRows(rows, search, kind, state) : [];
+  // "Zustand ausblenden" filters nothing, it only hides the states (rule 25).
+  const shown = rows ? filterRows(rows, search, kind, state === "hide" ? "" : state) : [];
   const selected = rows?.find((row) => row.id === chosen) ?? null;
   return (
     <>
       {barActions}
       {large && selected && selected.fileType !== "mail" && <ReadLarge document={selected.id} name={selected.name} pages={selected.pages ?? 1} onClose={() => setLarge(false)} />}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(280px,360px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-4 px-6 pt-4 pb-6 min-[1300px]:grid-cols-[minmax(320px,400px)_minmax(0,1fr)_minmax(280px,340px)] min-[1300px]:grid-rows-1">
-        <section aria-label="Dokumente" className="row-span-2 flex min-h-0 flex-col rounded-panel bg-surface shadow-panel min-[1300px]:row-span-1">
+      <div
+        style={columnStyle("--list", listWidth)}
+        className={`grid min-h-0 flex-1 grid-cols-[var(--list)_minmax(320px,1fr)] gap-4 px-6 pt-4 pb-6 min-[1300px]:grid-rows-1 ${valuesShown ? "grid-rows-[minmax(0,1fr)_auto] min-[1300px]:grid-cols-[var(--list)_minmax(320px,1fr)_minmax(280px,340px)]" : "grid-rows-1"}`}
+      >
+        <section aria-label="Dokumente" className={`relative flex min-h-0 flex-col rounded-panel bg-surface shadow-panel min-[1300px]:row-span-1 ${valuesShown ? "row-span-2" : ""}`}>
+          {listDivider}
           <div className="flex flex-col gap-2 border-b border-line p-3">
             <TextField label="Suchen" value={search} onChange={setSearch} icon="search" clearable placeholder="Name" />
             <div className="grid grid-cols-2 gap-2">
               <SelectField label="Art" value={kind} onChange={setKind} options={[{ value: "", label: "Jede Art" }, ...kinds.map((value) => ({ value, label: kindLabel(value) }))]} />
-              <SelectField label="Zustand" value={state} onChange={setState} options={[{ value: "", label: "Jeder Zustand" }, ...states.map((value) => ({ value, label: value }))]} />
+              <SelectField
+                label="Zustand"
+                value={state}
+                onChange={setState}
+                options={[
+                  { value: "", label: "Jeder Zustand" },
+                  ...states.map((value) => ({ value, label: `${value} · ${(rows ?? []).filter((row) => rowState(row.state).label === value).length}` })),
+                  { value: "line", label: "──────────", disabled: true },
+                  { value: "hide", label: state === "hide" ? "Ausgeblendet" : "Zustand ausblenden" },
+                ]}
+              />
             </div>
             <span className="text-small text-fg-muted tabular-nums">{queued ?? (rows ? countsLine(shown) : "")}</span>
           </div>
@@ -161,7 +186,7 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
                         <PageImage document={row.id} width={160} label={`Erste Seite von ${row.name}`} className="h-10 w-8 rounded-[3px] shadow-panel" />
                       )
                     }
-                    state={rowState(row.state)}
+                    state={state === "hide" ? undefined : rowState(row.state)}
                     selected={chosen === row.id}
                     onSelect={() => setChosen(row.id)}
                   />
@@ -187,7 +212,7 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
           )}
         </section>
 
-        <section aria-label="Angaben" className="flex min-h-0 flex-col overflow-y-auto rounded-panel bg-surface shadow-panel min-[1300px]:col-start-3 min-[1300px]:row-start-1">
+        <section aria-label="Angaben" className={`${valuesShown ? "flex" : "hidden"} min-h-0 flex-col overflow-y-auto rounded-panel bg-surface shadow-panel min-[1300px]:col-start-3 min-[1300px]:row-start-1`}>
           {selected && (
             <Values
               key={`${selected.id}-${selected.state}`}

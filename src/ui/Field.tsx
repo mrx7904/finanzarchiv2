@@ -83,7 +83,7 @@ type SelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "id" | "on
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
   hint?: string;
   error?: string;
 };
@@ -102,7 +102,7 @@ export function SelectField({ label, value, onChange, options, hint, error, clas
           {...props}
         >
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </option>
           ))}

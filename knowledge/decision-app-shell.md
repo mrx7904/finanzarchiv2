@@ -53,3 +53,15 @@ The capability of the main window granted `core:event:allow-listen` and `core:ev
 
 - **No frame on both systems with drawn traffic lights on macOS.** Loses the system's window functions on the Mac, and drawn traffic lights never behave like the real ones.
 - **Removing the frame from JavaScript at start** (`setDecorations(false)`): the frame of the system would flash at every start, and it needs one more permission.
+
+## Fitting a view (#53)
+
+**Decided:** 2026-11-27 · applies to `src/ui/layout.ts`, `src/ui/Columns.tsx`, `src/ui/size.ts`, `src-tauri/capabilities/default.json`
+
+- **The size is the zoom of the webview.** Klein, Mittel and Groß (90, 100, 115 %) call `getCurrentWebview().setZoom(scale)` of `@tauri-apps/api/webview`, so the media queries see the width the view really has. Checked at v2.tauri.app on 2026-11-27: `setZoom(scaleFactor)`, 1 being 100 %, needs the permission below, which `core:webview:default` does not hold. Where the call is not there (the stand-in of the core in a browser) the root gets the CSS `zoom` instead. **Not verified:** whether `setZoom` works on WKWebView; the docs name no platform. It is looked at with the Mac (#08).
+
+| Permission | Since | Why |
+|---|---|---|
+| `core:webview:allow-set-webview-zoom` | #53 | the sizes Klein, Mittel and Groß as the zoom of the webview |
+
+- **Kept on the computer, not in the archive.** Column widths, the rail, the folded columns and the size are kept in the webview's storage under `finanzarchiv.layout.<key>`, one key per thing and per view (`documents.list`, `bookings.detail`, `rail`, `size`, …), and read with their default when nothing or something broken is stored. A value equal to the default is removed, not stored.

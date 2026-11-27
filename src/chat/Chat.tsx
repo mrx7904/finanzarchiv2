@@ -1,6 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { type ChatMessageRow, type ChatRow, commands } from "../bindings";
-import { BarActions, Button, Dialog, Icon, List, ListRow, Spinner, cn } from "../ui";
+import { BarActions, Button, Dialog, Icon, List, ListRow, Spinner, cn, columnStyle, useColumn } from "../ui";
 
 // "Chat" (#42, knowledge/decision-chat.md) as a list with detail: the chats at the left, the chosen one at the right
 // with the question field at its foot. The model looks up through fixed lookups, code checks every amount, and the
@@ -14,6 +14,8 @@ export function Chat({ onOpenDocument, onOpenBookings }: { onOpenDocument: (docu
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const end = useRef<HTMLDivElement>(null);
+  const [width, divider] = useColumn({ key: "chat.list", initial: 280, least: 220, most: 440, side: "left", label: "Breite der Chats" });
+
 
   const loadChats = useCallback(async () => {
     const result = await commands.listChats();
@@ -65,8 +67,9 @@ export function Chat({ onOpenDocument, onOpenBookings }: { onOpenDocument: (docu
           Neuer Chat
         </Button>
       </BarActions>
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(240px,300px)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
-        <section aria-label="Chats" className="min-h-0 overflow-y-auto rounded-panel bg-surface shadow-panel">
+      <div style={columnStyle("--list", width)} className="grid min-h-0 flex-1 grid-cols-[var(--list)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
+        <section aria-label="Chats" className="relative min-h-0 overflow-y-auto rounded-panel bg-surface shadow-panel">
+          {divider}
           {chats.length === 0 ? (
             <p className="p-4 text-small text-fg-muted">Noch kein Chat</p>
           ) : (

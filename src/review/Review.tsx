@@ -3,7 +3,7 @@ import { type ReviewAnswer, type ReviewGroup, type ReviewQuestion, commands } fr
 import { PageImage } from "../documents/PageImage";
 import { PageView } from "../documents/PageView";
 import { kindLabel } from "../documents/describe";
-import { BarActions, Button, Dialog, EmptyState, List, ListRow, TextField } from "../ui";
+import { BarActions, Button, Dialog, EmptyState, List, ListRow, TextField, columnStyle, useColumn } from "../ui";
 import { SEQUENCE, inSequence, questionLine, reviewKey } from "./keys";
 
 /** Where "Prüfen" stands: the group chosen and the question open, both lifted into the app for the path. */
@@ -42,6 +42,7 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [listWidth, listDivider] = useColumn({ key: "review.list", initial: 380, least: 280, most: 560, label: "Breite der Liste" });
 
   const loadGroups = useCallback(async () => {
     const result = await commands.reviewGroups();
@@ -282,8 +283,9 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
   if (at.group) {
     const chosen = questions[index] ?? null;
     return (
-      <section className="grid min-h-0 w-full flex-1 grid-cols-[minmax(320px,440px)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
-        <div className="min-h-0 overflow-y-auto rounded-panel bg-surface shadow-panel">
+      <section style={columnStyle("--list", listWidth)} className="grid min-h-0 w-full flex-1 grid-cols-[var(--list)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
+        <div className="relative min-h-0 overflow-y-auto rounded-panel bg-surface shadow-panel">
+          {listDivider}
           <List label={at.group.label}>
             {questions.map((question, number) => (
               <ListRow key={`${question.document}-${question.key}`} title={question.name} detail={question.text} selected={number === index} onSelect={() => (number === index ? open(question) : setIndex(number))} />

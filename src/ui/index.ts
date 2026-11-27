@@ -11,6 +11,9 @@ export { Capsule, DenseRow, FilterMark, GroupHead, List, ListRow, RowActions, ty
 export { Menu, type MenuEntry } from "./Menu";
 export { AnimatePresence, MotionRoot, cn, m, quick, spring } from "./motion";
 export { AppShell, BarActions, TopBar } from "./AppShell";
+export { columnStyle, useColumn } from "./Columns";
+export { applySize } from "./size";
+export { SIZES, readFlag, readSize, sizeStep, write as writeLayout, type Size } from "./layout";
 export { SidebarRow } from "./Sidebar";
 export { PathNav, collapsePath, type PathItem, type PathSegment } from "./Path";
 export { closeWindow, isWindowMaximized, minimizeWindow, toggleMaximizeWindow, windowSystem, type WindowSystem } from "./window";

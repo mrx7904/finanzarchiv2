@@ -29,6 +29,8 @@ type AppShellProps = {
   system?: WindowSystem;
   /** Leads back after a jump; without it the arrow at the left of the path is gone (#44). */
   onBack?: () => void;
+  /** The sidebar folded to a rail of icons (#53). */
+  rail?: boolean;
 };
 
 /** Where a view puts its actions: the top bar (rule 2 of knowledge/decision-views.md). */
@@ -40,15 +42,15 @@ export function BarActions({ children }: { children: ReactNode }) {
   return slot ? createPortal(children, slot) : null;
 }
 
-export function AppShell({ path, actions, sidebar, appName, children, system = windowSystem(), onBack }: AppShellProps) {
+export function AppShell({ path, actions, sidebar, appName, children, system = windowSystem(), onBack, rail = false }: AppShellProps) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-canvas font-sans text-body text-fg">
       {sidebar && (
-        <aside className="flex w-(--sidebar-width) shrink-0 flex-col bg-sidebar shadow-[inset_-1px_0_0_var(--line)]">
+        <aside className={cn("flex shrink-0 flex-col bg-sidebar shadow-[inset_-1px_0_0_var(--line)]", rail ? "w-14" : "w-(--sidebar-width)")}>
           <div
             data-tauri-drag-region
-            className={cn("flex h-(--bar-height) shrink-0 items-center gap-2 select-none", system === "mac" ? "pl-(--traffic-lights-width)" : "pl-5")}
+            className={cn("flex h-(--bar-height) shrink-0 items-center gap-2 select-none", rail ? "justify-center" : system === "mac" ? "pl-(--traffic-lights-width)" : "pl-5")}
           >
             {appName}
           </div>

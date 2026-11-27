@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { type TaxCategoryRow, type TaxProfileRow, type TaxYearRow_Serialize as TaxYearRow, commands } from "../bindings";
-import { BarActions, Button, Dialog, EmptyState, List, ListRow, LoadingRows, Segmented, SelectField, Switch, TextField } from "../ui";
+import { BarActions, Button, Dialog, EmptyState, List, ListRow, LoadingRows, Segmented, SelectField, Switch, TextField, columnStyle, useColumn } from "../ui";
 
 // "Steuern" (#41, knowledge/decision-taxes.md) as a list with detail: the year in the top bar, the notice to check
 // everything in one line, the sections by form and section at the left (never a line number), and at the right the
@@ -13,6 +13,7 @@ export function Taxes({ onOpenDocument, onOpenBooking }: { onOpenDocument: (docu
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [row, setRow] = useState<TaxYearRow | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
+  const [width, divider] = useColumn({ key: "taxes.list", initial: 380, least: 280, most: 560, side: "left", label: "Breite der Liste" });
   const load = useCallback(async (which: number) => {
     const result = await commands.taxYear(which);
     if (result.status === "ok") setRow(result.data);
@@ -44,8 +45,9 @@ export function Taxes({ onOpenDocument, onOpenBooking }: { onOpenDocument: (docu
           {row?.notice ?? "Keine Steuerberatung, bitte alles selbst prüfen."}
           {row && (row.valuesSource ? ` · Werte ${row.valuesSource}` : ` · Für ${year} sind keine Werte hinterlegt, Pauschalen fehlen.`)}
         </p>
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(300px,420px)_minmax(0,1fr)] gap-4">
-          <section aria-label="Abschnitte" className="flex min-h-0 flex-col overflow-y-auto rounded-panel bg-surface shadow-panel">
+        <div style={columnStyle("--list", width)} className="grid min-h-0 flex-1 grid-cols-[var(--list)_minmax(0,1fr)] gap-4">
+          <section aria-label="Abschnitte" className="relative flex min-h-0 flex-col overflow-y-auto rounded-panel bg-surface shadow-panel">
+            {divider}
             {row === null ? (
               <LoadingRows loading />
             ) : (

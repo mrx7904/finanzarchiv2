@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { type InvoiceCandidate, type OrderRow_Serialize as OrderRow, commands } from "../bindings";
 import { formatIsoDay } from "../money/describe";
-import { Button, Dialog, EmptyState, List, ListRow, LoadingRows, cn } from "../ui";
+import { Button, Dialog, EmptyState, List, ListRow, LoadingRows, cn, columnStyle, useColumn } from "../ui";
 import { orderCountsLine, orderState } from "./describe";
 
 // "Bestellungen" (#32), a page below Dokumente since #46: every order the mails of Amazon told, "fehlt" or
@@ -12,6 +12,8 @@ export function OrdersPage({ onOpenDocument }: { onOpenDocument: (document: numb
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [width, divider] = useColumn({ key: "orders.list", initial: 380, least: 280, most: 560, side: "left", label: "Breite der Liste" });
+
 
   const reload = useCallback(async () => {
     const result = await commands.listOrders();
@@ -34,8 +36,9 @@ export function OrdersPage({ onOpenDocument }: { onOpenDocument: (document: numb
     await reload();
   };
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(320px,420px)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
-      <section aria-label="Bestellungen" className="flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
+    <div style={columnStyle("--list", width)} className="grid min-h-0 flex-1 grid-cols-[var(--list)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
+      <section aria-label="Bestellungen" className="relative flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
+        {divider}
         <span className="border-b border-line p-3 text-small text-fg-muted tabular-nums">{orders ? orderCountsLine(orders) : ""}</span>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {orders === null ? (

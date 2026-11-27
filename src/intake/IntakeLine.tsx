@@ -8,7 +8,7 @@ import { Button, Spinner, cn } from "../ui";
 import { footLine, stageLabel } from "./describe";
 import { useIntakeChanged } from "./useIntakeChanged";
 
-export function IntakeLine() {
+export function IntakeLine({ rail = false }: { rail?: boolean }) {
   const id = useId();
   const [overview, setOverview] = useState<IntakeOverview | null>(null);
   const reload = useCallback(async () => {
@@ -28,7 +28,9 @@ export function IntakeLine() {
       <button
         type="button"
         popoverTarget={id}
-        className="flex h-8 w-full items-center gap-2.5 rounded-row px-2 text-left text-fg-muted transition-quick hover:bg-hover hover:text-fg"
+        aria-label={rail ? `Eingang, ${line}` : undefined}
+        title={rail ? `Eingang, ${line}` : undefined}
+        className={cn("flex h-8 items-center gap-2.5 rounded-row text-left text-fg-muted transition-quick hover:bg-hover hover:text-fg", rail ? "w-8 justify-center" : "w-full px-2")}
       >
         {reading ? (
           <Spinner size={16} />
@@ -37,7 +39,7 @@ export function IntakeLine() {
             <span className={cn("size-2 rounded-full", overview.failed.length > 0 && !overview.paused ? "bg-danger" : "bg-fg-muted")} />
           </span>
         )}
-        <span className="flex-1 truncate">{line}</span>
+        {!rail && <span className="flex-1 truncate">{line}</span>}
       </button>
       <div id={id} popover="auto" className="fa-menu fixed inset-auto bottom-14 left-3 m-0 w-[380px] rounded-dialog bg-raised text-fg shadow-raised">
         <div className="flex flex-col">
