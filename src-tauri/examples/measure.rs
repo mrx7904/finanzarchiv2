@@ -1023,6 +1023,65 @@ enum Expected {
     Nothing,
 }
 
+/// How long the first page of the largest document of the owner's archive takes (#54): rendered at the width of
+/// 100 % and of 200 % of a wide column, each without the cache. Counts only.
+fn measure_page_timing(
+    pdfium: &pdfium_render::prelude::Pdfium,
+    database: &Path,
+    files: Option<&Path>,
+    out: &Path,
+) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let largest: Option<(i64, i64)> = ready
+        .connection()
+        .query_row("SELECT id, pages FROM documents WHERE file_type = 'pdf' AND pages IS NOT NULL ORDER BY pages DESC, size_bytes DESC LIMIT 1", [], |row| Ok((row.get(0)?, row.get(1)?)))
+        .ok();
+    let Some((document, pages)) = largest else {
+        eprintln!("Kein PDF im Archiv");
+        std::process::exit(1);
+    };
+    // The originals lie beside the real archive; a copy of the database has none, so `--files` names their folder.
+    let root = files.map_or_else(
+        || finanzarchiv2_lib::documents::archive_root(ready.path()),
+        Path::to_path_buf,
+    );
+    let Ok(Some((original, file_type))) =
+        finanzarchiv2_lib::documents::stored_of(ready.connection(), &root, document)
+    else {
+        eprintln!("Die Datei fehlt");
+        std::process::exit(1);
+    };
+    let mut timings = BTreeMap::new();
+    for (zoom, width) in [("100 %", 1280_u32), ("200 %", 2560_u32)] {
+        let cache = tempfile::tempdir().unwrap_or_else(|_| std::process::exit(1));
+        let started = std::time::Instant::now();
+        let rendered = finanzarchiv2_lib::previews::page_png(
+            cache.path(),
+            &original,
+            file_type,
+            Some(pdfium),
+            1,
+            width,
+        );
+        let ms = started.elapsed().as_secs_f64() * 1000.0;
+        println!(
+            "  {zoom}: {width} px in {ms:.0} ms{}",
+            if rendered.is_ok() { "" } else { ", Fehler" }
+        );
+        timings.insert(zoom, ms);
+    }
+    println!("  größtes Dokument: {pages} Seiten");
+    write(
+        &out.join("private").join("page-timing.json"),
+        &json!({ "reader": "page-timing", "pages": pages, "milliseconds": timings }),
+    );
+}
+
 /// How quick the list of Dokumente stands with the owner's archive (#46): the documents and the
 /// time of the rows the window gets, the best of five. Counts only.
 fn measure_documents_list(database: &Path, out: &Path) {
@@ -2123,6 +2182,15 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "page-timing" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader page-timing braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        let files = value("--files").map(PathBuf::from);
+        measure_page_timing(pdfium, Path::new(&database), files.as_deref(), &out);
         return;
     }
     if reader == "documents-list" {

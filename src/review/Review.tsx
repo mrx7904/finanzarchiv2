@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { type ReviewAnswer, type ReviewGroup, type ReviewQuestion, commands } from "../bindings";
 import { PageImage } from "../documents/PageImage";
+import { PageView } from "../documents/PageView";
 import { kindLabel } from "../documents/describe";
 import { BarActions, Button, Dialog, EmptyState, List, ListRow, TextField } from "../ui";
 import { SEQUENCE, inSequence, questionLine, reviewKey } from "./keys";
@@ -19,7 +20,20 @@ const KINDS = ["invoice", "receipt", "payslip", "statement", "other"];
 // "Prüfen" of #17, as designed in #47 (knowledge/decision-views.md): the reasons as an overview with "Der Reihe nach
 // prüfen" in the top bar, the documents of a reason with the page of the chosen one, and the question with its page at
 // the left and the question as a large sentence at the right. Every answer of #17 is kept, and so are its keys.
-export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: ReviewAt) => void; onAnswered: () => void }) {
+type ReviewProps = {
+  at: ReviewAt;
+  onAt: (at: ReviewAt) => void;
+  onAnswered: () => void;
+  /** The focus of #54: the sidebar hidden, the page, the question and the progress left. */
+  focusing?: boolean;
+  onFocus?: (on: boolean) => void;
+};
+
+export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: ReviewProps) {
+  // The focus ends by itself when no question is open any more.
+  useEffect(() => {
+    if (!at.question && focusing) onFocus?.(false);
+  }, [at.question, focusing, onFocus]);
   const [groups, setGroups] = useState<ReviewGroup[]>([]);
   const [questions, setQuestions] = useState<ReviewQuestion[]>([]);
   const [index, setIndex] = useState(0);
@@ -115,7 +129,11 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
       else if (action.kind === "open") {
         if (at.group) open(questions[index]);
         else if (groups[index]) onAt({ group: groups[index], question: null });
-      } else if (action.kind === "back") onAt(at.question ? { group: at.group, question: null } : { group: null, question: null });
+      } else if (action.kind === "back") {
+        // Esc ends the focus first, then goes one level back.
+        if (focusing) onFocus?.(false);
+        else onAt(at.question ? { group: at.group, question: null } : { group: null, question: null });
+      } else if (event.key === "f" && at.question && !(event.target instanceof HTMLTextAreaElement)) onFocus?.(!focusing);
       else if (action.kind === "pick") send({ answer: "reading", index: action.reading });
       else return;
       event.preventDefault();
@@ -140,19 +158,21 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
         <Button kind="plain" disabled={!nextQuestion} onClick={() => open(nextQuestion ?? undefined)}>
           Überspringen
         </Button>
+        <Button kind="plain" aria-pressed={focusing} title="Fokus (F)" onClick={() => onFocus?.(!focusing)}>
+          {focusing ? "Fokus beenden" : "Fokus"}
+        </Button>
       </BarActions>
       <section className="grid min-h-0 w-full flex-1 grid-cols-[minmax(0,1fr)_minmax(320px,440px)] gap-4 px-6 pt-4 pb-6">
-        <div className="min-h-0 overflow-y-auto rounded-panel bg-surface p-3 shadow-panel">
-        <div className="relative overflow-hidden rounded-control">
-          <PageImage document={question.document} page={question.page} width={1280} label={`Seite ${question.page} von ${question.name}`} />
-          {first?.mark ? (
-            <span
-              aria-hidden
-              className="absolute rounded-[2px] bg-accent/20 shadow-[0_0_0_2px_var(--accent)]"
-              style={markStyle(first.mark)}
-            />
-          ) : null}
-        </div>
+        <div className="flex min-h-0 flex-col rounded-panel bg-surface p-3 shadow-panel">
+          <PageView
+            key={`${question.document}-${question.key}`}
+            document={question.document}
+            name={question.name}
+            pages={Math.max(question.page, 1)}
+            page={question.page}
+            startZoom={100}
+            overlay={first?.mark ? <span aria-hidden className="absolute rounded-[2px] bg-accent/20 shadow-[0_0_0_2px_var(--accent)]" style={markStyle(first.mark)} /> : undefined}
+          />
         </div>
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-panel bg-surface p-5 shadow-panel">
           <span className="truncate text-small text-fg-muted">{question.name}</span>

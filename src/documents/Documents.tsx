@@ -8,6 +8,7 @@ import { Filing } from "./Filing";
 import { MailMark, MailText } from "./MailText";
 import { AssignTax } from "../taxes/Taxes";
 import { PageImage } from "./PageImage";
+import { PageView, ReadLarge } from "./PageView";
 
 // "Dokumente" as designed (#46, knowledge/decision-views.md): the list with its search, kind and state at the left,
 // the page of the chosen document, and its values with where each stands, the booking that paid it, "Warum?" and
@@ -38,6 +39,7 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
   const [state, setState] = useState("");
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [large, setLarge] = useState(false);
   useEffect(() => {
     if (focus !== null) setChosenHere(focus);
   }, [focus]);
@@ -121,6 +123,7 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
   return (
     <>
       {barActions}
+      {large && selected && selected.fileType !== "mail" && <ReadLarge document={selected.id} name={selected.name} pages={selected.pages ?? 1} onClose={() => setLarge(false)} />}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(280px,360px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-4 px-6 pt-4 pb-6 min-[1300px]:grid-cols-[minmax(320px,400px)_minmax(0,1fr)_minmax(280px,340px)] min-[1300px]:grid-rows-1">
         <section aria-label="Dokumente" className="row-span-2 flex min-h-0 flex-col rounded-panel bg-surface shadow-panel min-[1300px]:row-span-1">
           <div className="flex flex-col gap-2 border-b border-line p-3">
@@ -137,8 +140,18 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
             ) : (
               <List label="Dokumente">
                 {shown.map((row) => (
-                  <ListRow
+                  <div
                     key={row.id}
+                    className="contents"
+                    onKeyDown={(event) => {
+                      // The space bar on the chosen row reads it large.
+                      if (event.key === " " && chosen === row.id) {
+                        event.preventDefault();
+                        setLarge(true);
+                      }
+                    }}
+                  >
+                  <ListRow
                     title={row.name}
                     detail={rowDetail(row)}
                     leading={
@@ -152,18 +165,22 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
                     selected={chosen === row.id}
                     onSelect={() => setChosen(row.id)}
                   />
+                  </div>
                 ))}
               </List>
             )}
           </div>
         </section>
 
-        <section aria-label="Seite" className="flex min-h-[320px] items-center justify-center overflow-hidden rounded-panel bg-surface p-4 shadow-panel">
+        <section
+          aria-label="Seite"
+          className="flex min-h-[320px] flex-col items-center justify-center overflow-hidden rounded-panel bg-surface p-4 shadow-panel"
+        >
           {selected ? (
             selected.fileType === "mail" ? (
               <MailText key={selected.id} document={selected.id} />
             ) : (
-              <PageImage key={selected.id} document={selected.id} width={900} label={`Erste Seite von ${selected.name}`} fit />
+              <PageView key={selected.id} document={selected.id} name={selected.name} pages={selected.pages ?? 1} onLarge={() => setLarge(true)} />
             )
           ) : (
             <p className="self-center text-fg-muted">Kein Dokument gewählt</p>

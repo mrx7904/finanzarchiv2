@@ -236,7 +236,7 @@ pub fn dismiss_failed(intake: State<'_, Arc<Intake>>) -> Result<(), CommandError
 }
 
 /// A page of a document as an image for the window, as a data URL. The width is rounded up to
-/// one of `previews::WIDTHS`.
+/// one of `previews::WIDTHS` (160 to 2560 px).
 /// The text of a mail kept as its text (#31), for the preview: its head and text, without the mark.
 #[tauri::command]
 #[specta::specta]

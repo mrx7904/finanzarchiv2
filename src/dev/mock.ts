@@ -18,7 +18,7 @@ const documents = [
   { id: 3, name: "Kontoauszug Girokonto 2026-02", kind: "statement", state: "filed", importedAt: "2026-03-02T09:00:00Z", originalName: "auszug_02_2026.pdf" },
   { id: 4, name: "Rechnung Stadtwerke Musterstadt 2026-02", kind: "invoice", state: "filed", importedAt: "2026-02-20T10:00:00Z", originalName: "SW-2026-0413.pdf" },
   { id: 5, name: "Gehaltsabrechnung 2026-02", kind: "payslip", state: "open", importedAt: "2026-03-01T07:00:00Z", originalName: "lohn_02.pdf" },
-].map((row) => ({ ...row, fileType: "pdf", pages: 1, textState: "text", nameByOwner: false, arrival: null, paired: null }));
+].map((row) => ({ ...row, fileType: "pdf", pages: row.kind === "statement" ? 3 : 1, textState: "text", nameByOwner: false, arrival: null, paired: null }));
 
 const booking = (id: number, day: string, party: string, purpose: string, amount: string, incoming: boolean) => ({
   id, account: "Girokonto", day, party, otherSide: party, purpose, kind: incoming ? "Gutschrift" : "Lastschrift", incoming, amount, category: null, categoryByParty: false, documents: [], movement: null, statement: 3, page: 1,
