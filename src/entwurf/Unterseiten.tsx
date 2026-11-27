@@ -58,7 +58,7 @@ const orders: { title: string; detail: string; figure: string; state: { tone: To
   { title: "Fahrradschloss", detail: "Amazon, bestellt am 29.09.2026", figure: "39,95 €", state: { tone: "ok", label: "vollständig" } },
 ];
 
-function Bestellungen() {
+export function Bestellungen() {
   return (
     <Frame view="dokumente" path={["Dokumente", "Bestellungen"]}>
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_400px] gap-5 p-5">
@@ -223,7 +223,7 @@ function Switch({ on }: { on: boolean }) {
 
 const rows = "flex flex-col divide-y divide-line";
 
-function Ordner() {
+export function Ordner() {
   return (
     <Einstellungen page="Ordner">
       <div className={cn(panel, rows)}>
@@ -350,7 +350,7 @@ function Modell() {
   );
 }
 
-function Archiv() {
+export function Archiv() {
   return (
     <Einstellungen page="Archiv">
       <div className={cn(panel, rows)}>

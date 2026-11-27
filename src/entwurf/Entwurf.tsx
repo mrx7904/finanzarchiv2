@@ -3,7 +3,7 @@
 // calls the core and nothing is part of the app: the page is opened in the dev server at /src/entwurf/index.html,
 // with ?v=<view> and ?t=light or dark. No name, number or amount is real (decision-public-repository.md).
 import { useState, type ReactNode } from "react";
-import { AppShell, Button, Capsule, Icon, Kbd, List, ListRow, SelectField, Spinner, TextField, cn, type IconName, type PathSegment, type Tone } from "../ui";
+import { AppShell, Button, Capsule, Icon, Kbd, List, ListRow, Menu, SelectField, Spinner, TextField, cn, type IconName, type MenuEntry, type PathSegment, type Tone } from "../ui";
 
 export type ViewId = "start" | "pruefen" | "dokumente" | "konten" | "umsaetze" | "auswertungen" | "steuern" | "chat" | "einstellungen";
 
@@ -160,6 +160,23 @@ function IntakeOpen() {
 }
 
 export const panel = "rounded-panel bg-surface shadow-panel";
+
+const nothing = () => undefined;
+
+/** The menu behind "…": everything a view or a piece can do beyond its one or two buttons. */
+export function More({ entries, small = false }: { entries: MenuEntry[]; small?: boolean }) {
+  return (
+    <Menu
+      align="end"
+      entries={entries}
+      trigger={(props) => (
+        <button type="button" aria-label="Weitere Aktionen" {...props} className={cn("flex shrink-0 items-center justify-center rounded-control text-fg transition-quick hover:bg-hover aria-expanded:bg-selected", small ? "size-6" : "size-(--control-height)")}>
+          <Icon name="more" size={small ? 14 : 16} />
+        </button>
+      )}
+    />
+  );
+}
 
 export function Heading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
@@ -423,10 +440,23 @@ export function Dokumente({ back, search = false }: { back?: string; search?: bo
       back={back}
       actions={
         <>
-          <Button icon="more" label="Weitere Aktionen" kind="plain" />
-          <Button kind="primary" icon="plus">
-            Importieren
-          </Button>
+          <More entries={[{ label: "Bestellungen", icon: "receipt", onSelect: nothing }, { label: "Als Tabelle exportieren …", icon: "upload", onSelect: nothing }, { label: "Namen einstellen", icon: "gear", onSelect: nothing }]} />
+          <Menu
+            align="end"
+            entries={[
+              { label: "Dateien auswählen …", icon: "upload", onSelect: nothing },
+              { label: "Ordner einmal einlesen …", icon: "folder", onSelect: nothing },
+              { label: "Kontoauszug als CSV …", icon: "card", onSelect: nothing },
+              { label: "Jetzt im Postfach nachsehen", icon: "mail", onSelect: nothing },
+            ]}
+            trigger={(props) => (
+              <button type="button" {...props} className="inline-flex h-(--control-height) shrink-0 items-center gap-1.5 rounded-control bg-accent px-3 font-medium text-on-accent transition-quick hover:bg-accent-hover">
+                <Icon name="plus" size={16} />
+                Importieren
+                <Icon name="chevronDown" size={14} />
+              </button>
+            )}
+          />
         </>
       }
     >
@@ -457,7 +487,15 @@ export function Dokumente({ back, search = false }: { back?: string; search?: bo
           <div className="flex flex-col gap-0.5 px-5 pt-5 pb-3">
             <div className="flex items-start justify-between gap-2">
               <h2 className="text-heading font-semibold">2026-11-14 Stadtwerke Beispielstadt Rechnung</h2>
-              <Button size="small" kind="plain" icon="more" label="Weitere Aktionen" />
+              <More
+                small
+                entries={[
+                  { label: "Umbenennen …", icon: "document", onSelect: nothing },
+                  { label: "Datei im Ordner zeigen", icon: "folder", onSelect: nothing },
+                  { label: "Neu lesen lassen", icon: "search", onSelect: nothing },
+                  { label: "Löschen …", icon: "trash", danger: true, onSelect: nothing },
+                ]}
+              />
             </div>
             <p className="text-small text-fg-muted">Rechnung, 1 Seite, kam am 14.11. aus dem Ordner Eingang</p>
           </div>
@@ -594,7 +632,7 @@ export function Umsaetze({ loading = false }: { loading?: boolean }) {
   const [category, setCategory] = useState("");
   const [range, setRange] = useState("2026");
   return (
-    <Frame view="umsaetze" path={["Konten", "Girokonto"]} actions={<Button icon="more" label="Weitere Aktionen" kind="plain" />}>
+    <Frame view="umsaetze" path={["Konten", "Girokonto"]} actions={<More entries={[{ label: "Buchung von Hand …", icon: "plus", onSelect: nothing }, { label: "Kontoauszug importieren …", icon: "upload", onSelect: nothing }, { label: "Als Tabelle exportieren …", icon: "document", onSelect: nothing }, { label: "Konto umbenennen …", icon: "card", onSelect: nothing }]} />}>
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_280px] gap-5 p-5 min-[1200px]:grid-cols-[minmax(0,1fr)_400px]">
         <section className={cn(panel, "flex min-h-0 flex-col")}>
           <div className="flex flex-col gap-2 border-b border-line p-3">

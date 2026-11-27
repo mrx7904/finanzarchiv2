@@ -1,9 +1,10 @@
 // The root of the draft: picks the view by ?v= and the scheme by ?t=. Without ?v= it lists every view as a link.
 import type { ReactNode } from "react";
 import { hauptansichten } from "./Entwurf";
+import { dialoge } from "./Dialoge";
 import { unterseiten } from "./Unterseiten";
 
-const views: Record<string, () => ReactNode> = { ...hauptansichten, ...unterseiten };
+const views: Record<string, () => ReactNode> = { ...hauptansichten, ...unterseiten, ...dialoge };
 
 export function Seite() {
   const query = new URLSearchParams(window.location.search);
