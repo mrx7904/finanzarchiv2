@@ -11,7 +11,7 @@ The rules: [`knowledge/decision-views.md`](../knowledge/decision-views.md). The 
 - [ ] Ordner, Postfächer, Namen and Kategorien hold what the dialogs `Folders`, `Mailboxes`, `TemplatesDialog` and `Categories` hold today, with the same commands. The four dialogs and their buttons in Dokumente and Konten are gone.
 - [ ] Modell: whether the local model is reached, which one reads, its address, and "Verbindung testen". Changing `model.name` follows [`knowledge/decision-model.md`](../knowledge/decision-model.md).
 - [ ] Archiv: where the archive lies with its counts, and the snapshots with their day and reason. "Wiederherstellen …" and "Umziehen …" are shown only as far as the core can do them.
-- [ ] Darstellung: light, dark or as the system, kept over a restart.
+- [ ] Darstellung: light, dark or as the system, kept over a restart. The size of the view comes with #53.
 - [ ] Über: the version, and the pieces with their licences from the table of [`knowledge/decision-ui-libraries.md`](../knowledge/decision-ui-libraries.md), which that file promised to move into the app.
 - [ ] Removing a mailbox or a folder asks with what goes and what stays (rule 18). A problem of a folder or mailbox shows on its row and in the list of pages.
 - [ ] Tests cover that every page is reached by the quick search in the owner's words (rule 22).
@@ -20,4 +20,4 @@ The rules: [`knowledge/decision-views.md`](../knowledge/decision-views.md). The 
 ## Out of scope
 
 - Moving the archive, restoring from the view, updates, profiles: stage 6.
-- The size of the view (Klein, Mittel, Groß) and the view the app opens with: drawn, decided when the owner asks for them.
+- The size of the view (Klein, Mittel, Groß): #53. The view the app opens with: drawn, decided when the owner asks for it.

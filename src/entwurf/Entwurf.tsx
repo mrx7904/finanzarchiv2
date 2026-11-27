@@ -12,6 +12,10 @@ const glyphs = {
   chart: <path d="M3.5 16.5h13M6 13.5v-4M10 13.5v-9M14 13.5v-6" />,
   chat: <path d="M4.5 4h11a1 1 0 0 1 1 1v7.5a1 1 0 0 1-1 1H9l-3.5 3v-3h-1a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />,
   back: <path d="M11.5 5 6.5 10l5 5" />,
+  sidebar: <path d="M3.5 4.5h13a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM7.5 4.5v11" />,
+  values: <path d="M3.5 4.5h13a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM12.5 4.5v11" />,
+  expand: <path d="M11.5 3.5h5v5M8.5 16.5h-5v-5M16.5 3.5l-5.5 5.5M3.5 16.5 9 11" />,
+  minus: <path d="M4 10h12" />,
 };
 
 export function Glyph({ name, size = 16, className }: { name: keyof typeof glyphs; size?: number; className?: string }) {
@@ -53,11 +57,23 @@ function NavRow({ entry, selected }: { entry: Omit<NavEntry, "id">; selected: bo
 }
 
 /** The frame every view stands in: the same sidebar, the path and the actions of the view in the bar. */
-export function Frame({ view, path, actions, back, intake = false, children }: { view: ViewId; path: string[]; actions?: ReactNode; back?: string; intake?: boolean; children: ReactNode }) {
+export function Frame({ view, path, actions, back, intake = false, rail = false, bare = false, children }: { view: ViewId; path: string[]; actions?: ReactNode; back?: string; intake?: boolean; rail?: boolean; bare?: boolean; children: ReactNode }) {
   const segments: PathSegment[] = path.map((label, at) => (at < path.length - 1 ? { label, onSelect: () => undefined } : { label }));
   const here = view === "umsaetze" ? "konten" : view;
+  if (bare) {
+    return (
+      <AppShell system="windows" path={segments} actions={actions}>
+        {children}
+      </AppShell>
+    );
+  }
+  const toggle = (
+    <button type="button" aria-label={rail ? "Seitenleiste ausklappen" : "Seitenleiste einklappen"} title={rail ? "Seitenleiste ausklappen (Strg+B)" : "Seitenleiste einklappen (Strg+B)"} className="flex size-7 shrink-0 items-center justify-center rounded-control text-fg-muted hover:bg-hover hover:text-fg">
+      <Glyph name="sidebar" />
+    </button>
+  );
   return (
-    <div className={cn("relative h-full", back && "[&_header]:pl-14")}>
+    <div className={cn("relative h-full", back && "[&_header]:pl-14", rail && "[--sidebar-width:56px] [&_aside>div:first-child]:justify-center [&_aside>div:first-child]:pl-0")}>
       {back && (
         <button type="button" aria-label={`Zurück zu ${back}`} title={`Zurück zu ${back}`} className="absolute top-[calc((var(--bar-height)-28px)/2)] left-[calc(var(--sidebar-width)+16px)] z-10 flex size-7 items-center justify-center rounded-control text-fg hover:bg-hover">
           <Glyph name="back" size={18} />
@@ -69,14 +85,22 @@ export function Frame({ view, path, actions, back, intake = false, children }: {
       path={segments}
       actions={actions}
       appName={
-        <>
-          <span className="flex size-6 items-center justify-center rounded-[6px] bg-accent text-on-accent">
-            <Icon name="folder" size={14} />
-          </span>
-          <span className="font-semibold">Finanzarchiv</span>
-        </>
+        rail ? (
+          toggle
+        ) : (
+          <>
+            <span className="flex size-6 items-center justify-center rounded-[6px] bg-accent text-on-accent">
+              <Icon name="folder" size={14} />
+            </span>
+            <span className="flex-1 font-semibold">Finanzarchiv</span>
+            <span className="mr-2.5">{toggle}</span>
+          </>
+        )
       }
       sidebar={
+        rail ? (
+          <Rail here={here} settings={view === "einstellungen"} />
+        ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3">
           <button type="button" className="flex h-(--control-height) items-center gap-2 rounded-control bg-field px-2.5 text-fg-muted shadow-[inset_0_0_0_1px_var(--line)]">
             <Icon name="search" size={15} />
@@ -103,10 +127,97 @@ export function Frame({ view, path, actions, back, intake = false, children }: {
             <NavRow entry={{ label: "Einstellungen", icon: "gear" }} selected={view === "einstellungen"} />
           </div>
         </div>
+        )
       }
     >
       {children}
       </AppShell>
+    </div>
+  );
+}
+
+/** The sidebar folded to a rail of icons: the count of "Prüfen" and the intake stay in sight. */
+function Rail({ here, settings }: { here: ViewId; settings: boolean }) {
+  const cell = "relative flex size-8 items-center justify-center rounded-row";
+  const icon = (entry: Omit<NavEntry, "id">, selected: boolean) =>
+    entry.icon in glyphs ? <Glyph name={entry.icon as keyof typeof glyphs} className={selected ? "text-fg-accent" : "text-fg-muted"} /> : <Icon name={entry.icon as IconName} size={16} className={selected ? "text-fg-accent" : "text-fg-muted"} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center gap-4 pb-3">
+      <button type="button" aria-label="Suchen" title="Suchen (Strg+K)" className={cn(cell, "bg-field text-fg-muted shadow-[inset_0_0_0_1px_var(--line)]")}>
+        <Icon name="search" size={15} />
+      </button>
+      <nav aria-label="Ansichten" className="flex flex-1 flex-col gap-4">
+        {navigation.map((group) => (
+          <ul key={group[0]?.id} className="flex flex-col gap-px">
+            {group.map((entry) => (
+              <li key={entry.id}>
+                <button type="button" aria-label={entry.label} title={entry.label} aria-current={entry.id === here ? "page" : undefined} className={cn(cell, entry.id === here ? "bg-selected" : "hover:bg-hover")}>
+                  {icon(entry, entry.id === here)}
+                  {entry.count !== undefined && <span className="absolute -top-0.5 -right-1 rounded-full bg-accent px-1 text-[10px] leading-[14px] font-semibold text-on-accent tabular-nums">{entry.count}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ))}
+      </nav>
+      <div className="flex flex-col gap-px">
+        <button type="button" aria-label="Eingang, 3 werden gelesen" title="Eingang, 3 werden gelesen" className={cn(cell, "text-fg-muted hover:bg-hover")}>
+          <Spinner size={16} />
+        </button>
+        <button type="button" aria-label="Einstellungen" title="Einstellungen" className={cn(cell, settings ? "bg-selected" : "hover:bg-hover")}>
+          {icon({ label: "Einstellungen", icon: "gear" }, settings)}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** A button of the top bar that shows or hides a column and stays pressed while the column is in sight. */
+export function Toggle({ glyph, label, on }: { glyph: keyof typeof glyphs; label: string; on: boolean }) {
+  return (
+    <button type="button" aria-label={label} title={label} aria-pressed={on} className={cn("flex size-(--control-height) shrink-0 items-center justify-center rounded-control transition-quick hover:bg-hover", on ? "bg-selected text-fg" : "text-fg-muted")}>
+      <Glyph name={glyph} />
+    </button>
+  );
+}
+
+/** The line between two columns while the owner drags it. */
+function Divider() {
+  return (
+    <span role="separator" aria-orientation="vertical" aria-label="Breite der Liste" className="absolute top-3 -right-[12px] bottom-3 z-10 flex w-1 cursor-col-resize items-center justify-center rounded-full bg-accent">
+      <span className="absolute top-2 left-3 rounded-control bg-raised px-2 py-1 text-small whitespace-nowrap text-fg shadow-raised">470 px, Doppelklick stellt zurück</span>
+    </span>
+  );
+}
+
+/** Under the page of a document: its pages, its zoom, and the way into reading it large. */
+export function PageTools({ page = "1 von 3", zoom = "Ganze Seite", large = false }: { page?: string; zoom?: string; large?: boolean }) {
+  const key = "flex size-7 items-center justify-center rounded-[6px] text-fg-muted hover:bg-hover hover:text-fg";
+  return (
+    <div className="flex h-9 shrink-0 items-center gap-0.5 rounded-row bg-raised px-1 text-small whitespace-nowrap shadow-raised">
+      <button type="button" aria-label="Vorige Seite" className={key}>
+        <Glyph name="back" size={15} />
+      </button>
+      <span className="px-1.5 font-medium tabular-nums">{page}</span>
+      <button type="button" aria-label="Nächste Seite" className={key}>
+        <Icon name="chevronRight" size={15} />
+      </button>
+      <span aria-hidden className="mx-1 h-4 w-px bg-line-strong" />
+      <button type="button" aria-label="Kleiner" className={key}>
+        <Glyph name="minus" size={15} />
+      </button>
+      <span className="px-1 text-center font-medium tabular-nums">{zoom}</span>
+      <button type="button" aria-label="Größer" className={key}>
+        <Icon name="plus" size={15} />
+      </button>
+      {!large && (
+        <>
+          <span aria-hidden className="mx-1 h-4 w-px bg-line-strong" />
+          <button type="button" aria-label="Groß lesen" title="Groß lesen (Leertaste)" className={key}>
+            <Glyph name="expand" size={15} />
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -281,7 +392,7 @@ function Start({ intake = false }: { intake?: boolean }) {
   return (
     <Frame view="start" path={["Start"]} intake={intake}>
       <main className="min-h-0 flex-1 overflow-y-auto px-10 py-9">
-        <div className="grid max-w-[1120px] grid-cols-1 gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_320px] min-[1200px]:gap-14">
+        <div className="grid max-w-[1120px] grid-cols-1 gap-10 min-[1300px]:grid-cols-[minmax(0,1fr)_320px] min-[1300px]:gap-14">
           <section className="flex flex-col gap-6">
             <header className="flex flex-col gap-1">
               <h1 className="text-title font-semibold tracking-[-0.025em]">Vier Dinge warten auf dich.</h1>
@@ -308,7 +419,7 @@ function Start({ intake = false }: { intake?: boolean }) {
                 {filed.map(([name, detail, amount]) => (
                   <div key={name} className="flex h-10 items-center gap-3">
                     <span aria-hidden className="size-2 shrink-0 rounded-full bg-fg-muted" />
-                    <span className="w-48 shrink-0 truncate font-medium min-[1200px]:w-64">{name}</span>
+                    <span className="w-48 shrink-0 truncate font-medium min-[1300px]:w-64">{name}</span>
                     <span className="min-w-0 flex-1 truncate text-small text-fg-muted">{detail}</span>
                     <span className="font-medium tabular-nums">{amount}</span>
                   </div>
@@ -323,12 +434,12 @@ function Start({ intake = false }: { intake?: boolean }) {
           </section>
           <aside className="flex flex-col gap-5 pt-1.5">
             <Heading aside="bis 27.11.">2026</Heading>
-            <div className="grid grid-cols-3 gap-8 min-[1200px]:flex min-[1200px]:flex-col min-[1200px]:gap-0 max-[1199px]:[&>*]:border-t-0 max-[1199px]:[&>*]:py-0">
+            <div className="grid grid-cols-3 gap-8 min-[1300px]:flex min-[1300px]:flex-col min-[1300px]:gap-0 max-[1299px]:[&>*]:border-t-0 max-[1299px]:[&>*]:py-0">
               <Figure label="Einnahmen" value="38.412,60 €" note="2.140,00 € mehr als 2025 bis November" />
               <Figure label="Ausgaben" value="29.870,14 €" note="1.312,48 € weniger als 2025 bis November" />
               <Figure label="Auf allen Konten" value="12.604,33 €" note="Stand der Kontoauszüge vom 31.10." />
             </div>
-            <div className="hidden flex-col gap-2 border-t border-line pt-4 min-[1200px]:flex">
+            <div className="hidden flex-col gap-2 border-t border-line pt-4 min-[1300px]:flex">
               <MonthBars height={72} />
               <div className="flex justify-between text-small text-fg-muted">
                 <span>Jan</span>
@@ -360,19 +471,29 @@ export function Value({ label, value, source, tone = "ok" }: { label: string; va
   );
 }
 
-function Pruefen() {
+export function Pruefen({ focus = false }: { focus?: boolean }) {
   return (
     <Frame
+      bare={focus}
       view="pruefen"
       path={["Prüfen", "Betrag unklar", "Stadtwerke Beispielstadt"]}
       actions={
         <>
           <span className="text-small text-fg-muted tabular-nums">Frage 2 von 4</span>
           <Button>Überspringen</Button>
+          {focus ? (
+            <Button kind="plain">
+              Fokus beenden <Kbd>Esc</Kbd>
+            </Button>
+          ) : (
+            <button type="button" aria-label="Fokus" title="Fokus: nur Seite und Frage (F)" className="flex size-(--control-height) shrink-0 items-center justify-center rounded-control text-fg-muted hover:bg-hover hover:text-fg">
+              <Glyph name="expand" />
+            </button>
+          )}
         </>
       }
     >
-      <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_440px] gap-5 p-5">
+      <main className={cn("grid min-h-0 flex-1 gap-5 p-5", focus ? "mx-auto w-full max-w-[1500px] grid-cols-[minmax(0,1fr)_480px]" : "grid-cols-[minmax(0,1fr)_440px]")}>
         <section aria-label="Seite" className={cn(panel, "flex min-h-0 items-center justify-center overflow-hidden p-5")}>
           <div className="flex size-full items-center justify-center [container-type:size]">
             <Page marked className="h-[min(100cqh,141.4cqw)]" />
@@ -429,7 +550,7 @@ const documents: { title: string; detail: string; figure: string; state: { tone:
   { title: "Tonspur", detail: "Rechnung vom 15.10.2026, aus dem Postfach", figure: "10,99 €", state: { tone: "neutral", label: "gelesen" }, icon: "mail" },
 ];
 
-export function Dokumente({ back, search = false }: { back?: string; search?: boolean }) {
+export function Dokumente({ back, search = false, rail = false, resize = false, values = true }: { back?: string; search?: boolean; rail?: boolean; resize?: boolean; values?: boolean }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("");
   const [state, setState] = useState("");
@@ -438,8 +559,10 @@ export function Dokumente({ back, search = false }: { back?: string; search?: bo
       view="dokumente"
       path={["Dokumente"]}
       back={back}
+      rail={rail}
       actions={
         <>
+          <Toggle glyph="values" label={values ? "Angaben ausblenden" : "Angaben einblenden"} on={values} />
           <More entries={[{ label: "Bestellungen", icon: "receipt", onSelect: nothing }, { label: "Als Tabelle exportieren …", icon: "upload", onSelect: nothing }, { label: "Namen einstellen", icon: "gear", onSelect: nothing }]} />
           <Menu
             align="end"
@@ -460,9 +583,10 @@ export function Dokumente({ back, search = false }: { back?: string; search?: bo
         </>
       }
     >
-      <main className="grid min-h-0 flex-1 grid-cols-[340px_minmax(0,1fr)] gap-5 p-5 min-[1200px]:grid-cols-[400px_minmax(0,1fr)_360px]">
+      <main className={cn("grid min-h-0 flex-1 grid-cols-[340px_minmax(0,1fr)] gap-5 p-5", !values ? "min-[1300px]:grid-cols-[400px_minmax(0,1fr)]" : resize ? "min-[1300px]:grid-cols-[470px_minmax(0,1fr)_340px]" : "min-[1300px]:grid-cols-[400px_minmax(0,1fr)_360px]")}>
         {search && <SearchOpen />}
-        <section className={cn(panel, "flex min-h-0 flex-col")}>
+        <section className={cn(panel, "relative flex min-h-0 flex-col")}>
+          {resize && <Divider />}
           <div className="flex flex-col gap-2 border-b border-line p-3">
             <TextField label="Suchen" icon="search" placeholder="Absender, Nummer, Betrag" value={query} onChange={setQuery} />
             <div className="grid grid-cols-2 gap-2">
@@ -477,13 +601,16 @@ export function Dokumente({ back, search = false }: { back?: string; search?: bo
             ))}
           </List>
         </section>
-        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto min-[1200px]:contents">
-        <section aria-label="Seite" className={cn(panel, "flex h-[360px] min-h-0 shrink-0 items-center justify-center overflow-hidden p-5 min-[1200px]:h-auto")}>
+        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto min-[1300px]:contents">
+        <section aria-label="Seite" className={cn(panel, "relative flex h-[360px] min-h-0 shrink-0 items-center justify-center overflow-hidden p-5 pb-16 min-[1300px]:h-auto")}>
           <div className="flex size-full items-center justify-center [container-type:size]">
             <Page className="h-[min(100cqh,141.4cqw)]" />
           </div>
+          <div className="absolute inset-x-0 bottom-3.5 flex justify-center">
+            <PageTools />
+          </div>
         </section>
-        <section className={cn(panel, "flex shrink-0 flex-col min-[1200px]:min-h-0 min-[1200px]:shrink")}>
+        <section className={cn(panel, "flex shrink-0 flex-col min-[1300px]:min-h-0 min-[1300px]:shrink", !values && "hidden")}>
           <div className="flex flex-col gap-0.5 px-5 pt-5 pb-3">
             <div className="flex items-start justify-between gap-2">
               <h2 className="text-heading font-semibold">2026-11-14 Stadtwerke Beispielstadt Rechnung</h2>
@@ -627,17 +754,17 @@ const bookings: { month: string; sum: string; rows: Booking[] }[] = [
   },
 ];
 
-export function Umsaetze({ loading = false }: { loading?: boolean }) {
+export function Umsaetze({ loading = false, detail = true }: { loading?: boolean; detail?: boolean }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [range, setRange] = useState("2026");
   return (
-    <Frame view="umsaetze" path={["Konten", "Girokonto"]} actions={<More entries={[{ label: "Buchung von Hand …", icon: "plus", onSelect: nothing }, { label: "Kontoauszug importieren …", icon: "upload", onSelect: nothing }, { label: "Als Tabelle exportieren …", icon: "document", onSelect: nothing }, { label: "Konto umbenennen …", icon: "card", onSelect: nothing }]} />}>
-      <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_280px] gap-5 p-5 min-[1200px]:grid-cols-[minmax(0,1fr)_400px]">
+    <Frame view="umsaetze" path={["Konten", "Girokonto"]} actions={<><Toggle glyph="values" label={detail ? "Detail ausblenden" : "Detail einblenden"} on={detail} /><More entries={[{ label: "Buchung von Hand …", icon: "plus", onSelect: nothing }, { label: "Kontoauszug importieren …", icon: "upload", onSelect: nothing }, { label: "Als Tabelle exportieren …", icon: "document", onSelect: nothing }, { label: "Konto umbenennen …", icon: "card", onSelect: nothing }]} /></>}>
+      <main className={cn("grid min-h-0 flex-1 gap-5 p-5", detail ? "grid-cols-[minmax(0,1fr)_280px] min-[1300px]:grid-cols-[minmax(0,1fr)_400px]" : "grid-cols-1")}>
         <section className={cn(panel, "flex min-h-0 flex-col")}>
           <div className="flex flex-col gap-2 border-b border-line p-3">
-            <div className="grid grid-cols-[minmax(0,1fr)_110px] items-end gap-2 min-[1200px]:grid-cols-[minmax(0,1fr)_200px_140px]">
-              <TextField label="Suchen" icon="search" placeholder="Wer, Zweck, Betrag" value={query} onChange={setQuery} className="col-span-2 min-[1200px]:col-span-1" />
+            <div className="grid grid-cols-[minmax(0,1fr)_110px] items-end gap-2 min-[1300px]:grid-cols-[minmax(0,1fr)_200px_140px]">
+              <TextField label="Suchen" icon="search" placeholder="Wer, Zweck, Betrag" value={query} onChange={setQuery} className="col-span-2 min-[1300px]:col-span-1" />
               <SelectField label="Kategorie" value={category} onChange={setCategory} options={[{ value: "", label: "Alle Kategorien" }]} />
               <SelectField label="Zeitraum" value={range} onChange={setRange} options={[{ value: "2026", label: "2026" }]} />
             </div>
@@ -657,11 +784,11 @@ export function Umsaetze({ loading = false }: { loading?: boolean }) {
                     <div key={`${row.day}-${row.who}`} role="option" aria-selected={selected} className={cn("relative flex h-10 items-center gap-3 rounded-row px-2.5", selected ? "bg-selected" : "hover:bg-hover")}>
                       {selected && <span aria-hidden className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-mark" />}
                       <span className="w-12 shrink-0 text-small text-fg-muted tabular-nums">{row.day}</span>
-                      <span className="min-w-0 flex-1 truncate font-medium min-[1200px]:w-44 min-[1200px]:flex-none">{row.who}</span>
-                      <span className="hidden min-w-0 flex-1 truncate text-small text-fg-muted min-[1200px]:block">{row.purpose}</span>
-                      <span className="hidden w-36 shrink-0 truncate text-small text-fg-muted min-[1200px]:block">{row.category}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium min-[1300px]:w-44 min-[1300px]:flex-none">{row.who}</span>
+                      <span className="hidden min-w-0 flex-1 truncate text-small text-fg-muted min-[1300px]:block">{row.purpose}</span>
+                      <span className="hidden w-36 shrink-0 truncate text-small text-fg-muted min-[1300px]:block">{row.category}</span>
                       <span className="flex w-5 shrink-0 justify-center text-fg-muted">{row.proof ? <Icon name="document" size={14} /> : null}</span>
-                      <span className="w-24 shrink-0 text-right font-medium tabular-nums min-[1200px]:w-28">{row.amount}</span>
+                      <span className="w-24 shrink-0 text-right font-medium tabular-nums min-[1300px]:w-28">{row.amount}</span>
                     </div>
                   );
                 })}
@@ -670,7 +797,7 @@ export function Umsaetze({ loading = false }: { loading?: boolean }) {
           </div>
         </section>
         {loading && <section className={cn(panel, "flex min-h-0 items-center justify-center p-8 text-center text-small text-fg-muted")}>Wähle eine Buchung, um ihren Beleg zu sehen.</section>}
-        <section className={cn(panel, "flex min-h-0 flex-col overflow-y-auto", loading && "hidden")}>
+        <section className={cn(panel, "flex min-h-0 flex-col overflow-y-auto", (loading || !detail) && "hidden")}>
           <div className="flex flex-col gap-1 p-5">
             <span className="text-small text-fg-muted">18.11.2026, Girokonto</span>
             <h2 className="text-heading font-semibold">Stadtwerke Beispielstadt</h2>

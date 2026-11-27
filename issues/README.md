@@ -115,12 +115,14 @@ Order of work: #33 first, then #43 (added by the owner's answer of 2026-11-26), 
 | [#50](050-views-of-stage-5.md) | The views of stage 5 in the frame | FA-51 | #44, #45, #51 | open |
 | [#51](051-check-of-the-views.md) | A check that every view keeps the rules | FA-52 | #46, #47, #48, #49 | open |
 | [#52](052-recurring-payments-page.md) | The page "Wiederkehrend" under Konten | FA-49 | #34, #48 | open |
+| [#53](053-fitting-a-view.md) | Fitting a view: widths, the rail, folded columns, the size | FA-53 | #44, #45, #46, #48, #51 | open |
+| [#54](054-reading-and-focus.md) | Reading a document large, and the focus of "Prüfen" | FA-54 | #46, #47 | open |
 
 **The views are brought together when the owner works through a week of real documents in the installed app, from Start to Prüfen, Dokumente, Konten and Einstellungen, and finds every action where the map puts it, in light and dark, and `npm run check:views` passes.**
 
 **Status:** Cut on 2026-11-27 from the draft the owner went through as pictures ("Gefällt mir sehr gut", `knowledge/decision-views.md`). Not begun: the owner finishes the functions first and brings the frontend together after. It is no stage of `spec/concept.md` but the work that joins the stages in the window, so it does not wait for stage 5 to be accepted.
 
-Order of work: #45 and #44 first, then #46, #47, #48 and #49 in any order, then #51, then #52 once #34 is done. #38, #40, #41 and #42 build their views after #44 and #45, #50 holds them to the map.
+Order of work: #45 and #44 first, then #46, #47, #48 and #49 in any order, then #51 and #54, then #53, then #52 once #34 is done. #53 and #54 were added on 2026-11-27 on the owner's question about usability ("Elemente von der Größe her anpassen, ein/ausklappen, Fokusmodus"). #38, #40, #41 and #42 build their views after #44 and #45, #50 holds them to the map.
 
 ## Later stages
 

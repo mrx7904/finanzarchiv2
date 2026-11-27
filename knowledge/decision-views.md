@@ -44,7 +44,7 @@ The numbers are those of the draft, so a review can name one.
 | Question | the page of the document at the left, the question at the right | Prüfen (question) |
 
 - Three columns (list, page, values) hold when the chosen piece is a document with read values, as in the showcase of #07. Otherwise two.
-- The window is at least 960 px wide. Below 1200 px the values move under the page, Start becomes one column, and a row of Umsätze drops purpose and category, which stay in the detail. Nothing is covered and nothing runs out of the window sideways.
+- The window is at least 960 px wide. Below 1300 px the values move under the page, Start becomes one column, and a row of Umsätze drops purpose and category, which stay in the detail. Nothing is covered and nothing runs out of the window sideways.
 - On a large screen lists, tables and the page of a document take the width, running text, forms and the sections of an overview do not. The page of a document reaches the lower edge of the window.
 - Every column scrolls by itself, the bar and the sidebar stand still.
 
@@ -76,6 +76,20 @@ The numbers are those of the draft, so a review can name one.
 20. A button that asks something more first ends on " …". One that acts at once does not.
 21. One word for one thing, the same in every view. Texts speak of what the app does for the owner, never of how it is built.
 22. The quick search runs every action that stands in a top bar or a menu, and finds every page of Einstellungen in the owner's words.
+
+### Fitting a view
+
+Added on 2026-11-27 on the owner's question: "Wie siehts aus mit Usability? Elemente von der Größe her anpassen, ein/ausklappen, Fokusmodus?" Until then the draft said where things stand and almost nothing on how the owner fits a view. Five proposals were made, the owner took all five ("Ja, zeichne 1 bis 5 und trag sie ein").
+
+23. The line between two columns can be dragged, by mouse and by keyboard, and a double click gives the width of the design back. No column gets narrower than its least width.
+24. The sidebar folds to a rail of icons of 56 px by its button and by Strg+B. The count of "Prüfen" and the intake stay in sight.
+25. The values of a document and the detail of a booking fold away by a button of the top bar, which stays pressed while the column shows.
+26. Under the page of every document stand its pages and its zoom, and the document can be read large over the whole window, with its pages at the left. In "Prüfen" a focus hides everything but the page, the question and the progress. Esc ends both.
+27. The whole view has three sizes, Klein, Mittel and Groß (90, 100, 115 %), in Einstellungen › Darstellung and by Strg with +, − and 0. It is the zoom of the window, so a view folds by the width it then really has.
+
+What the owner set is kept over a restart, on the computer and not in the archive.
+
+Turning pages and zooming closed a gap of the draft: it showed only the first page of a document at one size, though invoices and statements have several pages.
 
 ## What the owner decided with it
 
@@ -109,6 +123,7 @@ One point departs from 1.0 knowingly. There the actions of a view stood in the t
 |---|---|
 | `Entwurf.tsx` | the nine views: Start, Prüfen (question), Dokumente, Konten, Umsätze, Auswertungen, Steuern, Chat, Einstellungen › Postfächer |
 | `Unterseiten.tsx` | Prüfen (reasons, documents of a reason), Bestellungen, Wiederkehrend, the seven other pages of Einstellungen, and the states: empty, loading, error, damaged archive, the intake opened, the quick search, the arrow back |
+| `Anpassen.tsx` | rules 23 to 27: a column dragged wider, the rail, a column folded away, the focus of Prüfen, a document read large, the sizes Groß and Klein |
 | `Dialoge.tsx` | seven dialogs: deleting a document, renaming, picking the invoice of an order, restoring a snapshot, moving the archive, removing a mailbox, no longer watching a folder |
 
 Seen by the owner as pictures on 2026-11-27: every view, sub page, state and dialog at 1440 × 900 in light, a part of them in dark, Start, Dokumente and Umsätze at 960 × 600, and the four menus. All of them were rendered in Chromium in light and dark.
@@ -128,9 +143,10 @@ Not changed in the draft, they are the work of #45:
 
 ## Known limits
 
+- **The sizes were not seen as a zoom of a window.** The pictures of Groß and Klein were taken with a smaller and a larger window at a higher and a lower density, which is what a zoom does. How Tauri zooms a webview is to be verified in #53.
 - **UNVERIFIED in the app:** everything was seen in Chromium, nothing in the Tauri window, on Windows or on the Mac. WebView2 is Chromium. WKWebView is not, and the Mac is still unseen for the design system too (#08).
 - The owner saw pictures, not a running app. A view is accepted when the owner has used it on the real archive, as every stage is (`spec/concept.md`, "One open stage").
-- Drawn but not asked of the core: "Neu lesen lassen" at a document, "Buchung von Hand" in Umsätze, "Braucht keine Rechnung" at an order, "Beim Start öffnen" in Darstellung, the size of the view (Klein, Mittel, Groß), "Als Tabelle exportieren". Each is named in the issue of its view as something to decide there, none is promised by this file.
+- Drawn but not asked of the core: "Neu lesen lassen" at a document, "Buchung von Hand" in Umsätze, "Braucht keine Rechnung" at an order, "Beim Start öffnen" in Darstellung, "Als Tabelle exportieren". Each is named in the issue of its view as something to decide there, none is promised by this file.
 
 ## Rejected
 
@@ -138,4 +154,6 @@ Not changed in the draft, they are the work of #45:
 - **Einstellungen as a wide dialog**, as in 1.0: the path could not show where the owner is, and rule 18 keeps lists out of dialogs.
 - **A routing package** (see "How one moves").
 - **Titles over the groups of the sidebar**, as in 1.0 ("Überblick", "Finanzen", "Eingang"): eight views read without them, and a label above content that needs none is what the skill `frontend-design` names as a mark of a templated page.
+- **Folding the sections of an overview** (what was filed on Start, the categories of Auswertungen): it makes a calm view restless, and an overview is short enough to scroll.
+- **A fold at 1200 px wide:** with the size Groß a window of 1440 px is 1252 px wide, and three columns left the page 145 px. The fold stands at 1300 px, and #53 holds the page at 320 px at least.
 - **Toasts** for feedback (Sonner stays out): in 1.0 one covered the actions of a row.

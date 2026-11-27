@@ -1,10 +1,10 @@
 # Entwurf: die Ansichten von Finanzarchiv 2.0
 
-**Stand:** 2026-11-27 · **Entschieden vom Besitzer am 2026-11-27** an den Bildern in echter Größe ("Gefällt mir sehr gut"). Was gilt, steht in [`knowledge/decision-views.md`](../knowledge/decision-views.md), gebaut wird nach den Issues #44 bis #52 ([`issues/README.md`](../issues/README.md)). Dieses Dokument bleibt als der Entwurf, an dem entschieden wurde.
+**Stand:** 2026-11-27 · **Entschieden vom Besitzer am 2026-11-27** an den Bildern in echter Größe ("Gefällt mir sehr gut"). Was gilt, steht in [`knowledge/decision-views.md`](../knowledge/decision-views.md), gebaut wird nach den Issues #44 bis #54 ([`issues/README.md`](../issues/README.md)). Dieses Dokument bleibt als der Entwurf, an dem entschieden wurde.
 
 Der Entwurf hat zwei Teile. Die Landkarte sagt, welche Ansichten es gibt, was in welche gehört und wie man von einer zur anderen kommt. Die Regeln sagen, was in jeder Ansicht gleich ist.
 
-**Die Ansichten als Bilder:** Jede Ansicht der Landkarte ist in `src/entwurf/` aus den Bausteinen von `src/ui/` gezeichnet, mit erfundenen Daten und ohne den Kern. `npm run dev` starten und `http://localhost:1420/src/entwurf/index.html?v=start&t=dark` öffnen. Ohne `v` listet die Seite alle Ansichten als Links, `t` ist `light` oder `dark`. Gezeichnet sind die neun Ansichten (`Entwurf.tsx`), ihre Unterseiten (Gründe und Liste in Prüfen, Bestellungen, Wiederkehrend, alle acht Seiten der Einstellungen) und die Zustände (leer, laden, Fehler, beschädigtes Archiv, Eingang aufgeklappt, Schnellsuche, Zurück nach einem Sprung) in `Unterseiten.tsx`, dazu sieben Dialoge in `Dialoge.tsx` (Dokument löschen, Umbenennen, Rechnung zuordnen, Sicherung wiederherstellen, Archiv umziehen, Postfach entfernen, Ordner nicht mehr beobachten). Die Menüs hinter "…" und "Importieren" öffnen sich in Dokumente und in den Umsätzen per Klick. Unter 1200 px Breite falten sich Start, Dokumente und Umsätze, wie die Regel zum schmalen Fenster es sagt. Die Seite gehört nicht zur App und nicht zum Release.
+**Die Ansichten als Bilder:** Jede Ansicht der Landkarte ist in `src/entwurf/` aus den Bausteinen von `src/ui/` gezeichnet, mit erfundenen Daten und ohne den Kern. `npm run dev` starten und `http://localhost:1420/src/entwurf/index.html?v=start&t=dark` öffnen. Ohne `v` listet die Seite alle Ansichten als Links, `t` ist `light` oder `dark`. Gezeichnet sind die neun Ansichten (`Entwurf.tsx`), ihre Unterseiten (Gründe und Liste in Prüfen, Bestellungen, Wiederkehrend, alle acht Seiten der Einstellungen) und die Zustände (leer, laden, Fehler, beschädigtes Archiv, Eingang aufgeklappt, Schnellsuche, Zurück nach einem Sprung) in `Unterseiten.tsx`, dazu sieben Dialoge in `Dialoge.tsx` (Dokument löschen, Umbenennen, Rechnung zuordnen, Sicherung wiederherstellen, Archiv umziehen, Postfach entfernen, Ordner nicht mehr beobachten). Die Menüs hinter "…" und "Importieren" öffnen sich in Dokumente und in den Umsätzen per Klick. Unter 1300 px Breite falten sich Start, Dokumente und Umsätze, wie die Regel zum schmalen Fenster es sagt. Die Seite gehört nicht zur App und nicht zum Release.
 
 Grundlage sind der Look Graphit und die Bausteine aus `src/ui/` ([`decision-ui-libraries.md`](../knowledge/decision-ui-libraries.md)), die Kopfleiste als Titelleiste ([`decision-app-shell.md`](../knowledge/decision-app-shell.md)), die Anforderungen bis FA-46 ([`requirements.md`](../spec/requirements.md)) und der Satz aus der [Analyse von 1.0](analyse-finanzarchiv-1.0.md), Abschnitt 3.10: weniger und klarere Ansichten.
 
@@ -119,7 +119,7 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 | **Frage** | die Seite des Dokuments links, die Frage rechts | Prüfen (Frage) |
 
 - **Zwei oder drei Spalten:** Ist das gewählte Stück ein Dokument mit gelesenen Werten, gelten drei Spalten wie im Muster von #07 (Liste, Seite, Angaben). Sonst gelten zwei (Liste, Detail). Ist nichts gewählt, füllt die Liste die Breite nicht aus, rechts steht ein ruhiger Hinweis.
-- **Schmales Fenster:** Das Fenster ist mindestens 960 px breit. Unter etwa 1200 px rücken die Angaben unter die Seite, statt eine dritte Spalte zu bilden. Nichts wird verdeckt, nichts läuft waagerecht aus dem Fenster.
+- **Schmales Fenster:** Das Fenster ist mindestens 960 px breit. Unter etwa 1300 px rücken die Angaben unter die Seite, statt eine dritte Spalte zu bilden. Nichts wird verdeckt, nichts läuft waagerecht aus dem Fenster.
 - **Großer Bildschirm:** Listen, Tabellen und die Seite eines Dokuments nehmen die Breite, die da ist. Fließtext, Formulare und die Abschnitte einer Übersicht tun es nicht. Die Seite eines Dokuments reicht bis zum unteren Rand des Fensters.
 - Jede Spalte rollt für sich, die Kopfleiste und die Seitenleiste stehen fest.
 
@@ -167,6 +167,18 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 - Jede Bewegung steht unter reduzierter Bewegung des Systems still.
 - Hell und dunkel sind gleichwertig, jede Ansicht wird in beiden gezeigt.
 - Die Oberfläche rechnet nichts, jede Summe kommt aus dem Kern.
+
+### Anpassen
+
+Am 2026-11-27 auf die Frage des Besitzers nach der Bedienbarkeit dazugekommen: "Elemente von der Größe her anpassen, ein/ausklappen, Fokusmodus?" Gezeichnet in `src/entwurf/Anpassen.tsx`.
+
+23. **Spalten ziehen.** Die Linie zwischen zwei Spalten lässt sich mit der Maus und der Tastatur verschieben, ein Doppelklick stellt die Breite des Entwurfs wieder her. Keine Spalte wird schmaler als ihre Mindestbreite.
+24. **Seitenleiste einklappen** zu einer Leiste aus Symbolen, per Knopf und Strg+B. Die Zahl an "Prüfen" und der Eingang bleiben sichtbar.
+25. **Eine Spalte ausblenden.** Die Angaben eines Dokuments und das Detail einer Buchung verschwinden über einen Knopf der Kopfleiste, der gedrückt bleibt, solange die Spalte da ist.
+26. **Groß lesen und Fokus.** Unter der Seite jedes Dokuments stehen Blättern und Zoom, und ein Dokument lässt sich über das ganze Fenster lesen, mit seinen Seiten links. In "Prüfen" blendet der Fokus alles aus bis auf Seite, Frage und Fortschritt. Esc beendet beides.
+27. **Drei Größen** für die ganze Ansicht: Klein, Mittel, Groß, in "Darstellung" und mit Strg und +, − und 0.
+
+Was der Besitzer einstellt, bleibt über einen Neustart. Abschnitte einer Übersicht klappen nicht ein, das macht eine ruhige Ansicht unruhig.
 
 ## Was 1.0 schon gelernt hat
 

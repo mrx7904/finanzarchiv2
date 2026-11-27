@@ -327,3 +327,15 @@ Issue: #50
 A command opens every view in light and dark at several window sizes and fails when a rule is broken, and it proves that it can fail.
 
 Issue: #51
+
+### FA-53 The owner fits a view to the work
+
+The line between two columns can be dragged, the sidebar folds to a rail, the values of a document and the detail of a booking fold away, and the whole view has three sizes. The app keeps each over a restart, and nothing gets so narrow that it is covered.
+
+Issue: #53
+
+### FA-54 Reading large and answering in focus
+
+Every page of a document can be turned to and zoomed, and a document can be read over the whole window. In "Prüfen" the owner can hide everything but the page and the question.
+
+Issue: #54

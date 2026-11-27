@@ -8,7 +8,7 @@ The rules: [`knowledge/decision-views.md`](../knowledge/decision-views.md). The 
 ## Done when
 
 - [ ] Konten: the sum over all accounts as the one large figure, how many accounts agree with the bank, then every account with its balance, the bank's balance with its day and "stimmt", "prüfen" or "ohne Bank". The top bar holds "Alle Umsätze" and "Kontoauszug importieren".
-- [ ] Umsätze: dense rows grouped by month with the month's sums, newest first, with the search, the category and the period in the head and one line with the count and the sums. Below 1200 px a row drops purpose and category.
+- [ ] Umsätze: dense rows grouped by month with the month's sums, newest first, with the search, the category and the period in the head and one line with the count and the sums. Below 1300 px a row drops purpose and category.
 - [ ] The detail of the chosen booking stands beside the list and no longer folds open in the row: who, the amount, the day, the purpose, the category, the document as a card, the party over the year, a move, and the statement as a line that shows its place on demand.
 - [ ] Money in carries a "+" and is not green (rule 13).
 - [ ] A jump from a figure sets its filter as a mark with "×" (rule 9), ready for #38.
