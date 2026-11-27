@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BACK_LIMIT, initialNav, navigate, type Nav } from "./navigation";
+import { BACK_LIMIT, initialNav, navFromUrl, navigate, type Nav } from "./navigation";
 
 const account = { id: 3, name: "Girokonto" };
 
@@ -55,5 +55,15 @@ describe("the navigation", () => {
     expect(nav.back).toHaveLength(0);
     for (let at = 0; at < BACK_LIMIT + 5; at += 1) nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: at, orders: false } } });
     expect(nav.back).toHaveLength(BACK_LIMIT);
+  });
+});
+
+describe("the place a URL of the dev server names (#51)", () => {
+  it("opens a view, a sub page or a page of Einstellungen, and nothing else", () => {
+    expect(navFromUrl(initialNav, "?view=accounts&bookings=all").places.accounts.bookingsOf).toBeNull();
+    expect(navFromUrl(initialNav, "?view=accounts&bookings=3").places.accounts.bookingsOf?.id).toBe(3);
+    expect(navFromUrl(initialNav, "?view=documents&orders").places.documents.orders).toBe(true);
+    expect(navFromUrl(initialNav, "?view=settings&page=modell").places.settings.page).toBe("modell");
+    expect(navFromUrl(initialNav, "?view=nothing")).toBe(initialNav);
   });
 });

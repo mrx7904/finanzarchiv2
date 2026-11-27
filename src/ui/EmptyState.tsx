@@ -22,6 +22,7 @@ type EmptyStateProps = {
 export function EmptyState({ icon, title, hint, actions, className }: EmptyStateProps) {
   return (
     <m.div
+      data-empty
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...quick, duration: 0.3, delay: 0.04 }}

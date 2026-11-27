@@ -58,7 +58,7 @@ export function AppShell({ path, actions, sidebar, appName, children, system = w
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar path={path} actions={actions} system={system} insetForTrafficLights={!sidebar && system === "mac"} onBack={onBack} slot={setSlot} />
         <BarSlot.Provider value={slot}>
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <div data-content className="flex min-h-0 flex-1 flex-col">{children}</div>
         </BarSlot.Provider>
       </div>
     </div>

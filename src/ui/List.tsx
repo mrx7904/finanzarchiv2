@@ -21,7 +21,7 @@ const dots: Record<Tone, string> = {
 /** One width for every state, so a column of them lines up. Room for about ten letters. */
 export function Capsule({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
-    <span className="inline-flex h-5.5 w-24 shrink-0 items-center gap-1.5 rounded-full bg-surface px-2 text-small font-medium text-fg shadow-[inset_0_0_0_1px_var(--line-strong)]">
+    <span data-state className="inline-flex h-5.5 w-24 shrink-0 items-center gap-1.5 rounded-full bg-surface px-2 text-small font-medium text-fg shadow-[inset_0_0_0_1px_var(--line-strong)]">
       <span aria-hidden className={cn("size-2 shrink-0 rounded-full", dots[tone])} />
       <span className="truncate">{children}</span>
     </span>

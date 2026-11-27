@@ -8,7 +8,7 @@ import { useIntakeChanged } from "./intake/useIntakeChanged";
 import { Accounts } from "./money/Accounts";
 import { Bookings } from "./money/Bookings";
 import { moneyPath } from "./money/describe";
-import { initialNav, navigate, type ViewId } from "./navigation";
+import { initialNav, navFromUrl, navigate, type ViewId } from "./navigation";
 import { reviewPath } from "./review/keys";
 import { Review } from "./review/Review";
 import { Settings, settingsPages, type SettingsPageId } from "./settings/Settings";
@@ -45,7 +45,8 @@ type Findings = { documents: DocumentRow[]; accounts: { id: number; name: string
 export function App() {
   const hash = useHash();
   const [loaded, setLoaded] = useState<LoadedStatus | null>(null);
-  const [nav, dispatch] = useReducer(navigate, initialNav);
+  // The dev server may name a place in its URL, for the check of the views (#51).
+  const [nav, dispatch] = useReducer(navigate, initialNav, (start) => (import.meta.env.DEV ? navFromUrl(start, window.location.search) : start));
   const [waiting, setWaiting] = useState(0);
   const [searching, setSearching] = useState(false);
   const [findings, setFindings] = useState<Findings | null>(null);

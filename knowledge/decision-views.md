@@ -91,6 +91,10 @@ What the owner set is kept over a restart, on the computer and not in the archiv
 
 Turning pages and zooming closed a gap of the draft: it showed only the first page of a document at one size, though invoices and statements have several pages.
 
+## The check of the views
+
+`npm run check:views` (#51) opens every built view and sub page with the stand-in of the core in light and dark at 960 × 600, 1440 × 900 and 2560 × 1440, and every list empty, failing and loading, and fails on: running out sideways, a covered control, the content below a quarter of the height at 1440 × 900 (an empty state excepted), more than one primary button in the top bar, a state word outside rule 11. It is a command of its own, not part of `scripts/check.mjs`: it takes about 90 s and a browser of the system. A view is merged after it passes.
+
 ## What the owner decided with it
 
 The draft asked nine questions, each with a proposal. The owner on 2026-11-27 on the proposals: "Deine Vorschläge gefallen mir aber soweit", then on the nine views drawn with them: "Gefällt mir sehr gut".
