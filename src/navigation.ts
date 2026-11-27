@@ -17,6 +17,8 @@ export type Places = {
   accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string; recurring?: boolean; filter?: BookingJump };
   /** The year of Auswertungen, null for the newest. */
   evaluations: { year: number | null };
+  /** Start has no place of its own. */
+  start: Record<string, never>;
   /** The page of Einstellungen. */
   settings: { page: SettingsPageId };
 };
@@ -45,6 +47,7 @@ export const initialNav: Nav = {
     accounts: { bookingsOf: undefined, text: "" },
     settings: { page: "ordner" },
     evaluations: { year: null },
+    start: {},
   },
   back: [],
 };
@@ -84,7 +87,7 @@ export function navigate(nav: Nav, action: NavAction): Nav {
 export function navFromUrl(nav: Nav, search: string): Nav {
   const params = new URLSearchParams(search);
   const view = params.get("view");
-  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations") return nav;
+  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations" && view !== "start") return nav;
   const places = { ...nav.places };
   if (view === "documents") places.documents = { focus: null, orders: params.has("orders") };
   if (view === "accounts") {

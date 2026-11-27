@@ -14,7 +14,7 @@ describe("the frame", () => {
     const views = searchEntries({ findings: null, go: () => undefined, openDocument: () => undefined, openBookings: () => undefined, openSettings: () => undefined, back: null })
       .filter((entry) => entry.group === "Ansichten")
       .map((entry) => entry.label);
-    expect(views).toEqual(["Prüfen", "Dokumente", "Konten", "Auswertungen", "Einstellungen"]);
+    expect(views).toEqual(["Start", "Prüfen", "Dokumente", "Konten", "Auswertungen", "Einstellungen"]);
   });
 
   it("shows the arrow back only while there is a way back", () => {
