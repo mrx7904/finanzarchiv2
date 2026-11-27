@@ -124,6 +124,37 @@ Order of work: #33 first, then #43 (added by the owner's answer of 2026-11-26), 
 
 Order of work: #45 and #44 first, then #46, #47, #48 and #49 in any order, then #51 and #54, then #53, then #52 once #34 is done. #53 and #54 were added on 2026-11-27 on the owner's question about usability ("Elemente von der Größe her anpassen, ein/ausklappen, Fokusmodus"). #38, #40, #41 and #42 build their views after #44 and #45, #50 holds them to the map.
 
+## After the first look
+
+Faults and gaps found when 0.7.0 was read against the requirements, the concept and what 1.0 could do.
+
+| # | Title | Requirements | Depends on | Status |
+|---|---|---|---|---|
+| [#55](055-page-stands-still.md) | The page of a document stands still | FA-55 | #54 | open |
+| [#56](056-wheel-through-pages.md) | Through the pages of a document by the wheel | FA-56 | #55 | open |
+| [#57](057-pages-and-mark-in-review.md) | Every page and the right mark in "Prüfen" | FA-57 | #55 | open |
+| [#58](058-jump-to-one-booking.md) | A jump leads to the one booking | FA-58 | #48, #50 | open |
+| [#59](059-failures-show.md) | Failures show, and an answer that is overtaken does not count | FA-59 | #46, #48 | open |
+| [#60](060-window-stays-fluid.md) | The window stays fluid while the archive works | FA-60 | #55 | open |
+| [#61](061-correcting-at-the-document.md) | Correcting a value and the kind at the document | FA-61 | #46, #47 | open |
+| [#62](062-finding-documents.md) | Finding a document by what stands in it | FA-62 | #46 | open |
+| [#63](063-open-invoices-and-missing-documents.md) | Invoices open and paid, bookings without a document | FA-63 | #24, #46, #48 | open |
+| [#64](064-filters-of-bookings.md) | The filters of "Umsätze": a month, a range, the direction, an amount | FA-64 | #48 | open |
+| [#65](065-evaluations-complete.md) | "Auswertungen" shows what the core already knows | FA-65 | #38, #39 | open |
+| [#66](066-parties-in-settings.md) | Parties in the window | FA-66 | #25, #49 | open |
+| [#67](067-model-and-trash.md) | The model, its setup and the Papierkorb in Einstellungen | FA-67 | #49 | open |
+| [#68](068-bookings-by-hand.md) | Accounts without statements, and the opening balance | FA-68 | #48 | open, needs the owner's word |
+| [#69](069-export.md) | Taking a list and the documents of a tax year out of the archive | FA-69 | #41, #46, #64 | open |
+| [#70](070-log-and-one-instance.md) | A log file and one instance | FA-70 | none | open |
+| [#71](071-running-in-the-background.md) | The archive fills while the window is closed | FA-71 | #70 | open, needs the owner's word |
+| [#72](072-handling-documents.md) | Handling documents: the drop, the keys, several at once | FA-72 | #46, #48, #61 | open |
+
+**This block is done when the owner works through a week of real documents in the installed app without one of the faults of #55 to #60, and finds each function of #61 to #72 that was built where its issue puts it.**
+
+**Status:** Cut on 2026-11-27 on the owner's word ("Bitte erstelle eine ausführliche Analyse mit neuen Issues", then "schau auch mal noch nach Funktionalitäten, ob Usability oder Feature, die noch fehlen und lege dafür ebenfalls neue Issues an"). Like the views it is no stage of `spec/concept.md`. #55 was reproduced, the other faults were found by reading the code and are to be seen in the window by their issue. #68 and #71 wait for the owner's word before they begin.
+
+Order of work: #55 first, then #56, #57 and #59, then #58 and #60. After the faults: #70, then #61, #62 and #64, then #63, #65, #66 and #67, then #69 and #72, and #68 and #71 once the owner decided.
+
 ## Later stages
 
 Stage 6 of `spec/concept.md` is cut into issues when its turn comes.
