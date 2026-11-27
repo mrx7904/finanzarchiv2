@@ -3,6 +3,7 @@ import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { type DocumentRow_Serialize as DocumentRow, commands } from "./bindings";
 import { Documents } from "./documents/Documents";
 import { Evaluations } from "./evaluations/Evaluations";
+import { Start } from "./start/Start";
 import { OrdersPage } from "./documents/Orders";
 import { IntakeLine } from "./intake/IntakeLine";
 import { useIntakeChanged } from "./intake/useIntakeChanged";
@@ -31,7 +32,10 @@ function useHash() {
 
 /** The views in the sidebar, in their groups without a title. A view not built yet is not listed (#44). */
 const groups: { id: ViewId; label: string; icon: IconName }[][] = [
-  [{ id: "review", label: "Prüfen", icon: "check" }],
+  [
+    { id: "start", label: "Start", icon: "home" },
+    { id: "review", label: "Prüfen", icon: "check" },
+  ],
   [
     { id: "documents", label: "Dokumente", icon: "document" },
     { id: "accounts", label: "Konten", icon: "card" },
@@ -124,6 +128,8 @@ export function App() {
                   })
                 : nav.view === "evaluations"
                   ? [{ label: "Auswertungen" }]
+                : nav.view === "start"
+                  ? [{ label: "Start" }]
                 : nav.view === "settings"
                   ? [{ label: "Einstellungen", onSelect: () => openSettings("ordner") }, { label: settingsLabel }]
                   : documents.orders
@@ -177,6 +183,16 @@ export function App() {
             onJump={openDocument}
             onOpenBooking={(account) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: account, text: "" } } })}
             onOrders={() => dispatch({ type: "set", spot: { view: "documents", place: { ...documents, orders: true } } })}
+          />
+        ) : nav.view === "start" ? (
+          <Start
+            onTarget={(target) => {
+              if (target.view === "review") dispatch({ type: "go", view: "review" });
+              else if (target.view === "evaluations") dispatch({ type: "go", view: "evaluations" });
+              else if (target.view === "orders") dispatch({ type: "jump", to: { view: "documents", place: { focus: null, orders: true } } });
+              else if (target.view === "accounts") dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: undefined, text: "" } } });
+              else openSettings(target.page);
+            }}
           />
         ) : nav.view === "evaluations" ? (
           <Evaluations
