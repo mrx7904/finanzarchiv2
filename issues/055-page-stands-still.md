@@ -9,13 +9,17 @@ The cause, in `src/documents/PageView.tsx` and `src/documents/PageImage.tsx`: at
 
 ## Done when
 
-- [ ] The width a page is fitted to does not change when a scroll bar comes or goes.
-- [ ] The window asks the core only for the widths the core renders (`previews::WIDTHS`), so two widths that give the same image are one request.
-- [ ] While another width or page loads, the image shown before stays, at its place and size. A page never shows an empty box between two images of the same page.
-- [ ] A test counts the calls of `page_image` for a page at 100 % in a box lower than the page, over a simulated second: at most 2. It fails on the code of 0.7.0.
-- [ ] `npm run check:views` gains the probe: a question of "Prüfen" at 1600 × 900 makes at most 2 calls of `page_image` per page within 3 seconds.
-- [ ] A page that cannot be rendered shows "Keine Vorschau" in its box, not an empty one.
+- [x] The width a page is fitted to does not change when a scroll bar comes or goes.
+- [x] The window asks the core only for the widths the core renders (`previews::WIDTHS`), so two widths that give the same image are one request.
+- [x] While another width or page loads, the image shown before stays, at its place and size. A page never shows an empty box between two images of the same page.
+- [x] A test counts the calls of `page_image` for a page at 100 % in a box lower than the page, over a simulated second: at most 2. It fails on the code of 0.7.0.
+- [x] `npm run check:views` gains the probe: a question of "Prüfen" at 1600 × 900 makes at most 2 calls of `page_image` per page within 3 seconds.
+- [x] A page that cannot be rendered shows "Keine Vorschau" in its box, not an empty one.
 - [ ] Seen by the owner in the installed app on a real document in "Prüfen", in Dokumente at 150 % and in "Groß lesen".
+
+## Evidence
+
+Measured on 2026-11-27 with `npm run check:views -- --still` at 1600 × 900, scroll bars shown, over 3 seconds: 0.7.0 makes 564 calls of `page_image` for the question of "Prüfen" and 598 for a document in Dokumente at 150 %, the fix 2 and 2. `src/documents/stands-still.test.ts` fails on `pages.ts` of 0.7.0 (4 requests in the simulated second, widths 761 and 776) and passes after it. With `?mock=nopage` the probe finds "Keine Vorschau" in the page column of Dokumente, and finds it missing on `PageImage.tsx` of 0.7.0. The whole `npm run check:views` passes with the scroll bars shown (0 findings, 150 s), its self-test finds the planted page that asks every 50 ms (62 calls). Not seen in the Tauri window: UNVERIFIED there.
 
 ## Out of scope
 

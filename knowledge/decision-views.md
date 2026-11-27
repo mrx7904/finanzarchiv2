@@ -93,7 +93,7 @@ Turning pages and zooming closed a gap of the draft: it showed only the first pa
 
 ## The check of the views
 
-`npm run check:views` (#51) opens every built view and sub page with the stand-in of the core in light and dark at 960 × 600, 1440 × 900 and 2560 × 1440, and every list empty, failing and loading, and fails on: running out sideways, a covered control, the content below a quarter of the height at 1440 × 900 (an empty state excepted), more than one primary button in the top bar, a state word outside rule 11. It is a command of its own, not part of `scripts/check.mjs`: it takes about 90 s and a browser of the system. A view is merged after it passes.
+`npm run check:views` (#51) opens every built view and sub page with the stand-in of the core in light and dark at 960 × 600, 1440 × 900 and 2560 × 1440, and every list empty, failing and loading, and fails on: running out sideways, a covered control, the content below a quarter of the height at 1440 × 900 (an empty state excepted), more than one primary button in the top bar, a state word outside rule 11. Since #55 it also counts the calls of `page_image` over 3 seconds for a question of "Prüfen" and a document in Dokumente at 150 % at 1600 × 900, at most 2 per page and one per thumbnail of the list, and the browser shows its scroll bars, because a hidden scroll bar hid the loop of #55 (`--still` runs this probe alone). It is a command of its own, not part of `scripts/check.mjs`: it takes about 90 s and a browser of the system. A view is merged after it passes.
 
 ## What the owner decided with it
 

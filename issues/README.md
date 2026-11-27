@@ -130,7 +130,7 @@ Faults and gaps found when 0.7.0 was read against the requirements, the concept 
 
 | # | Title | Requirements | Depends on | Status |
 |---|---|---|---|---|
-| [#55](055-page-stands-still.md) | The page of a document stands still | FA-55 | #54 | open |
+| [#55](055-page-stands-still.md) | The page of a document stands still | FA-55 | #54 | built, the owner looks |
 | [#56](056-wheel-through-pages.md) | Through the pages of a document by the wheel | FA-56 | #55 | open |
 | [#57](057-pages-and-mark-in-review.md) | Every page and the right mark in "Prüfen" | FA-57 | #55 | open |
 | [#58](058-jump-to-one-booking.md) | A jump leads to the one booking | FA-58 | #48, #50 | open |

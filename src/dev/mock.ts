@@ -125,14 +125,20 @@ const answers: Record<string, (args: Args) => unknown> = {
   model_status: () => ({ name: "gemma4:12b-it-qat", address: "http://127.0.0.1:11434", reached: true, installed: true, problem: null }),
 };
 
-/** `?mock=empty`, `?mock=error` or `?mock=slow`: the lists answer empty, with an error, or after 1.5 s (#51). */
+/** `?mock=empty`, `?mock=error` or `?mock=slow`: the lists answer empty, with an error, or after 1.5 s (#51). `?mock=nopage` renders no page (#55). */
 const mode = new URLSearchParams(window.location.search).get("mock") ?? "";
 const LISTS = ["list_documents", "list_accounts", "list_orders", "review_groups", "list_bookings"];
 
 let callbacks = 0;
+/** How often each command was called, for the probes of `npm run check:views` (#55). */
+const calls: Record<string, number> = {};
+(window as unknown as { __calls: typeof calls }).__calls = calls;
 const internals = {
   invoke: async (command: string, args: Args) => {
     if (command.startsWith("plugin:event|")) return 0;
+    calls[command] = (calls[command] ?? 0) + 1;
+    // `?mock=nopage`: no page can be rendered (#55).
+    if (mode === "nopage" && command === "page_image") throw { kind: "internal", message: "Die Seite ließ sich nicht darstellen." };
     if (LISTS.includes(command)) {
       if (mode === "empty") return command === "list_bookings" ? { rows: [], total: 0, income: "0,00 €", spending: "0,00 €" } : [];
       if (mode === "error") throw { kind: "internal", message: "Die Liste ließ sich nicht laden." };

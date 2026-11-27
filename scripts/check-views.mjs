@@ -7,6 +7,7 @@
 //
 //   npm run check:views
 //   npm run check:views -- --self-test
+//   npm run check:views -- --still        only the probe of #55
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -95,6 +96,14 @@ const PLANTS = {
   word: `(() => { const s = document.createElement("span"); s.dataset.state = ""; s.textContent = "erledigt"; document.querySelector("[data-content]").append(s); })()`,
 };
 
+/**
+ * The probe of #55: a question of "Prüfen" at 1600 × 900 with the scroll bars shown, counted over 3 seconds. A page
+ * that flickers asks the core again and again, a page that stands asks once per page and size.
+ */
+const STILL = { size: [1600, 900], seconds: 3, most: 2 };
+/** The fault the self-test plants for the probe: a page that asks every 50 ms. */
+const FLICKER = `setInterval(() => window.__TAURI_INTERNALS__.invoke("page_image", { document: 2, page: 1, width: 640 }), 50)`;
+
 function browserPath() {
   const candidates = [
     process.env.CHECK_VIEWS_BROWSER,
@@ -162,7 +171,7 @@ async function main() {
   const server = await createServer({ server: { port: 1431, strictPort: true }, logLevel: "error" });
   await server.listen();
   const profile = mkdtempSync(path.join(tmpdir(), "check-views-"));
-  const browser = spawn(executable, ["--headless=new", "--remote-debugging-port=9333", `--user-data-dir=${profile}`, "--no-first-run", "--hide-scrollbars", "about:blank"], { stdio: "ignore" });
+  const browser = spawn(executable, ["--headless=new", "--remote-debugging-port=9333", `--user-data-dir=${profile}`, "--no-first-run", "about:blank"], { stdio: "ignore" });
   let page;
   const started = Date.now();
   const findings = [];
@@ -188,6 +197,36 @@ async function main() {
       await loaded;
       await sleep(settle);
     };
+    const evaluate = async (expression) => (await page.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result.value;
+    const click = (text) => `[...document.querySelectorAll("button, [role=option]")].find((b) => b.textContent.trim() === ${JSON.stringify(text)} || b.getAttribute("aria-label") === ${JSON.stringify(text)})?.click()`;
+    /** Prüfen at its 100 %, and Dokumente at 150 %: the first document opened, then five times "Größer". */
+    const still = async (plant) => {
+      const found = [];
+      for (const [view, steps] of [
+        ["view=review", [click("Der Reihe nach prüfen")]],
+        ["view=documents", [`document.querySelector("[data-content] [role=option]")?.click()`, ...Array(5).fill(click("Größer"))]],
+      ]) {
+        await open(`mock&${view}`, STILL.size, "light");
+        await evaluate("window.__calls.page_image = 0");
+        for (const step of steps) {
+          await evaluate(step);
+          await sleep(50);
+        }
+        if (plant) await evaluate(plant);
+        await sleep(STILL.seconds * 1000);
+        const calls = await evaluate("window.__calls.page_image ?? 0");
+        // Dokumente asks for the thumbnails of its list too, one per document.
+        const most = STILL.most + (view === "view=documents" ? await evaluate("document.querySelectorAll(\"[data-content] [role=option]\").length") : 0);
+        console.log(`still: ${view} ${calls} call(s) of page_image in ${STILL.seconds} s, at most ${most}`);
+        if (calls > most) found.push(`${view} ${STILL.size.join("×")}: ${calls} calls of page_image in ${STILL.seconds} s, at most ${most}`);
+      }
+      // A page that cannot be rendered says so in its box.
+      await open("mock=nopage&view=documents", STILL.size, "light");
+      await evaluate(`document.querySelector("[data-content] [role=option]")?.click()`);
+      await sleep(400);
+      if (!(await evaluate(`[...document.querySelectorAll("[data-content] span")].some((e) => e.textContent === "Keine Vorschau" && e.getBoundingClientRect().width > 40)`))) found.push("view=documents nopage: no \"Keine Vorschau\" for a page that cannot be rendered");
+      return found;
+    };
     const rules = async () => (await page.send("Runtime.evaluate", { expression: RULES, returnByValue: true })).result.value ?? ["the rules did not run"];
 
     if (selfTest) {
@@ -199,7 +238,14 @@ async function main() {
         console.log(`${ok ? "ok  " : "FAIL"} ${rule}${ok ? `: ${found[0]}` : " was not found"}`);
         if (!ok) findings.push(rule);
       }
+      const found = await still(FLICKER);
+      console.log(`${found.length > 0 ? "ok  " : "FAIL"} still${found.length > 0 ? `: ${found[0]}` : " was not found"}`);
+      if (found.length === 0) findings.push("still");
     } else {
+      findings.push(...(await still()));
+      if (process.argv.includes("--still")) {
+        // Only the probe of #55, for measuring.
+      } else {
       for (const view of VIEWS) {
         for (const size of SIZES) {
           for (const theme of THEMES) {
@@ -219,6 +265,7 @@ async function main() {
           await open(`mock=${state}&${view}`, [1440, 900], "light", state === "slow" ? 600 : 900);
           for (const found of await rules()) findings.push(`${view} ${state}: ${found}`);
         }
+      }
       }
     }
   } finally {

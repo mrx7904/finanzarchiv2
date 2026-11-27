@@ -149,6 +149,9 @@ export const events = {
 	intakeChanged: makeEvent<IntakeChanged, IntakeChanged>("intake-changed"),
 };
 
+/* Constants */
+export const PAGE_WIDTHS = [160,640,1280,1920,2560] as const;
+
 /* Types */
 export type AccountBalances = AccountBalances_Serialize | AccountBalances_Deserialize;
 
