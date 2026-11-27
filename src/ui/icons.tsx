@@ -49,6 +49,7 @@ const paths = {
   plus: <path d="M10 4v12M4 10h12" />,
   chevronDown: <path d="m6 8 4 4 4-4" />,
   chevronRight: <path d="m8 5.5 4.5 4.5L8 14.5" />,
+  back: <path d="M16 10H4.5M9 5.5 4.5 10 9 14.5" />,
   upDown: <path d="m7 8 3-3 3 3M7 12l3 3 3-3" />,
   check: <path d="m4.5 10.5 3.5 3.5 7.5-8" />,
   close: <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />,

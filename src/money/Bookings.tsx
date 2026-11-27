@@ -7,11 +7,12 @@ import { bookingFilter, bookingWho, formatIsoDay } from "./describe";
 
 // "Umsätze" of #26: the bookings of one account or of all, newest first, 200 at a time. An opened
 // booking shows its detail: the document that paid it, the party over the year, a move.
-export function Bookings({ account, onOpenDocument }: { account: number | null; onOpenDocument: (document: number) => void }) {
+export function Bookings({ account, onOpenDocument, text: jumpText = "" }: { account: number | null; onOpenDocument: (document: number) => void; text?: string }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [category, setCategory] = useState("");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(jumpText);
+  useEffect(() => setText(jumpText), [jumpText]);
   const [page, setPage] = useState<BookingPage | null>(null);
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { intakeLine, queuedLine, stageLabel } from "./describe";
+import { footLine, intakeLine, queuedLine, stageLabel } from "./describe";
 
 const overview = { paused: false, open: 0, running: [], failed: [], addedToday: 0 };
 const failed = { id: 1, name: "notiz.txt", stage: "failed", error: "Dateien dieser Art nimmt das Archiv nicht an." };
@@ -32,5 +32,20 @@ describe("the intake", () => {
     expect(queuedLine(0)).toBeNull();
     expect(queuedLine(1)).toBe("1 Datei ist im Eingang.");
     expect(queuedLine(30)).toBe("30 Dateien sind im Eingang.");
+  });
+});
+
+describe("the line at the foot of the sidebar", () => {
+  const quiet = { paused: false, open: 0, running: [], failed: [], addedToday: 4 };
+  const job = { id: 1, name: "a.pdf", stage: "queued", error: null } as never;
+  it("is gone while nothing is read, paused or refused", () => {
+    expect(footLine(quiet)).toBeNull();
+  });
+  it("says what is read, what is paused and what was refused", () => {
+    expect(footLine({ ...quiet, open: 1 })).toBe("1 wird gelesen");
+    expect(footLine({ ...quiet, open: 3 })).toBe("3 werden gelesen");
+    expect(footLine({ ...quiet, paused: true })).toBe("Eingang angehalten");
+    expect(footLine({ ...quiet, paused: true, open: 2 })).toBe("2 angehalten");
+    expect(footLine({ ...quiet, failed: [job, job] })).toBe("2 nicht angenommen");
   });
 });

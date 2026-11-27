@@ -8,7 +8,9 @@
 // guide (v2.tauri.app/learn/window-customization, MIT): a drag region and three buttons calling the window API. The
 // buttons follow the caption buttons of Windows 11 (46 px wide, close turning red), the bar the unified toolbar of
 // macOS apps.
-import { useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { Icon } from "./icons";
 import { cn } from "./motion";
 import { PathNav, type PathSegment } from "./Path";
 import { closeWindow, isWindowMaximized, minimizeWindow, toggleMaximizeWindow, windowSystem, type WindowSystem } from "./window";
@@ -25,9 +27,21 @@ type AppShellProps = {
   children: ReactNode;
   /** For the showcase, which draws the bar of another system. */
   system?: WindowSystem;
+  /** Leads back after a jump; without it the arrow at the left of the path is gone (#44). */
+  onBack?: () => void;
 };
 
-export function AppShell({ path, actions, sidebar, appName, children, system = windowSystem() }: AppShellProps) {
+/** Where a view puts its actions: the top bar (rule 2 of knowledge/decision-views.md). */
+const BarSlot = createContext<HTMLElement | null>(null);
+
+/** The actions of a view, drawn into the top bar wherever the view renders them. */
+export function BarActions({ children }: { children: ReactNode }) {
+  const slot = useContext(BarSlot);
+  return slot ? createPortal(children, slot) : null;
+}
+
+export function AppShell({ path, actions, sidebar, appName, children, system = windowSystem(), onBack }: AppShellProps) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-canvas font-sans text-body text-fg">
       {sidebar && (
@@ -42,16 +56,26 @@ export function AppShell({ path, actions, sidebar, appName, children, system = w
         </aside>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar path={path} actions={actions} system={system} insetForTrafficLights={!sidebar && system === "mac"} />
-        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        <TopBar path={path} actions={actions} system={system} insetForTrafficLights={!sidebar && system === "mac"} onBack={onBack} slot={setSlot} />
+        <BarSlot.Provider value={slot}>
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        </BarSlot.Provider>
       </div>
     </div>
   );
 }
 
-type TopBarProps = { path: PathSegment[]; actions?: ReactNode; system: WindowSystem; insetForTrafficLights: boolean };
+type TopBarProps = {
+  path: PathSegment[];
+  actions?: ReactNode;
+  system: WindowSystem;
+  insetForTrafficLights: boolean;
+  onBack?: () => void;
+  /** Receives the element the actions of a view are drawn into. */
+  slot?: (element: HTMLElement | null) => void;
+};
 
-export function TopBar({ path, actions, system, insetForTrafficLights }: TopBarProps) {
+export function TopBar({ path, actions, system, insetForTrafficLights, onBack, slot }: TopBarProps) {
   const buttons = system === "windows";
   return (
     <header
@@ -64,8 +88,20 @@ export function TopBar({ path, actions, system, insetForTrafficLights }: TopBarP
     >
       {/* A drag region holds only on the element that carries it: the bar and the free gap carry it, the path does not,
           so its segments stay buttons. */}
+      {onBack && (
+        <button
+          type="button"
+          aria-label="Zurück"
+          title="Zurück (Alt+←)"
+          onClick={onBack}
+          className="-mr-1 flex size-7 shrink-0 items-center justify-center rounded-control text-fg-muted transition-quick hover:bg-hover hover:text-fg"
+        >
+          <Icon name="back" size={16} />
+        </button>
+      )}
       <PathNav path={path} />
       <div data-tauri-drag-region className="h-full min-w-4 flex-1" />
+      <div ref={slot} className="flex shrink-0 items-center gap-2 empty:hidden" />
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       {buttons && <WindowButtons />}
     </header>
