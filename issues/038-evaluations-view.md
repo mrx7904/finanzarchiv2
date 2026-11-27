@@ -1,7 +1,9 @@
 # #38 The view "Auswertungen"
 
 **Goal:** The owner sees in one view what the year brought, and every figure opens what it rests on.
-**Requirements**: FA-41 · **Depends on**: #37
+**Requirements**: FA-41 · **Depends on**: #37, #44, #45
+
+The view follows the map and the rules of [`knowledge/decision-views.md`](../knowledge/decision-views.md), its picture is in `src/entwurf/` (#50).
 
 ## Done when
 

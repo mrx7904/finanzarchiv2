@@ -1,7 +1,9 @@
 # #40 The start view
 
 **Goal:** The owner sees at first glance what waits and does it with one click.
-**Requirements**: FA-43 · **Depends on**: #38, #39
+**Requirements**: FA-43 · **Depends on**: #38, #39, #44, #45
+
+The view follows the map and the rules of [`knowledge/decision-views.md`](../knowledge/decision-views.md), its picture is in `src/entwurf/` (#50).
 
 ## Done when
 

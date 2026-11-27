@@ -287,3 +287,55 @@ Issue: #42
 Every party without a category gets one from the local model, from its name, its bookings and its documents. A category the owner chose is never changed by the model, and the window shows no explanation of the choice (the owner, 2026-11-26: "nicht so textlastig").
 
 Issue: #43
+
+## The views, brought together
+
+The map and the rules are decided in `knowledge/decision-views.md`. These requirements say what the window owes them.
+
+### FA-47 One frame and one way to move
+
+Every view stands in one frame: a sidebar with the same views everywhere, the path of the place in the top bar, the intake seen from every view, the quick search from every view. A jump leads from a thing to what belongs to it and an arrow leads back. A healthy archive says nothing, a damaged or missing one replaces every view.
+
+Issue: #44
+
+### FA-48 Every piece of a view comes from the design system
+
+No view draws a control of its own. A piece a view needs is added to the design system and shown in the showcase in light and dark before the view uses it.
+
+Issue: #45
+
+### FA-49 Every view has one of three forms
+
+A view is a list with its detail beside it, an overview or a question, with its actions in the top bar, its filters in the head of its list, the states in one vocabulary, and its own look when it is empty, loads or fails. From the narrowest window to a large screen nothing is covered and nothing runs out of the window.
+
+Issue: #46, #47, #48, #52
+
+### FA-50 Settings in one place
+
+What the owner sets up once (folders, mailboxes, name templates, categories, the model, the archive, the appearance) stands in one view "Einstellungen" and nowhere else.
+
+Issue: #49
+
+### FA-51 The views of stage 5 follow the map
+
+Start, Auswertungen, Steuern and Chat are built after the map and the rules, none is designed by itself.
+
+Issue: #50
+
+### FA-52 The rules are checked, not remembered
+
+A command opens every view in light and dark at several window sizes and fails when a rule is broken, and it proves that it can fail.
+
+Issue: #51
+
+### FA-53 The owner fits a view to the work
+
+The line between two columns can be dragged, the sidebar folds to a rail, the values of a document and the detail of a booking fold away, and the whole view has three sizes. The app keeps each over a restart, and nothing gets so narrow that it is covered.
+
+Issue: #53
+
+### FA-54 Reading large and answering in focus
+
+Every page of a document can be turned to and zoomed, and a document can be read over the whole window. In "Prüfen" the owner can hide everything but the page and the question.
+
+Issue: #54
