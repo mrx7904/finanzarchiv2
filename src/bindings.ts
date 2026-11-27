@@ -68,6 +68,8 @@ export const commands = {
 	notRecurring: (party: number, incoming: boolean, rhythm: string, since: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("not_recurring", { party, incoming, rhythm, since }, options)),
 	/**  The years of the payslips, newest first. */
 	salaryYears: (options?: InvokeOptions) => typedError<SalaryYearRow_Serialize[], CommandError>(__TAURI_INVOKE("salary_years", undefined, options)),
+	/**  Each account and the sum of all at the end of each month. */
+	balancesByMonth: (options?: InvokeOptions) => typedError<BalancesRow_Serialize, CommandError>(__TAURI_INVOKE("balances_by_month", undefined, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -110,6 +112,20 @@ export const events = {
 };
 
 /* Types */
+export type AccountBalances = AccountBalances_Serialize | AccountBalances_Deserialize;
+
+export type AccountBalances_Deserialize = {
+	account: number,
+	name: string,
+	points: BalancePoint_Deserialize[],
+};
+
+export type AccountBalances_Serialize = {
+	account: number,
+	name: string,
+	points: BalancePoint_Serialize[],
+};
+
 /**  An account as "Konten" shows it. */
 export type AccountRow = AccountRow_Serialize | AccountRow_Deserialize;
 
@@ -148,6 +164,45 @@ export type AppStatus = {
 
 /**  The state of the archive as the window shows it. */
 export type ArchiveStatus = { state: "ready" } | { state: "damaged"; snapshots: SnapshotInfo[] } | { state: "missing"; snapshots: SnapshotInfo[] };
+
+/**  The balance at the end of a month (or of the last day known). */
+export type BalancePoint = BalancePoint_Serialize | BalancePoint_Deserialize;
+
+/**  The balance at the end of a month (or of the last day known). */
+export type BalancePoint_Deserialize = {
+	/**  `YYYY-MM-DD`. */
+	day: string,
+	cents: number,
+	text: string,
+	/**  The bank printed this balance. */
+	byBank: boolean,
+	/**  The bank's minus the one counted, when they differ. */
+	differenceText?: string | null,
+};
+
+/**  The balance at the end of a month (or of the last day known). */
+export type BalancePoint_Serialize = {
+	/**  `YYYY-MM-DD`. */
+	day: string,
+	cents: number,
+	text: string,
+	/**  The bank printed this balance. */
+	byBank: boolean,
+	/**  The bank's minus the one counted, when they differ. */
+	differenceText: string | null,
+};
+
+export type BalancesRow = BalancesRow_Serialize | BalancesRow_Deserialize;
+
+export type BalancesRow_Deserialize = {
+	accounts: AccountBalances_Deserialize[],
+	total: BalancePoint_Deserialize[],
+};
+
+export type BalancesRow_Serialize = {
+	accounts: AccountBalances_Serialize[],
+	total: BalancePoint_Serialize[],
+};
 
 /**  Another booking of the same party. */
 export type BookingBrief = {

@@ -1,6 +1,7 @@
 //! The commands the window may call. Each is written once here, the TypeScript bindings in
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
+pub mod balances;
 pub mod documents;
 pub mod evaluations;
 pub mod folders;
@@ -168,6 +169,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             recurring::list_recurring,
             recurring::not_recurring,
             salary::salary_years,
+            balances::balances_by_month,
             money::list_categories,
             money::add_category,
             money::rename_category,
