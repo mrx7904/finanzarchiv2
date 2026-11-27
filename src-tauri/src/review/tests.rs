@@ -92,7 +92,36 @@ fn what_waits_is_grouped_by_its_first_reason_with_a_question_and_the_line() {
     );
     assert_eq!(asked[0].readings[1].reader, "Modell");
     assert_eq!(asked[0].readings[0].rect, Some([60.0, 520.0, 400.0, 531.0]));
-    assert_eq!(asked[0].page_size, Some((595.0, 842.0)));
+    assert_eq!(asked[0].readings[0].size, Some((595.0, 842.0)));
+    assert_eq!(asked[0].pages, 1);
+}
+
+#[test]
+fn every_reading_knows_its_own_page_and_the_question_all_pages() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let id = disputed(conn, 1, "R-1");
+    // A second page in landscape, and the model's reading moved onto it.
+    conn.execute(
+        "INSERT INTO pages (document_id, number, width, height) VALUES (?1, 2, 842.0, 595.0)",
+        [id],
+    )
+    .unwrap();
+    conn.execute("UPDATE documents SET pages = 3 WHERE id = ?1", [id])
+        .unwrap();
+    conn.execute(
+        "UPDATE field_values SET page = 2 WHERE document_id = ?1 AND reader LIKE 'model:%'",
+        [id],
+    )
+    .unwrap();
+    let asked = questions(conn, "check:agree gross").unwrap();
+    assert_eq!(asked[0].page, 1, "opens on the page of the first reading");
+    assert_eq!(asked[0].pages, 3);
+    assert_eq!(asked[0].readings[0].page, Some(1));
+    assert_eq!(asked[0].readings[0].size, Some((595.0, 842.0)));
+    assert_eq!(asked[0].readings[1].page, Some(2));
+    assert_eq!(asked[0].readings[1].size, Some((842.0, 595.0)));
 }
 
 #[test]

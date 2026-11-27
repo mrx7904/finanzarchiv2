@@ -45,7 +45,10 @@ pub struct ReviewQuestion {
     pub field: Option<String>,
     pub text: String,
     pub readings: Vec<ReviewReading>,
+    /// The page shown first, the page of the first reading.
     pub page: u32,
+    /// The pages of the document (#57).
+    pub pages: u32,
 }
 
 /// What the owner answered.
@@ -114,7 +117,6 @@ pub fn review_questions(
         questions
             .into_iter()
             .map(|question| {
-                let size = question.page_size;
                 Ok(ReviewQuestion {
                     document: u32::try_from(question.document)
                         .map_err(|_| CommandError::internal())?,
@@ -130,7 +132,7 @@ pub fn review_questions(
                                 shown(question.field.as_deref(), &reading.value)
                             },
                             page: reading.page,
-                            mark: reading.rect.zip(size).map(
+                            mark: reading.rect.zip(reading.size).map(
                                 |([left, bottom, right, top], (width, height))| {
                                     vec![
                                         left / width,
@@ -147,6 +149,7 @@ pub fn review_questions(
                     field: question.field,
                     text: question.text,
                     page: question.page,
+                    pages: question.pages,
                 })
             })
             .collect()

@@ -132,7 +132,7 @@ Faults and gaps found when 0.7.0 was read against the requirements, the concept 
 |---|---|---|---|---|
 | [#55](055-page-stands-still.md) | The page of a document stands still | FA-55 | #54 | built, the owner looks |
 | [#56](056-wheel-through-pages.md) | Through the pages of a document by the wheel | FA-56 | #55 | open |
-| [#57](057-pages-and-mark-in-review.md) | Every page and the right mark in "Prüfen" | FA-57 | #55 | open |
+| [#57](057-pages-and-mark-in-review.md) | Every page and the right mark in "Prüfen" | FA-57 | #55 | built, the owner looks |
 | [#58](058-jump-to-one-booking.md) | A jump leads to the one booking | FA-58 | #48, #50 | open |
 | [#59](059-failures-show.md) | Failures show, and an answer that is overtaken does not count | FA-59 | #46, #48 | open |
 | [#60](060-window-stays-fluid.md) | The window stays fluid while the archive works | FA-60 | #55 | open |
