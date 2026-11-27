@@ -1,7 +1,9 @@
 # #42 The chat over the archive
 
 **Goal:** The owner asks the archive in words and gets answers whose numbers are right.
-**Requirements**: FA-45 · **Depends on**: #33, #34, #35, #41
+**Requirements**: FA-45 · **Depends on**: #33, #34, #35, #41, #44, #45
+
+The view follows the map and the rules of [`knowledge/decision-views.md`](../knowledge/decision-views.md), its picture is in `src/entwurf/` (#50).
 
 ## Done when
 

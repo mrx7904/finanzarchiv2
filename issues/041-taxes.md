@@ -1,7 +1,9 @@
 # #41 Taxes for the return
 
 **Goal:** What counts for the owner's own tax return is collected per year, ready to be entered in ELSTER, without advice.
-**Requirements**: FA-44 · **Depends on**: #33, #24
+**Requirements**: FA-44 · **Depends on**: #33, #24, #44, #45
+
+The view follows the map and the rules of [`knowledge/decision-views.md`](../knowledge/decision-views.md), its picture is in `src/entwurf/` (#50).
 
 ## Done when
 

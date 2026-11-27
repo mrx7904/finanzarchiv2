@@ -1,6 +1,6 @@
 # Entwurf: die Ansichten von Finanzarchiv 2.0
 
-**Stand:** 2026-11-27 · **Entwurf, nichts davon ist entschieden.** Der Besitzer geht ihn durch, ändert und wählt. Was bleibt, wird zu einer Entscheidung in `knowledge/` und zu Issues, nach denen das Frontend zusammengeführt wird.
+**Stand:** 2026-11-27 · **Entschieden vom Besitzer am 2026-11-27** an den Bildern in echter Größe ("Gefällt mir sehr gut"). Was gilt, steht in [`knowledge/decision-views.md`](../knowledge/decision-views.md), gebaut wird nach den Issues #44 bis #52 ([`issues/README.md`](../issues/README.md)). Dieses Dokument bleibt als der Entwurf, an dem entschieden wurde.
 
 Der Entwurf hat zwei Teile. Die Landkarte sagt, welche Ansichten es gibt, was in welche gehört und wie man von einer zur anderen kommt. Die Regeln sagen, was in jeder Ansicht gleich ist.
 
@@ -193,7 +193,7 @@ Ein Punkt weicht bewusst ab. In 1.0 standen die Aktionen ein paar Stunden lang i
 
 ## Offene Fragen an den Besitzer
 
-Der Besitzer am 2026-11-27 zu den Vorschlägen: "gefallen mir aber soweit". Die Bilder sind deshalb mit dem jeweiligen Vorschlag gezeichnet. Entschieden ist eine Frage erst, wenn der Besitzer die Ansicht dazu gesehen hat.
+Der Besitzer am 2026-11-27 zu den Vorschlägen: "gefallen mir aber soweit". Die Bilder sind deshalb mit dem jeweiligen Vorschlag gezeichnet. Nach den Bildern hat der Besitzer am selben Tag zugestimmt, damit gilt jeder Vorschlag. Eine Abweichung: Steuern ist als Liste mit Detail gezeichnet und so entschieden, nicht als Übersicht, wie die Tabelle der Formen oben noch sagt.
 
 1. **"Konten" oder "Geld"?** Die Analyse von 1.0 nennt die Ansicht "Geld", gebaut heißt sie "Konten". Der Entwurf bleibt bei "Konten", weil die Ansicht mit den Konten beginnt.
 2. **Bestellungen unter "Dokumente"?** Eine Bestellung ist kein Dokument, sie wartet auf eines. Die andere Möglichkeit ist eine Seite unter "Konten", neben den PayPal-Zahlungen.

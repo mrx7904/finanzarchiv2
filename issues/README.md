@@ -89,11 +89,11 @@ Order of work: #27 first, then #28 and #29, then #30 and #31, then #32.
 | [#35](035-salary-from-payslips.md) | Salary from the payslips | FA-39 | #13 | open |
 | [#36](036-balances-over-time.md) | Balances over time | FA-40 | #22 | open |
 | [#37](037-evaluation-variants.md) | Variants of the evaluations, chosen by the owner | FA-41 | #33, #34, #35, #36 | open |
-| [#38](038-evaluations-view.md) | The view "Auswertungen" | FA-41 | #37 | open |
+| [#38](038-evaluations-view.md) | The view "Auswertungen" | FA-41 | #37, #44, #45 | open |
 | [#39](039-savings-hints.md) | Savings hints | FA-42 | #34, #33 | open |
-| [#40](040-start-view.md) | The start view | FA-43 | #38, #39 | open |
-| [#41](041-taxes.md) | Taxes for the return | FA-44 | #33, #24 | open |
-| [#42](042-chat.md) | The chat over the archive | FA-45 | #33, #34, #35, #41 | open |
+| [#40](040-start-view.md) | The start view | FA-43 | #38, #39, #44, #45 | open |
+| [#41](041-taxes.md) | Taxes for the return | FA-44 | #33, #24, #44, #45 | open |
+| [#42](042-chat.md) | The chat over the archive | FA-45 | #33, #34, #35, #41, #44, #45 | open |
 | [#43](043-categories-by-model.md) | Categories by the model | FA-46 | #25, #14 | done |
 
 **Stage 5 is done when the owner sees on "Start" what to do, reads what a year brought in "Auswertungen" with every figure leading to its bookings, collects the return in "Steuern" and gets right numbers from the chat, all on the real archive.**
@@ -101,6 +101,26 @@ Order of work: #27 first, then #28 and #29, then #30 and #31, then #32.
 **Status:** Cut on 2026-11-26 with the owner's answers (all four parts, savings hints added by the owner, the tax situation as in 1.0, the look from variants at real size) and begun on the owner's word ("weiter mit Stufe 5") while stage 4 waits for the owner's look.
 
 Order of work: #33 first, then #43 (added by the owner's answer of 2026-11-26), then #34, #35 and #36, then #37 and #38, then #39 and #40, then #41, then #42.
+
+## The views, brought together
+
+| # | Title | Requirements | Depends on | Status |
+|---|---|---|---|---|
+| [#44](044-frame-and-navigation.md) | The frame of the views and how one moves | FA-47 | #07, #26 | open |
+| [#45](045-pieces-for-the-views.md) | The pieces the views need | FA-48 | #07 | open |
+| [#46](046-documents-view.md) | The view "Dokumente" as designed | FA-49 | #44, #45 | open |
+| [#47](047-review-view.md) | The view "Prüfen" as designed | FA-49 | #44, #45 | open |
+| [#48](048-accounts-and-bookings-view.md) | The views "Konten" and "Umsätze" as designed | FA-49 | #44, #45 | open |
+| [#49](049-settings-view.md) | The view "Einstellungen" | FA-50 | #44, #45 | open |
+| [#50](050-views-of-stage-5.md) | The views of stage 5 in the frame | FA-51 | #44, #45, #51 | open |
+| [#51](051-check-of-the-views.md) | A check that every view keeps the rules | FA-52 | #46, #47, #48, #49 | open |
+| [#52](052-recurring-payments-page.md) | The page "Wiederkehrend" under Konten | FA-49 | #34, #48 | open |
+
+**The views are brought together when the owner works through a week of real documents in the installed app, from Start to Prüfen, Dokumente, Konten and Einstellungen, and finds every action where the map puts it, in light and dark, and `npm run check:views` passes.**
+
+**Status:** Cut on 2026-11-27 from the draft the owner went through as pictures ("Gefällt mir sehr gut", `knowledge/decision-views.md`). Not begun: the owner finishes the functions first and brings the frontend together after. It is no stage of `spec/concept.md` but the work that joins the stages in the window, so it does not wait for stage 5 to be accepted.
+
+Order of work: #45 and #44 first, then #46, #47, #48 and #49 in any order, then #51, then #52 once #34 is done. #38, #40, #41 and #42 build their views after #44 and #45, #50 holds them to the map.
 
 ## Later stages
 
