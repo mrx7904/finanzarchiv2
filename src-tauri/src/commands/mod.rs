@@ -7,6 +7,7 @@ pub mod folders;
 pub mod mail;
 pub mod money;
 pub mod names;
+pub mod recurring;
 pub mod review;
 
 use std::sync::{Arc, Mutex};
@@ -163,6 +164,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             money::list_orders,
             evaluations::evaluation_years,
             evaluations::evaluation_year,
+            recurring::list_recurring,
+            recurring::not_recurring,
             money::list_categories,
             money::add_category,
             money::rename_category,

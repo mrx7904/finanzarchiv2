@@ -24,6 +24,7 @@ pub mod payments;
 pub mod pdf;
 pub mod previews;
 pub mod readers;
+pub mod recurring;
 pub mod review;
 pub mod statements;
 #[cfg(test)]

@@ -1017,6 +1017,53 @@ fn measure_csv(folder: &Path, out: &Path) {
     write(&out.join("private").join("files-csv.json"), &result);
 }
 
+/// The recurring payments on a writable copy of the owner's archive (#34): how many per rhythm and
+/// direction, how many ended and how many changed their amount. Counts only; the names go to a
+/// sample in `private/` for the owner to check.
+fn measure_recurring(database: &Path, out: &Path) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    // As the app does at start: a PayPal booking belongs to its payee (#43).
+    let _ = finanzarchiv2_lib::parties::payees(ready.connection(), jiff::Timestamp::now());
+    let today = jiff::tz::Offset::UTC
+        .to_datetime(jiff::Timestamp::now())
+        .date();
+    let found = finanzarchiv2_lib::recurring::found(ready.connection(), today).unwrap_or_default();
+    let mut counts: BTreeMap<String, u32> = BTreeMap::new();
+    for one in &found {
+        let direction = if one.incoming { "ein" } else { "aus" };
+        *counts
+            .entry(format!("{} {direction}", one.rhythm.name()))
+            .or_default() += 1;
+        if one.ended {
+            *counts.entry("beendet".to_owned()).or_default() += 1;
+        }
+        if one.change.is_some() {
+            *counts.entry("Betrag geändert".to_owned()).or_default() += 1;
+        }
+    }
+    for (key, count) in &counts {
+        println!("  {key}: {count}");
+    }
+    println!("  {} gefunden", found.len());
+    write(
+        &out.join("private").join("recurring.json"),
+        &json!({ "reader": "recurring", "found": found.len(), "counts": counts }),
+    );
+    let sample: Vec<Value> = found
+        .iter()
+        .map(|one| json!({ "name": one.name, "rhythm": one.rhythm.name(), "incoming": one.incoming, "cents": one.cents, "since": one.since.to_string(), "last": one.last.to_string(), "ended": one.ended, "change": one.change_text() }))
+        .collect();
+    write(
+        &out.join("private").join("recurring-sample.json"),
+        &json!(sample),
+    );
+}
+
 /// The balance of each account against the bank on a writable copy of the owner's archive (#22):
 /// the copy is migrated and read again, then each account's findings are counted. Counts only.
 fn measure_accounts(database: &Path, out: &Path) {
@@ -1777,6 +1824,14 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "recurring" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader recurring braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_recurring(Path::new(&database), &out);
         return;
     }
     if reader == "categories" {
