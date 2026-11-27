@@ -6,6 +6,8 @@ Der Entwurf hat zwei Teile. Die Landkarte sagt, welche Ansichten es gibt, was in
 
 Grundlage sind der Look Graphit und die Bausteine aus `src/ui/` ([`decision-ui-libraries.md`](../knowledge/decision-ui-libraries.md)), die Kopfleiste als Titelleiste ([`decision-app-shell.md`](../knowledge/decision-app-shell.md)), die Anforderungen bis FA-46 ([`requirements.md`](../spec/requirements.md)) und der Satz aus der [Analyse von 1.0](analyse-finanzarchiv-1.0.md), Abschnitt 3.10: weniger und klarere Ansichten.
 
+Gegengelesen ist der Entwurf mit den beiden Skills des Vaults, `ui-libraries` (die sechs Quellen und die Regeln, ein Stück zu übernehmen) und `frontend-design`, und mit `decision-app-layout.md` von 1.0. Dort stehen die Wünsche des Besitzers aus drei Wochen mit der laufenden App. Was davon für 2.0 gilt, ist in die Regeln eingearbeitet und im Abschnitt "Was 1.0 schon gelernt hat" einzeln genannt.
+
 ## Warum ein Gesamtentwurf
 
 Abgenommen sind bisher das Aussehen und die Bausteine. Die drei gebauten Ansichten sind funktional zusammengesetzt, während die Funktionen entstehen. Dabei ist Folgendes gewachsen, das der Entwurf auflöst:
@@ -25,7 +27,7 @@ Abgenommen sind bisher das Aussehen und die Bausteine. Die drei gebauten Ansicht
 
 ### Die Seitenleiste
 
-Acht Ansichten in vier Gruppen, in jeder Ansicht gleich:
+Acht Ansichten in vier Gruppen, in jeder Ansicht gleich. Die Gruppen trennt ein Abstand, sie tragen keine Überschrift:
 
 | Gruppe | Ansicht | Frage, die sie beantwortet | Stand |
 |---|---|---|---|
@@ -71,7 +73,7 @@ Gegenüber dem Muster von #07 fallen "Rechnungen" und "Zahlungen" als eigene Ans
 | Kategorien | die Liste der Kategorien, später die Parteien und ihre Schreibweisen | Dialog "Kategorien" in "Konten" |
 | Modell | ob Ollama erreichbar ist und welches Modell liest | neu |
 | Archiv | wo es liegt, die Sicherungen, später Wiederherstellen und Umziehen | neu, Stufe 6 |
-| Darstellung | hell, dunkel oder wie das System | neu |
+| Darstellung | hell, dunkel oder wie das System, die Größe der Ansicht (klein, mittel, groß) | neu, die Größe wie in 1.0 |
 | Über | Version, die übernommenen Stücke und ihre Lizenzen | Statuszeile, Tabelle in `decision-ui-libraries.md` |
 
 Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, keine neue Ansicht in der Seitenleiste.
@@ -101,10 +103,10 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 ### Der Rahmen
 
 1. Jede Ansicht steht in der `AppShell`. Keine Ansicht zeichnet eine eigene Kopfzeile, einen eigenen Titel oder eine zweite Navigation.
-2. **Die Kopfleiste trägt die Aktionen der Ansicht:** höchstens ein schwarzer Hauptknopf, höchstens ein zweiter Knopf, alles Weitere in einem Menü "…". Im Inhalt stehen nur Aktionen, die zu einer Zeile oder zum gewählten Stück gehören.
+2. **Die Kopfleiste trägt die Aktionen der Ansicht:** höchstens ein schwarzer Hauptknopf, höchstens ein zweiter Knopf, alles Weitere in einem Menü "…". Im Inhalt stehen nur Aktionen, die zu einer Zeile oder zum gewählten Stück gehören. Die Knöpfe haben die Höhe, die zur Leiste von 47 px passt, und stehen dort nur, wenn die Ansicht sie braucht. Eine Ansicht ohne Aktion hat eine leere Leiste.
 3. **Was man einmal einrichtet, steht in "Einstellungen"**, nie als Knopf in einer Ansicht. Eine Ansicht darf dorthin führen, wenn etwas fehlt ("Postfach einrichten").
-4. Der Inhalt beginnt oben links. Nichts steht mittig außer einem Leerzustand.
-5. Kein erklärender Satz über einer Ansicht. Was eine Ansicht ist, sagen ihr Name und ihr Inhalt. Text erklärt nur einen Leerzustand, einen Fehler oder eine Frage. Das folgt dem Wort des Besitzers vom 2026-11-26: "nicht so textlastig".
+4. **Inhalt zuerst.** Der Inhalt beginnt oben links, direkt unter der Kopfleiste. Bei 1440 × 900 beginnt die Liste, die Summe oder das Dokument spätestens nach einem Viertel der Fensterhöhe, bei 960 × 600 ist es ohne Rollen zu sehen. Nichts steht mittig außer einem Leerzustand.
+5. Kein erklärender Satz über einer Ansicht. Was eine Ansicht ist, sagen ihr Name und ihr Inhalt. Text erklärt nur einen Leerzustand, einen Fehler oder eine Frage. Die Erklärung einer Zahl steht hinter einem kleinen "i" an der Zahl, nie als loser Satz daneben. Das folgt dem Wort des Besitzers vom 2026-11-26: "nicht so textlastig".
 
 ### Drei Formen, mehr nicht
 
@@ -116,15 +118,16 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 
 - **Zwei oder drei Spalten:** Ist das gewählte Stück ein Dokument mit gelesenen Werten, gelten drei Spalten wie im Muster von #07 (Liste, Seite, Angaben). Sonst gelten zwei (Liste, Detail). Ist nichts gewählt, füllt die Liste die Breite nicht aus, rechts steht ein ruhiger Hinweis.
 - **Schmales Fenster:** Das Fenster ist mindestens 960 px breit. Unter etwa 1200 px rücken die Angaben unter die Seite, statt eine dritte Spalte zu bilden. Nichts wird verdeckt, nichts läuft waagerecht aus dem Fenster.
+- **Großer Bildschirm:** Listen, Tabellen und die Seite eines Dokuments nehmen die Breite, die da ist. Fließtext, Formulare und die Abschnitte einer Übersicht tun es nicht. Die Seite eines Dokuments reicht bis zum unteren Rand des Fensters.
 - Jede Spalte rollt für sich, die Kopfleiste und die Seitenleiste stehen fest.
 
 ### Listen
 
 6. Jede Liste ist der Baustein `List` mit `ListRow`: vorn ein Zeichen oder die erste Seite, dann Titel und eine Zeile Detail, rechts der Betrag, ganz rechts der Zustand.
 7. Für Umsätze kommt eine **dichte Zeile** dazu (etwa 40 px statt 56 px), weil dort hunderte Zeilen stehen. Sie wird wie jedes neue Stück zuerst in der Gestaltungsansicht gezeigt.
-8. Das Detail einer Zeile steht daneben, es klappt nie in der Liste auf.
+8. Das Detail einer Zeile steht daneben, es klappt nie in der Liste auf. Aktionen einer Zeile erscheinen rechts in der Zeile, wenn der Zeiger oder der Fokus auf ihr steht. Eine Zeile ändert dabei nie ihre Höhe.
 9. **Filter stehen im Kopf der Liste:** ein Suchfeld, höchstens zwei Auswahlen, darunter eine Zeile mit der Summe ("214 Buchungen, Ausgaben 3.480,12 €"). Ein Filter, den ein Sprung gesetzt hat, steht als Marke mit "×" da, damit man sieht, warum die Liste kürzer ist.
-10. Pfeiltasten bewegen die Auswahl, Enter öffnet, Esc geht eine Ebene zurück. Das gilt in jeder Liste, nicht nur in "Prüfen".
+10. Pfeiltasten bewegen die Auswahl, Enter öffnet, Esc geht eine Ebene zurück. Das gilt in jeder Liste, nicht nur in "Prüfen". Der Ring des Fokus zeigt sich nur, wenn man mit der Tastatur kommt, nie nach einem Klick.
 
 ### Zustände und Beträge
 
@@ -153,6 +156,8 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 18. Ein Dialog fragt nur, bevor etwas gelöscht wird, oder nach einer einzelnen kurzen Eingabe. Listen werden nie in einem Dialog verwaltet.
 19. Nach einer Aktion steht die Rückmeldung an der Stelle, an der sie geschah, mit "Rückgängig", wo es eines gibt. Keine Meldungen, die am Rand aufgehen und verschwinden.
 20. Ein Knopf, der erst noch etwas fragt, endet auf " …". Ein Knopf, der sofort handelt, nicht.
+21. **Ein Wort für eine Sache**, in jeder Ansicht dasselbe, und der Knopf sagt, was geschieht ("Bestätigen", "Übernehmen", "Löschen"). Die Texte sprechen von dem, was die App für den Besitzer tut, nie davon, wie sie gebaut ist.
+22. **Die Schnellsuche führt jede Aktion aus**, die in einer Kopfleiste oder einem Menü steht, und findet jede Seite der Einstellungen in den Worten des Besitzers ("dunkel", "größer", "Postfach").
 
 ### Was schon gilt und bleibt
 
@@ -160,6 +165,27 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 - Jede Bewegung steht unter reduzierter Bewegung des Systems still.
 - Hell und dunkel sind gleichwertig, jede Ansicht wird in beiden gezeigt.
 - Die Oberfläche rechnet nichts, jede Summe kommt aus dem Kern.
+
+## Was 1.0 schon gelernt hat
+
+Aus `decision-app-layout.md` von 1.0. Jede Zeile war dort ein Wunsch des Besitzers an die laufende App, und jede ist oben schon Regel, damit sie in 2.0 nicht nachträglich kommt.
+
+| Was in 1.0 geschah | Wo es hier steht |
+|---|---|
+| Funktionen kamen über die Zeit oben auf eine Ansicht und schoben ihren Inhalt aus dem Bild (#107 dort) | Regel 4, Inhalt zuerst, und Regel 2, ein Hauptknopf und ein Menü |
+| Einstellungen standen in der Seitenleiste und in den Ansichten, dann kam ein Ort für alle (#39 dort) | Regel 3 und die Ansicht "Einstellungen" |
+| Quellen (Ordner, Postfächer) wurden zuletzt nur noch in den Einstellungen eingerichtet | die Seiten Ordner und Postfächer |
+| Der Zustand von Archiv und Modell zeigte sich zuletzt nur bei einem Fehler | Regel 17, die Seite Modell, der Schritt auf Start |
+| Eine Meldung unten rechts verdeckte Aktionen einer Zeile | Regel 19 |
+| Knöpfe einer Zeile brachen um und machten die Zeile höher | Regel 8 |
+| Eine Erklärung stand als loser Satz neben den Zahlen | Regel 5 |
+| Ein Ring des Fokus nach einem Klick störte | Regel 10 |
+| Fünf Wörter für dasselbe Übernehmen einer Mail, Texte wie für einen Entwickler | Regel 21 |
+| Auf einem großen Bildschirm wuchs nichts, der Besitzer wollte "Responsiveness und viel größer" | die Regel zum großen Bildschirm, die Größe der Ansicht in "Darstellung" |
+| Jede Ansicht bekam eine eigene Farbe, der Besitzer fand es am selben Tag zu bunt | Regel 12 |
+| Ansichten blieben am Leben, wenn man wechselte | "Wie man sich bewegt", erster Punkt |
+
+Ein Punkt weicht bewusst ab. In 1.0 standen die Aktionen ein paar Stunden lang in der oberen Leiste, und der Besitzer fand die Knöpfe dort zu groß und nur zum Füllen hingestellt. Für 2.0 hat der Besitzer am 2026-11-25 entschieden, dass die Kopfleiste Seitentitel und Knöpfe trägt ([`decision-app-shell.md`](../knowledge/decision-app-shell.md)). Der Entwurf folgt der neueren Entscheidung und nimmt aus 1.0 die Lehre mit: Die Knöpfe passen in ihrer Größe zur Leiste, und keiner steht dort, um sie zu füllen (Regel 2).
 
 ## Offene Fragen an den Besitzer
 
@@ -170,6 +196,8 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 5. **Der Pfeil "Zurück" nach einem Sprung:** gewünscht, oder reicht der Pfad?
 6. **Wiederkehrende Zahlungen:** eine Seite unter "Konten", ein Abschnitt in "Auswertungen", oder beides wie im Entwurf?
 7. **Chat in der Seitenleiste** oder als Feld, das wie die Schnellsuche über jeder Ansicht aufgeht?
+8. **Einstellungen als Ansicht oder als breiter Dialog?** In 1.0 waren sie ein Dialog mit den Abschnitten links. Der Entwurf macht sie zur Ansicht, weil der Pfad dann zeigt, wo man ist ("Einstellungen › Postfächer"), und weil Regel 18 Listen aus Dialogen heraushält.
+9. **Gehalt:** ein Abschnitt in "Auswertungen" wie im Entwurf, oder wieder eine eigene Ansicht wie in 1.0?
 
 ## Wie es weitergeht
 
