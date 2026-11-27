@@ -14,12 +14,24 @@ import { PageImage } from "./PageImage";
 
 // The documents of #04 in the pieces of the design system (#07), imports through the queue of #05,
 // the first page of each and the preview of the chosen one from #06.
-export function Documents({ focus = null }: { focus?: number | null }) {
+type DocumentsProps = {
+  focus?: number | null;
+  /** The owner chose a document in the list: the view keeps it as its place (#44). */
+  onChoose?: (document: number | null) => void;
+  /** A jump to another document, such as the paired receipt, that the arrow back leads from (#44). */
+  onJump?: (document: number) => void;
+};
+
+export function Documents({ focus = null, onChoose, onJump }: DocumentsProps) {
   const [rows, setRows] = useState<DocumentRow[]>([]);
-  const [chosen, setChosen] = useState<number | null>(focus);
+  const [chosen, setChosenHere] = useState<number | null>(focus);
   useEffect(() => {
-    if (focus !== null) setChosen(focus);
+    if (focus !== null) setChosenHere(focus);
   }, [focus]);
+  const setChosen = (document: number | null) => {
+    setChosenHere(document);
+    onChoose?.(document);
+  };
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -118,7 +130,12 @@ export function Documents({ focus = null }: { focus?: number | null }) {
                 {selected.paired ? (
                   <p className="text-small text-fg-muted">
                     {selected.paired.invoice ? "Zahlungsbeleg der Rechnung " : "Bezahlt über PayPal, Beleg "}
-                    <button type="button" className="text-fg-accent underline-offset-2 hover:underline" onClick={() => setChosen(selected.paired?.document ?? null)}>
+                    <button type="button" className="text-fg-accent underline-offset-2 hover:underline" onClick={() => {
+                        const paired = selected.paired?.document;
+                        if (paired === undefined) return;
+                        if (onJump) onJump(paired);
+                        else setChosen(paired);
+                      }}>
                       {selected.paired.name}
                     </button>
                   </p>

@@ -34,3 +34,11 @@ export function queuedLine(files: number): string | null {
   if (files === 0) return null;
   return files === 1 ? "1 Datei ist im Eingang." : `${files} Dateien sind im Eingang.`;
 }
+
+/** The one line of the intake at the foot of the sidebar (#44), `null` while nothing is read, paused or refused. */
+export function footLine(overview: IntakeOverview): string | null {
+  if (overview.paused) return overview.open > 0 ? `${overview.open} angehalten` : "Eingang angehalten";
+  if (overview.open > 0) return `${overview.open} ${overview.open === 1 ? "wird" : "werden"} gelesen`;
+  if (overview.failed.length > 0) return `${overview.failed.length} nicht angenommen`;
+  return null;
+}

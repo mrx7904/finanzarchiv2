@@ -10,7 +10,7 @@ export { Icon, type IconName } from "./icons";
 export { Capsule, DenseRow, FilterMark, GroupHead, List, ListRow, RowActions, type Tone } from "./List";
 export { Menu, type MenuEntry } from "./Menu";
 export { AnimatePresence, MotionRoot, cn, m, quick, spring } from "./motion";
-export { AppShell, TopBar } from "./AppShell";
+export { AppShell, BarActions, TopBar } from "./AppShell";
 export { SidebarRow } from "./Sidebar";
 export { PathNav, collapsePath, type PathItem, type PathSegment } from "./Path";
 export { closeWindow, isWindowMaximized, minimizeWindow, toggleMaximizeWindow, windowSystem, type WindowSystem } from "./window";
