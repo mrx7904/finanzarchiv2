@@ -83,7 +83,7 @@ Added on 2026-11-27 on the owner's question: "Wie siehts aus mit Usability? Elem
 
 23. The line between two columns can be dragged, by mouse and by keyboard, and a double click gives the width of the design back. No column gets narrower than its least width.
 24. The sidebar folds to a rail of icons of 56 px by its button and by Strg+B. The count of "Prüfen" and the intake stay in sight.
-25. The values of a document and the detail of a booking fold away by a button of the top bar, which stays pressed while the column shows.
+25. The values of a document and the detail of a booking fold away by a button of the top bar, which stays pressed while the column shows. The states of the rows of Dokumente can be hidden too, as the last entry of the filter of the states, "Zustand ausblenden", below a line that parts it from the states to filter by. The owner on 2026-11-27: "Zustand möchte ich auch ausblenden können. Am besten einfach als Punkt beim Filter der Zustände unter Dokumente". While they are hidden the filter reads "Ausgeblendet", a row gives its room to the name, and the line of counts still says how many wait. A filter by one state and hidden states exclude each other, which the one control makes plain.
 26. Under the page of every document stand its pages and its zoom, and the document can be read large over the whole window, with its pages at the left. In "Prüfen" a focus hides everything but the page, the question and the progress. Esc ends both.
 27. The whole view has three sizes, Klein, Mittel and Groß (90, 100, 115 %), in Einstellungen › Darstellung and by Strg with +, − and 0. It is the zoom of the window, so a view folds by the width it then really has.
 
@@ -123,7 +123,7 @@ One point departs from 1.0 knowingly. There the actions of a view stood in the t
 |---|---|
 | `Entwurf.tsx` | the nine views: Start, Prüfen (question), Dokumente, Konten, Umsätze, Auswertungen, Steuern, Chat, Einstellungen › Postfächer |
 | `Unterseiten.tsx` | Prüfen (reasons, documents of a reason), Bestellungen, Wiederkehrend, the seven other pages of Einstellungen, and the states: empty, loading, error, damaged archive, the intake opened, the quick search, the arrow back |
-| `Anpassen.tsx` | rules 23 to 27: a column dragged wider, the rail, a column folded away, the focus of Prüfen, a document read large, the sizes Groß and Klein |
+| `Anpassen.tsx` | rules 23 to 27: a column dragged wider, the rail, a column folded away, the states hidden by the filter, the focus of Prüfen, a document read large, the sizes Groß and Klein |
 | `Dialoge.tsx` | seven dialogs: deleting a document, renaming, picking the invoice of an order, restoring a snapshot, moving the archive, removing a mailbox, no longer watching a folder |
 
 Seen by the owner as pictures on 2026-11-27: every view, sub page, state and dialog at 1440 × 900 in light, a part of them in dark, Start, Dokumente and Umsätze at 960 × 600, and the four menus. All of them were rendered in Chromium in light and dark.

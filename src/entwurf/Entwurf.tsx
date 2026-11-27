@@ -190,6 +190,39 @@ function Divider() {
   );
 }
 
+/** The filter of the states open, drawn still: the states to filter by, and below a line the choice to hide them. */
+function StateChoice() {
+  const row = "relative z-10 flex h-8 w-full items-center gap-2 rounded-row px-2 text-left";
+  const states: [string, string, string][] = [
+    ["bg-warn", "prüfen", "4"],
+    ["bg-danger", "doppelt?", "1"],
+    ["bg-ok", "bestätigt", "212"],
+    ["bg-fg-muted", "gelesen", "1.067"],
+  ];
+  return (
+    <div role="listbox" aria-label="Zustand" className="absolute top-[calc(100%+4px)] right-0 left-0 z-20 flex flex-col rounded-panel bg-raised p-1 shadow-raised">
+      <div className={row}>
+        <Icon name="check" size={14} />
+        <span className="flex-1 font-medium">Jeder Zustand</span>
+      </div>
+      {states.map(([dot, label, count]) => (
+        <div key={label} className={row}>
+          <span className="flex w-3.5 justify-center">
+            <span className={cn("size-2 rounded-full", dot)} />
+          </span>
+          <span className="flex-1">{label}</span>
+          <span className="text-small text-fg-muted tabular-nums">{count}</span>
+        </div>
+      ))}
+      <span aria-hidden className="mx-2 my-1 h-px bg-line" />
+      <div className={cn(row, "bg-selected")}>
+        <span className="w-3.5" />
+        <span className="flex-1">Zustand ausblenden</span>
+      </div>
+    </div>
+  );
+}
+
 /** Under the page of a document: its pages, its zoom, and the way into reading it large. */
 export function PageTools({ page = "1 von 3", zoom = "Ganze Seite", large = false }: { page?: string; zoom?: string; large?: boolean }) {
   const key = "flex size-7 items-center justify-center rounded-[6px] text-fg-muted hover:bg-hover hover:text-fg";
@@ -550,10 +583,11 @@ const documents: { title: string; detail: string; figure: string; state: { tone:
   { title: "Tonspur", detail: "Rechnung vom 15.10.2026, aus dem Postfach", figure: "10,99 €", state: { tone: "neutral", label: "gelesen" }, icon: "mail" },
 ];
 
-export function Dokumente({ back, search = false, rail = false, resize = false, values = true }: { back?: string; search?: boolean; rail?: boolean; resize?: boolean; values?: boolean }) {
+/** `states`: "hidden" lists the documents without their state, "choosing" shows the filter of the states open, where the owner hides them. */
+export function Dokumente({ back, search = false, rail = false, resize = false, values = true, states = "shown" }: { back?: string; search?: boolean; rail?: boolean; resize?: boolean; values?: boolean; states?: "shown" | "hidden" | "choosing" }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("");
-  const [state, setState] = useState("");
+  const [state, setState] = useState(states === "hidden" ? "none" : "");
   return (
     <Frame
       view="dokumente"
@@ -591,13 +625,16 @@ export function Dokumente({ back, search = false, rail = false, resize = false, 
             <TextField label="Suchen" icon="search" placeholder="Absender, Nummer, Betrag" value={query} onChange={setQuery} />
             <div className="grid grid-cols-2 gap-2">
               <SelectField label="Art" value={kind} onChange={setKind} options={[{ value: "", label: "Alle Arten" }, { value: "r", label: "Rechnungen" }]} />
-              <SelectField label="Zustand" value={state} onChange={setState} options={[{ value: "", label: "Jeder Zustand" }, { value: "p", label: "prüfen" }]} />
+              <div className="relative">
+                <SelectField label="Zustand" value={state} onChange={setState} options={[{ value: "", label: "Jeder Zustand" }, { value: "p", label: "prüfen" }, { value: "none", label: "Ausgeblendet" }]} />
+                {states === "choosing" && <StateChoice />}
+              </div>
             </div>
             <p className="pt-0.5 text-small text-fg-muted">1.284 Dokumente, 4 warten auf dich</p>
           </div>
           <List label="Dokumente" className="min-h-0 flex-1 overflow-y-auto">
             {documents.map((row, at) => (
-              <ListRow key={row.title} title={row.title} detail={row.detail} figure={row.figure} state={row.state} leading={<Icon name={row.icon} size={16} />} selected={at === 0} onSelect={() => undefined} />
+              <ListRow key={row.title} title={row.title} detail={row.detail} figure={row.figure} state={states === "hidden" ? undefined : row.state} leading={<Icon name={row.icon} size={16} />} selected={at === 0} onSelect={() => undefined} />
             ))}
           </List>
         </section>

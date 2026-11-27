@@ -174,7 +174,7 @@ Am 2026-11-27 auf die Frage des Besitzers nach der Bedienbarkeit dazugekommen: "
 
 23. **Spalten ziehen.** Die Linie zwischen zwei Spalten lässt sich mit der Maus und der Tastatur verschieben, ein Doppelklick stellt die Breite des Entwurfs wieder her. Keine Spalte wird schmaler als ihre Mindestbreite.
 24. **Seitenleiste einklappen** zu einer Leiste aus Symbolen, per Knopf und Strg+B. Die Zahl an "Prüfen" und der Eingang bleiben sichtbar.
-25. **Eine Spalte ausblenden.** Die Angaben eines Dokuments und das Detail einer Buchung verschwinden über einen Knopf der Kopfleiste, der gedrückt bleibt, solange die Spalte da ist.
+25. **Eine Spalte ausblenden.** Die Angaben eines Dokuments und das Detail einer Buchung verschwinden über einen Knopf der Kopfleiste, der gedrückt bleibt, solange die Spalte da ist. Auch der Zustand der Zeilen in "Dokumente" lässt sich ausblenden, als letzter Punkt im Filter der Zustände ("Zustand ausblenden"). Die Zeile gibt den Platz dann dem Namen, und die Zeile mit den Zahlen sagt weiter, wie viele warten.
 26. **Groß lesen und Fokus.** Unter der Seite jedes Dokuments stehen Blättern und Zoom, und ein Dokument lässt sich über das ganze Fenster lesen, mit seinen Seiten links. In "Prüfen" blendet der Fokus alles aus bis auf Seite, Frage und Fortschritt. Esc beendet beides.
 27. **Drei Größen** für die ganze Ansicht: Klein, Mittel, Groß, in "Darstellung" und mit Strg und +, − und 0.
 

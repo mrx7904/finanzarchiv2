@@ -65,6 +65,8 @@ export const anpassen = {
   "dokumente-leiste": () => <Dokumente rail />,
   "dokumente-ohne-angaben": () => <Dokumente values={false} />,
   "dokumente-leiste-ohne-angaben": () => <Dokumente rail values={false} />,
+  "dokumente-zustand-waehlen": () => <Dokumente states="choosing" />,
+  "dokumente-ohne-zustand": () => <Dokumente states="hidden" />,
   "umsaetze-ohne-detail": () => <Umsaetze detail={false} />,
   "pruefen-fokus": () => <Pruefen focus />,
   "dokument-lesen": () => <Lesen />,
