@@ -264,3 +264,36 @@ pub fn list(conn: &Connection, today: Date) -> rusqlite::Result<Vec<Listed>> {
 
 #[cfg(test)]
 mod tests;
+
+/// Why an account cannot take a name.
+#[derive(Debug, thiserror::Error)]
+pub enum RenameError {
+    #[error("Gib dem Konto einen Namen.")]
+    Empty,
+    #[error("Ein Konto heißt schon so.")]
+    Taken,
+    #[error(transparent)]
+    Database(#[from] rusqlite::Error),
+}
+
+/// "Konto umbenennen …" (#48, decided by Fable 5.2 for the owner): the name only, bank and IBAN
+/// stay. A statement read later does not write over it, the name is set only for a new account.
+pub fn rename(conn: &Connection, account: i64, name: &str) -> Result<(), RenameError> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(RenameError::Empty);
+    }
+    let taken: bool = conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM accounts WHERE name = ?1 AND id <> ?2)",
+        params![name, account],
+        |row| row.get(0),
+    )?;
+    if taken {
+        return Err(RenameError::Taken);
+    }
+    conn.execute(
+        "UPDATE accounts SET name = ?2 WHERE id = ?1",
+        params![account, name],
+    )?;
+    Ok(())
+}

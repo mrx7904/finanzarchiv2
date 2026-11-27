@@ -20,6 +20,18 @@ const documents = [
   { id: 5, name: "Gehaltsabrechnung 2026-02", kind: "payslip", state: "open", importedAt: "2026-03-01T07:00:00Z", originalName: "lohn_02.pdf" },
 ].map((row) => ({ ...row, fileType: "pdf", pages: 1, textState: "text", nameByOwner: false, arrival: null, paired: null }));
 
+const booking = (id: number, day: string, party: string, purpose: string, amount: string, incoming: boolean) => ({
+  id, account: "Girokonto", day, party, otherSide: party, purpose, kind: incoming ? "Gutschrift" : "Lastschrift", incoming, amount, category: null, categoryByParty: false, documents: [], movement: null, statement: 3, page: 1,
+});
+const bookings = [
+  booking(1, "2026-03-28", "Beispiel Software GmbH", "Gehalt März", "2.594,40 €", true),
+  booking(2, "2026-03-25", "Beispiel Markt", "Lebensmittel Filiale 12", "34,12 €", false),
+  booking(3, "2026-03-21", "Beispiel Musik", "Abo März", "11,99 €", false),
+  booking(4, "2026-03-03", "Wohnbau Musterstadt eG", "Miete März Wohnung 3", "780,00 €", false),
+  booking(5, "2026-02-12", "Stadtwerke Musterstadt", "Abschlag Strom", "85,00 €", false),
+  booking(6, "2026-02-03", "Beispiel Markt", "Lebensmittel Filiale 12", "88,12 €", false),
+];
+
 const orders = [
   { id: 1, shop: "Amazon", number: "123-1234567-1234567", day: "2026-03-01", total: "49,95 €", invoice: 1, invoiceName: "Rechnung Beispiel Musik 2026-03", noInvoice: false },
   { id: 2, shop: "Amazon", number: "123-7654321-7654321", day: "2026-02-14", total: "19,99 €", invoice: null, invoiceName: null, noInvoice: false },
@@ -51,7 +63,14 @@ const answers: Record<string, (args: Args) => unknown> = {
   list_orders: () => orders,
   order_invoice_candidates: () => [{ document: 4, name: "Rechnung Stadtwerke Musterstadt 2026-02", gross: "85,00 €", day: "2026-02-18" }],
   list_accounts: () => [{ id: 1, name: "Girokonto", iban: "DE89370400440532013000", balance: "2.345,67 €", bankBalance: "2.345,67 €", bankDay: "2026-02-28", findings: [] }],
-  list_bookings: () => ({ rows: [], total: 0, income: "0,00 €", spending: "0,00 €" }),
+  list_bookings: () => ({ rows: bookings, total: bookings.length, income: "2.594,40 €", spending: "999,23 €" }),
+  booking_detail: (args) => {
+    const row = bookings.find((booking) => booking.id === args?.booking) ?? bookings[0];
+    return { ...row, valueDay: null, candidates: [], partyYear: { party: row?.party ?? "", year: 2026, count: 3, sum: row?.amount ?? "", incoming: row?.incoming ?? false, latest: [] }, counterpart: null, statement: { document: 3, name: "Kontoauszug Girokonto 2026-02", page: 1 } };
+  },
+  balances_by_month: () => ({ accounts: [], total: [{ day: "2026-03-31", cents: 234567, text: "2.345,67 €", byBank: false, differenceText: null }] }),
+  evaluation_years: () => [2026, 2025],
+  rename_account: () => null,
   list_folders: () => [{ id: 1, path: "D:\\Beispiel\\Eingang", isInbox: true, problem: null }],
   downloads_state: () => ({ on: false, taken: 0, leftOut: 0, lying: 0 }),
   list_mailboxes: () => [],

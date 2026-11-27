@@ -259,3 +259,47 @@ fn a_booking_dated_with_the_statement_before_counts_with_its_own() {
     );
     assert_eq!(findings(conn, other).unwrap(), []);
 }
+
+#[test]
+fn an_account_takes_a_new_name_but_no_empty_and_no_taken_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let ready = ready(dir.path());
+    let conn = ready.connection();
+    let giro = account(conn);
+    let savings = crate::statements::account_of(
+        conn,
+        "GB82WEST12345698765432",
+        Some("Beispielbank eG"),
+        testing::t0(),
+    )
+    .unwrap();
+    rename(conn, giro, "  Girokonto ").unwrap();
+    let name: String = conn
+        .query_row("SELECT name FROM accounts WHERE id = ?1", [giro], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(name, "Girokonto");
+    assert!(matches!(
+        rename(conn, savings, "Girokonto"),
+        Err(RenameError::Taken)
+    ));
+    assert!(matches!(
+        rename(conn, savings, " "),
+        Err(RenameError::Empty)
+    ));
+    // A statement read again keeps the owner's name.
+    crate::statements::account_of(
+        conn,
+        "DE89370400440532013000",
+        Some("Beispielbank eG"),
+        testing::t0(),
+    )
+    .unwrap();
+    let kept: String = conn
+        .query_row("SELECT name FROM accounts WHERE id = ?1", [giro], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(kept, "Girokonto");
+}

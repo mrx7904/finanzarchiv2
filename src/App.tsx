@@ -177,7 +177,7 @@ export function App() {
             <Review at={review} onAt={(at) => dispatch({ type: "set", spot: { view: "review", place: at } })} onAnswered={countWaiting} />
           </main>
         ) : (
-          <main className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-8 py-8">
+          <>
             {accounts.bookingsOf === undefined ? (
               <Accounts
                 onOpen={(account) =>
@@ -185,9 +185,17 @@ export function App() {
                 }
               />
             ) : (
-              <Bookings account={accounts.bookingsOf?.id ?? null} text={accounts.text} onOpenDocument={openDocument} />
+              <Bookings
+                account={accounts.bookingsOf ?? null}
+                text={accounts.text}
+                onOpenDocument={openDocument}
+                onClearText={() => dispatch({ type: "set", spot: { view: "accounts", place: { ...accounts, text: "" } } })}
+                onRenamed={(name) =>
+                  accounts.bookingsOf && dispatch({ type: "set", spot: { view: "accounts", place: { ...accounts, bookingsOf: { ...accounts.bookingsOf, name } } } })
+                }
+              />
             )}
-          </main>
+          </>
         )}
       </AppShell>
       <QuickSearch open={searching} onClose={() => setSearching(false)} entries={entries} />

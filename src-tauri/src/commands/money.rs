@@ -777,3 +777,19 @@ pub fn undo_move(archive: State<'_, Arc<Mutex<Opened>>>, pair: u32) -> Result<()
 
 #[cfg(test)]
 mod tests;
+
+/// "Konto umbenennen …" (#48).
+#[tauri::command]
+#[specta::specta]
+pub fn rename_account(
+    archive: State<'_, Arc<Mutex<Opened>>>,
+    account: u32,
+    name: String,
+) -> Result<(), CommandError> {
+    with_ready(&archive, |conn| {
+        crate::accounts::rename(conn, i64::from(account), &name).map_err(|error| match error {
+            crate::accounts::RenameError::Database(_) => CommandError::internal(),
+            other => CommandError::refused(other.to_string()),
+        })
+    })
+}
