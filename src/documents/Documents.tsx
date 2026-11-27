@@ -88,7 +88,7 @@ export function Documents({ focus = null, onChoose, onJump, onOpenBooking, onOrd
     return (
       <>
         {barActions}
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <div className="flex flex-col items-start gap-3 px-6 pt-6">
           <p className="text-danger">{failed}</p>
           <Button onClick={() => void reload()}>Erneut versuchen</Button>
         </div>

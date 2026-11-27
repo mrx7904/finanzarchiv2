@@ -69,3 +69,22 @@ export function navigate(nav: Nav, action: NavAction): Nav {
     }
   }
 }
+
+/**
+ * The place a URL of the dev server names, for the check of the views (#51): `view` (documents, review, accounts,
+ * settings), `orders` for Bestellungen, `bookings` (`all` or an account id) for Umsätze, `page` for Einstellungen.
+ * Anything else keeps the start. The release never reads it.
+ */
+export function navFromUrl(nav: Nav, search: string): Nav {
+  const params = new URLSearchParams(search);
+  const view = params.get("view");
+  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings") return nav;
+  const places = { ...nav.places };
+  if (view === "documents") places.documents = { focus: null, orders: params.has("orders") };
+  if (view === "accounts") {
+    const bookings = params.get("bookings");
+    places.accounts = { bookingsOf: bookings === null ? undefined : bookings === "all" ? null : { id: Number(bookings), name: "Konto" }, text: "" };
+  }
+  if (view === "settings") places.settings = { page: (params.get("page") ?? "ordner") as Places["settings"]["page"] };
+  return { ...nav, view, places };
+}

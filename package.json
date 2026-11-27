@@ -12,7 +12,8 @@
     "tauri": "tauri",
     "bindings": "cargo test --manifest-path src-tauri/Cargo.toml --lib write_bindings -- --ignored",
     "corpus": "cargo run --manifest-path src-tauri/Cargo.toml --example corpus -- --seed 2026 --out fixtures/synthetic",
-    "measure": "cargo run --release --manifest-path src-tauri/Cargo.toml --example measure -- --corpus fixtures/synthetic"
+    "measure": "cargo run --release --manifest-path src-tauri/Cargo.toml --example measure -- --corpus fixtures/synthetic",
+    "check:views": "node scripts/check-views.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.5",

@@ -84,10 +84,19 @@ const answers: Record<string, (args: Args) => unknown> = {
   model_status: () => ({ name: "gemma4:12b-it-qat", address: "http://127.0.0.1:11434", reached: true, installed: true, problem: null }),
 };
 
+/** `?mock=empty`, `?mock=error` or `?mock=slow`: the lists answer empty, with an error, or after 1.5 s (#51). */
+const mode = new URLSearchParams(window.location.search).get("mock") ?? "";
+const LISTS = ["list_documents", "list_accounts", "list_orders", "review_groups", "list_bookings"];
+
 let callbacks = 0;
 const internals = {
   invoke: async (command: string, args: Args) => {
     if (command.startsWith("plugin:event|")) return 0;
+    if (LISTS.includes(command)) {
+      if (mode === "empty") return command === "list_bookings" ? { rows: [], total: 0, income: "0,00 €", spending: "0,00 €" } : [];
+      if (mode === "error") throw { kind: "internal", message: "Die Liste ließ sich nicht laden." };
+      if (mode === "slow") await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
     const answer = answers[command];
     if (!answer) throw { kind: "internal", message: `Im Mock gibt es ${command} nicht.` };
     return answer(args);
