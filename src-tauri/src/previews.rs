@@ -10,7 +10,8 @@ use crate::pdf::Pdfium;
 
 pub const FOLDER: &str = "Vorschau";
 /// Widths the window may ask for. Anything else is rounded up to the next, so the cache stays small.
-pub const WIDTHS: [u32; 3] = [160, 640, 1280];
+/// The widths a page is rendered at, so 200 % of a wide column stays sharp (#54).
+pub const WIDTHS: [u32; 5] = [160, 640, 1280, 1920, 2560];
 
 pub fn folder_of(database: &Path) -> PathBuf {
     database
@@ -67,11 +68,12 @@ mod tests {
     use crate::testing;
 
     #[test]
-    fn a_width_is_rounded_up_to_one_of_three() {
+    fn a_width_is_rounded_up_to_one_of_five() {
         assert_eq!(snap_width(1), 160);
         assert_eq!(snap_width(160), 160);
         assert_eq!(snap_width(161), 640);
-        assert_eq!(snap_width(5000), 1280);
+        assert_eq!(snap_width(1300), 1920);
+        assert_eq!(snap_width(5000), 2560);
     }
 
     #[test]

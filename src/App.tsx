@@ -62,6 +62,8 @@ export function App() {
   const [nav, dispatch] = useReducer(navigate, initialNav, (start) => (import.meta.env.DEV ? navFromUrl(start, window.location.search) : start));
   const [waiting, setWaiting] = useState(0);
   const [searching, setSearching] = useState(false);
+  // The focus of Prüfen (#54) hides the sidebar.
+  const [focusing, setFocusing] = useState(false);
   const [findings, setFindings] = useState<Findings | null>(null);
   const countWaiting = () =>
     void commands.reviewGroups().then((result) => {
@@ -147,7 +149,7 @@ export function App() {
                     : [{ label: "Dokumente" }]
         }
         sidebar={
-          ready ? (
+          ready && !(focusing && nav.view === "review") ? (
             <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3">
               <button
                 type="button"
@@ -220,7 +222,7 @@ export function App() {
           <Settings page={nav.places.settings.page} onPage={openSettings} version={loaded.status === "ok" ? loaded.data.version : null} />
         ) : nav.view === "review" ? (
           <main className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-8 py-8">
-            <Review at={review} onAt={(at) => dispatch({ type: "set", spot: { view: "review", place: at } })} onAnswered={countWaiting} />
+            <Review at={review} onAt={(at) => dispatch({ type: "set", spot: { view: "review", place: at } })} onAnswered={countWaiting} focusing={focusing} onFocus={setFocusing} />
           </main>
         ) : (
           <>
