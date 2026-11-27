@@ -72,8 +72,21 @@ const answers: Record<string, (args: Args) => unknown> = {
     const row = bookings.find((booking) => booking.id === args?.booking) ?? bookings[0];
     return { ...row, valueDay: null, candidates: [], partyYear: { party: row?.party ?? "", year: 2026, count: 3, sum: row?.amount ?? "", incoming: row?.incoming ?? false, latest: [] }, counterpart: null, statement: { document: 3, name: "Kontoauszug Girokonto 2026-02", page: 1 } };
   },
-  balances_by_month: () => ({ accounts: [], total: [{ day: "2026-03-31", cents: 234567, text: "2.345,67 €", byBank: false, differenceText: null }] }),
+  balances_by_month: () => ({ accounts: [], total: ["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31", "2026-06-30", "2026-07-31", "2026-08-31", "2026-09-30", "2026-10-31"].map((day, at) => ({ day, cents: 412300 + at * 91000, text: "", byBank: false, differenceText: null })) }),
   evaluation_years: () => [2026, 2025],
+  evaluation_year: (args) => {
+    const year = Number(args?.year ?? 2026);
+    const sum = (cents: number, count = 1) => ({ cents, text: `${(cents / 100).toFixed(2)} €`, count });
+    const income = Array.from({ length: 12 }, (_, at) => (year === 2026 && at > 9 ? sum(0, 0) : sum(259440 + (at === 4 ? 19460 : 0))));
+    const spending = Array.from({ length: 12 }, (_, at) => (year === 2026 && at > 9 ? sum(0, 0) : sum([182310, 141220, 168900, 152040, 201330, 139870, 233110, 147650, 158220, 149990, 151000, 210000][at] ?? 0)));
+    const total = (rows: { cents: number; count: number }[]) => sum(rows.reduce((s, r) => s + r.cents, 0), rows.reduce((s, r) => s + r.count, 0));
+    const part = (id: number | null, name: string | null, cents: number) => ({ id, name, income: false, sum: sum(cents, 3) });
+    return {
+      year, income, spending, incomeTotal: total(income), spendingTotal: total(spending), balance: sum(0), parties: [], previousIncome: sum(0), previousSpending: sum(0),
+      categories: [part(1, "Miete und Wohnen", 780000), part(2, "Lebensmittel", 341220), part(3, "Auto und Tanken", 182040), part(4, "Restaurant und Café", 98760), part(null, null, 22950)],
+    };
+  },
+  salary_years: () => [{ year: 2026, missing: 1, totals: [], months: Array.from({ length: 10 }, (_, at) => ({ month: `2026-${String(at + 1).padStart(2, "0")}`, missing: at === 2, payslips: [], amounts: at === 2 ? [] : [{ field: "netto", label: "Netto", cents: 259440, text: "2.594,40 €" }], paidText: null, differenceText: null })) }],
   list_recurring: () => [
     { party: 11, name: "Beispiel Musik", incoming: false, rhythm: "monatlich", since: "2025-04-05", last: "2026-03-05", next: "2026-04-05", count: 12, cents: -1199, text: "11,99 €", perYearCents: -14388, perYearText: "-143,88 €", change: "seit August 2025 2,00 € mehr", ended: false, category: "Abos und Medien", bookings: [21, 22], history: ["2025-04-05", "2025-05-05", "2025-06-05", "2025-07-05", "2025-08-05", "2025-09-05", "2025-10-05", "2025-11-05", "2025-12-05", "2026-01-05", "2026-02-05", "2026-03-05"].map((day, at) => ({ day, cents: at < 4 ? -999 : -1199, text: at < 4 ? "9,99 €" : "11,99 €" })) },
     { party: 12, name: "Wohnbau Musterstadt eG", incoming: false, rhythm: "monatlich", since: "2024-01-03", last: "2026-03-03", next: "2026-04-03", count: 27, cents: -78000, text: "780,00 €", perYearCents: -936000, perYearText: "-9.360,00 €", change: null, ended: false, category: "Miete und Wohnen", bookings: [31], history: [{ day: "2026-03-03", cents: -78000, text: "780,00 €" }] },

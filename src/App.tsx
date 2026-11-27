@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useReducer, useState } from "re
 import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { type DocumentRow_Serialize as DocumentRow, commands } from "./bindings";
 import { Documents } from "./documents/Documents";
+import { Evaluations } from "./evaluations/Evaluations";
 import { OrdersPage } from "./documents/Orders";
 import { IntakeLine } from "./intake/IntakeLine";
 import { useIntakeChanged } from "./intake/useIntakeChanged";
@@ -35,6 +36,7 @@ const groups: { id: ViewId; label: string; icon: IconName }[][] = [
     { id: "documents", label: "Dokumente", icon: "document" },
     { id: "accounts", label: "Konten", icon: "card" },
   ],
+  [{ id: "evaluations", label: "Auswertungen", icon: "scale" }],
 ];
 
 /** What the quick search finds beside the views: documents, accounts, parties and bookings, loaded when it opens. */
@@ -120,6 +122,8 @@ export function App() {
                 ? moneyPath(accounts.bookingsOf?.name ?? null, accounts.bookingsOf !== undefined, {
                     toAccounts: () => dispatch({ type: "set", spot: { view: "accounts", place: { bookingsOf: undefined, text: "" } } }),
                   })
+                : nav.view === "evaluations"
+                  ? [{ label: "Auswertungen" }]
                 : nav.view === "settings"
                   ? [{ label: "Einstellungen", onSelect: () => openSettings("ordner") }, { label: settingsLabel }]
                   : documents.orders
@@ -174,6 +178,13 @@ export function App() {
             onOpenBooking={(account) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: account, text: "" } } })}
             onOrders={() => dispatch({ type: "set", spot: { view: "documents", place: { ...documents, orders: true } } })}
           />
+        ) : nav.view === "evaluations" ? (
+          <Evaluations
+            year={nav.places.evaluations.year}
+            onYear={(year) => dispatch({ type: "set", spot: { view: "evaluations", place: { year } } })}
+            onBookings={(filter) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: null, text: "", filter } } })}
+            onRecurring={() => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: undefined, text: "", recurring: true } } })}
+          />
         ) : nav.view === "settings" ? (
           <Settings page={nav.places.settings.page} onPage={openSettings} version={loaded.status === "ok" ? loaded.data.version : null} />
         ) : nav.view === "review" ? (
@@ -195,8 +206,9 @@ export function App() {
               <Bookings
                 account={accounts.bookingsOf ?? null}
                 text={accounts.text}
+                filter={accounts.filter}
                 onOpenDocument={openDocument}
-                onClearText={() => dispatch({ type: "set", spot: { view: "accounts", place: { ...accounts, text: "" } } })}
+                onClearText={() => dispatch({ type: "set", spot: { view: "accounts", place: { ...accounts, text: "", filter: undefined } } })}
                 onRenamed={(name) =>
                   accounts.bookingsOf && dispatch({ type: "set", spot: { view: "accounts", place: { ...accounts, bookingsOf: { ...accounts.bookingsOf, name } } } })
                 }

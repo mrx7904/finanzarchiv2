@@ -5,13 +5,18 @@
 import type { ReviewAt } from "./review/Review";
 import type { SettingsPageId } from "./settings/Settings";
 
+/** A filter a jump from a figure sets on Umsätze (#38): a period, a category, and the words of its mark. */
+export type BookingJump = { from?: string; to?: string; category?: number; label: string };
+
 /** The place inside each view that is built. A view that is not built yet has none and is not shown. */
 export type Places = {
   review: ReviewAt;
   /** The document chosen in Dokumente, and whether its page "Bestellungen" is open. */
   documents: { focus: number | null; orders: boolean };
   /** In Konten: the account whose bookings are open, all of them (null), or none open (undefined); and a text a jump set. */
-  accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string; recurring?: boolean };
+  accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string; recurring?: boolean; filter?: BookingJump };
+  /** The year of Auswertungen, null for the newest. */
+  evaluations: { year: number | null };
   /** The page of Einstellungen. */
   settings: { page: SettingsPageId };
 };
@@ -39,6 +44,7 @@ export const initialNav: Nav = {
     documents: { focus: null, orders: false },
     accounts: { bookingsOf: undefined, text: "" },
     settings: { page: "ordner" },
+    evaluations: { year: null },
   },
   back: [],
 };
@@ -78,7 +84,7 @@ export function navigate(nav: Nav, action: NavAction): Nav {
 export function navFromUrl(nav: Nav, search: string): Nav {
   const params = new URLSearchParams(search);
   const view = params.get("view");
-  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings") return nav;
+  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations") return nav;
   const places = { ...nav.places };
   if (view === "documents") places.documents = { focus: null, orders: params.has("orders") };
   if (view === "accounts") {
