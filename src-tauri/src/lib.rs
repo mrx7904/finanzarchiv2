@@ -30,6 +30,7 @@ pub mod recurring;
 pub mod review;
 pub mod salary;
 pub mod statements;
+pub mod taxes;
 #[cfg(test)]
 mod testing;
 

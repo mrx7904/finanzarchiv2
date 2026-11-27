@@ -74,6 +74,15 @@ export const commands = {
 	listHints: (options?: InvokeOptions) => typedError<HintRow[], CommandError>(__TAURI_INVOKE("list_hints", undefined, options)),
 	/**  "Ausblenden": the hint stays away until its numbers change. */
 	dismissHint: (key: string, numbers: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("dismiss_hint", { key, numbers }, options)),
+	taxCategories: (options?: InvokeOptions) => __TAURI_INVOKE<TaxCategoryRow[]>("tax_categories", undefined, options),
+	/**  The years with an entry, newest first. */
+	taxYears: (options?: InvokeOptions) => typedError<number[], CommandError>(__TAURI_INVOKE("tax_years", undefined, options)),
+	/**  What a tax year collects. */
+	taxYear: (year: number, options?: InvokeOptions) => typedError<TaxYearRow_Serialize, CommandError>(__TAURI_INVOKE("tax_year", { year }, options)),
+	/**  Assigns a document or a booking, or changes its assignment. */
+	assignTax: (input: TaxAssignmentInput_Deserialize, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("assign_tax", { input }, options)),
+	unassignTax: (document: number | null, booking: number | null, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("unassign_tax", { document, booking }, options)),
+	setTaxProfile: (year: number, profile: TaxProfileRow, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_tax_profile", { year, profile }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -954,6 +963,117 @@ export type SumRow = {
 	cents: number,
 	text: string,
 	count: number,
+};
+
+export type TaxAmount = {
+	cents: number,
+	text: string,
+};
+
+export type TaxAssignmentInput = TaxAssignmentInput_Serialize | TaxAssignmentInput_Deserialize;
+
+export type TaxAssignmentInput_Deserialize = {
+	document?: number | null,
+	booking?: number | null,
+	category: string,
+	sharePercent: number,
+	refundedCents: number,
+	labourCents?: number | null,
+};
+
+export type TaxAssignmentInput_Serialize = {
+	document: number | null,
+	booking: number | null,
+	category: string,
+	sharePercent: number,
+	refundedCents: number,
+	labourCents: number | null,
+};
+
+export type TaxCategoryRow = {
+	key: string,
+	label: string,
+	group: string,
+	/**  Form and section as ELSTER shows them, never a line number. */
+	elster: string,
+};
+
+export type TaxEntryRow = TaxEntryRow_Serialize | TaxEntryRow_Deserialize;
+
+export type TaxEntryRow_Deserialize = {
+	document?: number | null,
+	booking?: number | null,
+	day: string,
+	gross: TaxAmount,
+	counted: TaxAmount,
+	notes: string[],
+};
+
+export type TaxEntryRow_Serialize = {
+	document: number | null,
+	booking: number | null,
+	day: string,
+	gross: TaxAmount,
+	counted: TaxAmount,
+	notes: string[],
+};
+
+export type TaxProfileRow = {
+	commuteKm: number,
+	commuteDays: number,
+	ownCar: boolean,
+	employerCommuteCents: number,
+	homeofficeDays: number,
+};
+
+export type TaxSectionRow = TaxSectionRow_Serialize | TaxSectionRow_Deserialize;
+
+export type TaxSectionRow_Deserialize = {
+	category: TaxCategoryRow,
+	entries: TaxEntryRow_Deserialize[],
+	counted: TaxAmount,
+};
+
+export type TaxSectionRow_Serialize = {
+	category: TaxCategoryRow,
+	entries: TaxEntryRow_Serialize[],
+	counted: TaxAmount,
+};
+
+export type TaxYearRow = TaxYearRow_Serialize | TaxYearRow_Deserialize;
+
+export type TaxYearRow_Deserialize = {
+	year: number,
+	notice: string,
+	/**  Where the values of the year come from; `None` when the app has none for it. */
+	valuesSource?: string | null,
+	profile: TaxProfileRow,
+	sections: TaxSectionRow_Deserialize[],
+	entfernungspauschale?: TaxAmount | null,
+	homeoffice?: TaxAmount | null,
+	werbungskosten: TaxAmount,
+	pauschbetrag?: TaxAmount | null,
+	abovePauschbetrag?: TaxAmount | null,
+	erstausbildung: TaxAmount,
+	haushaltReduction?: TaxAmount | null,
+	handwerkerReduction?: TaxAmount | null,
+};
+
+export type TaxYearRow_Serialize = {
+	year: number,
+	notice: string,
+	/**  Where the values of the year come from; `None` when the app has none for it. */
+	valuesSource: string | null,
+	profile: TaxProfileRow,
+	sections: TaxSectionRow_Serialize[],
+	entfernungspauschale: TaxAmount | null,
+	homeoffice: TaxAmount | null,
+	werbungskosten: TaxAmount,
+	pauschbetrag: TaxAmount | null,
+	abovePauschbetrag: TaxAmount | null,
+	erstausbildung: TaxAmount,
+	haushaltReduction: TaxAmount | null,
+	handwerkerReduction: TaxAmount | null,
 };
 
 /**  What a year brought, and the year before for comparison. */

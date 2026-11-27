@@ -12,6 +12,7 @@ pub mod names;
 pub mod recurring;
 pub mod review;
 pub mod salary;
+pub mod taxes;
 
 use std::sync::{Arc, Mutex};
 
@@ -173,6 +174,12 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             balances::balances_by_month,
             hints::list_hints,
             hints::dismiss_hint,
+            taxes::tax_categories,
+            taxes::tax_years,
+            taxes::tax_year,
+            taxes::assign_tax,
+            taxes::unassign_tax,
+            taxes::set_tax_profile,
             money::list_categories,
             money::add_category,
             money::rename_category,
