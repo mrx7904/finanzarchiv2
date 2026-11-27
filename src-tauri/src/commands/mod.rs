@@ -5,6 +5,7 @@ pub mod balances;
 pub mod documents;
 pub mod evaluations;
 pub mod folders;
+pub mod hints;
 pub mod mail;
 pub mod money;
 pub mod names;
@@ -170,6 +171,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             recurring::not_recurring,
             salary::salary_years,
             balances::balances_by_month,
+            hints::list_hints,
+            hints::dismiss_hint,
             money::list_categories,
             money::add_category,
             money::rename_category,

@@ -40,6 +40,10 @@ pub const MIGRATIONS: &[(u32, &str)] = &[
     ),
     (22, include_str!("../../migrations/0022_category_by.sql")),
     (23, include_str!("../../migrations/0023_recurring_none.sql")),
+    (
+        24,
+        include_str!("../../migrations/0024_hints_dismissed.sql"),
+    ),
 ];
 
 #[derive(Debug, thiserror::Error)]

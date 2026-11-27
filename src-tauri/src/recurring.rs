@@ -14,7 +14,7 @@ use crate::money::Cents;
 
 /// The bookings of a party that count: not replaced by a CSV twin, no move between own accounts.
 const BOOKINGS: &str = "
-    SELECT b.party_id, p.name, b.day, b.amount_cents
+    SELECT b.party_id, p.name, b.day, b.amount_cents, b.id
     FROM bookings b
     JOIN parties p ON p.id = b.party_id
     WHERE b.replaced_by IS NULL
@@ -107,6 +107,8 @@ pub struct Recurring {
     pub change: Option<Change>,
     /// Twice its rhythm without a payment.
     pub ended: bool,
+    /// The bookings of the run, oldest first.
+    pub bookings: Vec<i64>,
 }
 
 impl Recurring {
@@ -152,7 +154,7 @@ fn near(a: i64, b: i64) -> bool {
 /// Monthly first, then quarterly, then yearly, each booking in one chain at most. A chain needs
 /// three payments, and no more near amounts between its payments than half its own, so the
 /// purchases at a shop are no recurring payment.
-fn chains(bookings: &[(Date, i64)]) -> Vec<(Rhythm, Vec<(Date, i64)>)> {
+fn chains(bookings: &[(Date, i64)]) -> Vec<(Rhythm, Vec<usize>)> {
     let gap = |a: usize, b: usize| (bookings[b].0 - bookings[a].0).get_days();
     let mut used = vec![false; bookings.len()];
     let mut chains = Vec::new();
@@ -205,7 +207,7 @@ fn chains(bookings: &[(Date, i64)]) -> Vec<(Rhythm, Vec<(Date, i64)>)> {
             for j in &chain {
                 used[*j] = true;
             }
-            chains.push((rhythm, chain.into_iter().map(|j| bookings[j]).collect()));
+            chains.push((rhythm, chain));
         }
     }
     chains
@@ -237,10 +239,23 @@ fn rejected(conn: &Connection) -> rusqlite::Result<Vec<(i64, bool, String, Strin
         .collect()
 }
 
+/// The last day the archive knows: the end of the last statement read or the last booking, never
+/// after today. A statement comes weeks after its month, so what ended is judged by this day.
+pub fn known_until(conn: &Connection, today: Date) -> rusqlite::Result<Date> {
+    let known: Option<String> = conn.query_row(
+        "SELECT max(day) FROM (SELECT closing_day AS day FROM statements UNION ALL SELECT max(day) FROM bookings WHERE replaced_by IS NULL)",
+        [],
+        |row| row.get(0),
+    )?;
+    Ok(known
+        .and_then(|day| day.parse::<Date>().ok())
+        .map_or(today, |day| day.min(today)))
+}
+
 /// The recurring payments of the archive as of `today`: the running first, the larger first,
 /// those that ended last. None the owner said is none.
 pub fn found(conn: &Connection, today: Date) -> rusqlite::Result<Vec<Recurring>> {
-    let mut by_party: BTreeMap<(i64, bool), (String, Payments)> = BTreeMap::new();
+    let mut by_party: BTreeMap<(i64, bool), (String, Payments, Vec<i64>)> = BTreeMap::new();
     let rows = conn
         .prepare(BOOKINGS)?
         .query_map([], |row| {
@@ -249,34 +264,27 @@ pub fn found(conn: &Connection, today: Date) -> rusqlite::Result<Vec<Recurring>>
                 row.get::<_, String>(1)?,
                 row.get::<_, String>(2)?,
                 row.get::<_, i64>(3)?,
+                row.get::<_, i64>(4)?,
             ))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    for (party, name, day, cents) in rows {
+    for (party, name, day, cents, id) in rows {
         let Ok(day) = day.parse::<Date>() else {
             continue;
         };
-        by_party
+        let entry = by_party
             .entry((party, cents >= 0))
-            .or_insert_with(|| (name, Vec::new()))
-            .1
-            .push((day, cents));
+            .or_insert_with(|| (name, Vec::new(), Vec::new()));
+        entry.1.push((day, cents));
+        entry.2.push(id);
     }
     let rejected = rejected(conn)?;
-    // A statement comes weeks after its month: ended is judged by the last day the statements read
-    // reach, or the last booking.
-    let known: Option<String> = conn.query_row(
-        "SELECT max(day) FROM (SELECT closing_day AS day FROM statements UNION ALL SELECT max(day) FROM bookings WHERE replaced_by IS NULL)",
-        [],
-        |row| row.get(0),
-    )?;
-    let until = known
-        .and_then(|day| day.parse::<Date>().ok())
-        .map_or(today, |day| day.min(today));
+    let until = known_until(conn, today)?;
     let mut found = Vec::new();
-    for ((party, incoming), (name, bookings)) in by_party {
-        for (rhythm, run) in chains(&bookings) {
+    for ((party, incoming), (name, bookings, ids)) in by_party {
+        for (rhythm, picked) in chains(&bookings) {
             {
+                let run: Payments = picked.iter().map(|j| bookings[*j]).collect();
                 let (since, _) = run[0];
                 let Some(&(last, cents)) = run.last() else {
                     continue;
@@ -301,6 +309,7 @@ pub fn found(conn: &Connection, today: Date) -> rusqlite::Result<Vec<Recurring>>
                     per_year: cents * (12 / rhythm.months()),
                     change: change_of(&run),
                     ended,
+                    bookings: picked.iter().map(|j| ids[*j]).collect(),
                 });
             }
         }

@@ -1017,6 +1017,40 @@ fn measure_csv(folder: &Path, out: &Path) {
     write(&out.join("private").join("files-csv.json"), &result);
 }
 
+/// The savings hints on a writable copy of the owner's archive (#39): how many of each kind, with
+/// the categories the archive has (a copy after a pass of #43 for real ones). Counts only; the lines
+/// go to a sample in `private/` for the owner to check.
+fn measure_hints(database: &Path, out: &Path) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let _ = finanzarchiv2_lib::parties::payees(ready.connection(), jiff::Timestamp::now());
+    let today = jiff::tz::Offset::UTC
+        .to_datetime(jiff::Timestamp::now())
+        .date();
+    let hints = finanzarchiv2_lib::hints::found(ready.connection(), today).unwrap_or_default();
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    for hint in &hints {
+        *counts.entry(hint.kind.code().to_owned()).or_default() += 1;
+    }
+    for (key, count) in &counts {
+        println!("  {key}: {count}");
+    }
+    println!("  {} Hinweise", hints.len());
+    write(
+        &out.join("private").join("hints.json"),
+        &json!({ "reader": "hints", "found": hints.len(), "counts": counts }),
+    );
+    let sample: Vec<Value> = hints.iter().map(|hint| json!({ "kind": hint.kind.code(), "subject": hint.subject, "line": hint.line, "bookings": hint.bookings.len() })).collect();
+    write(
+        &out.join("private").join("hints-sample.json"),
+        &json!(sample),
+    );
+}
+
 /// The balances over time on a writable copy of the owner's archive (#36): the balance counted at
 /// each statement's end against the bank's, and the days of the series. Counts only.
 fn measure_balances(database: &Path, out: &Path) {
@@ -1926,6 +1960,14 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "hints" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader hints braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_hints(Path::new(&database), &out);
         return;
     }
     if reader == "balances" {

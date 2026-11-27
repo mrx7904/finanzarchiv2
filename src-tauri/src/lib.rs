@@ -10,6 +10,7 @@ pub mod documents;
 pub mod downloads;
 pub mod evaluations;
 pub mod folders;
+pub mod hints;
 pub mod intake;
 pub mod kinds;
 pub mod links;
