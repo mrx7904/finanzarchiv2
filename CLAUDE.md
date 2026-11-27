@@ -39,6 +39,7 @@ The skills come from the vault plugin `agentos` (the vault's `skills/`), enabled
 | touch recurring payments, their rhythm, a changed amount or "ist keine" | [`knowledge/decision-recurring.md`](./knowledge/decision-recurring.md) |
 | touch the salary, the months of the payslips or a missing month | [`knowledge/decision-salary.md`](./knowledge/decision-salary.md) |
 | touch balances over time, the sum of all accounts or the balance at the end of a month | [`knowledge/decision-balances.md`](./knowledge/decision-balances.md) |
+| touch the savings hints, their kinds or dismissing one | [`knowledge/decision-hints.md`](./knowledge/decision-hints.md) |
 | generate the corpus, measure a reader or add test documents | [`knowledge/decision-corpus.md`](./knowledge/decision-corpus.md) |
 | touch the intake queue, its stages, workers or the pause | [`knowledge/decision-intake.md`](./knowledge/decision-intake.md) |
 | open, check or read a PDF, or touch PDFium and how it ships | [`knowledge/decision-pdf.md`](./knowledge/decision-pdf.md) |

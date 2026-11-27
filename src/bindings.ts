@@ -70,6 +70,10 @@ export const commands = {
 	salaryYears: (options?: InvokeOptions) => typedError<SalaryYearRow_Serialize[], CommandError>(__TAURI_INVOKE("salary_years", undefined, options)),
 	/**  Each account and the sum of all at the end of each month. */
 	balancesByMonth: (options?: InvokeOptions) => typedError<BalancesRow_Serialize, CommandError>(__TAURI_INVOKE("balances_by_month", undefined, options)),
+	/**  The savings hints the owner did not dismiss. */
+	listHints: (options?: InvokeOptions) => typedError<HintRow[], CommandError>(__TAURI_INVOKE("list_hints", undefined, options)),
+	/**  "Ausblenden": the hint stays away until its numbers change. */
+	dismissHint: (key: string, numbers: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("dismiss_hint", { key, numbers }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -548,6 +552,20 @@ export type FolderRow_Serialize = {
 	isInbox: boolean,
 	/**  Why the folder is not watched right now, in German. */
 	problem: string | null,
+};
+
+/**  A hint as the window takes it. `key` and `numbers` go back with "Ausblenden". */
+export type HintRow = {
+	/**  "rose", "twice", "fees", "above" or "still-runs". */
+	kind: string,
+	key: string,
+	numbers: string,
+	subject: string,
+	line: string,
+	cents: number,
+	text: string,
+	bookings: number[],
+	documents: number[],
 };
 
 /**  Sent whenever the queue changed: jobs were added, one moved on, or the pause was switched. */
