@@ -19,6 +19,8 @@ export type Places = {
   evaluations: { year: number | null };
   /** Start has no place of its own. */
   start: Record<string, never>;
+  /** Steuern keeps its year inside the view. */
+  taxes: Record<string, never>;
   /** The page of Einstellungen. */
   settings: { page: SettingsPageId };
 };
@@ -48,6 +50,7 @@ export const initialNav: Nav = {
     settings: { page: "ordner" },
     evaluations: { year: null },
     start: {},
+    taxes: {},
   },
   back: [],
 };
@@ -87,7 +90,7 @@ export function navigate(nav: Nav, action: NavAction): Nav {
 export function navFromUrl(nav: Nav, search: string): Nav {
   const params = new URLSearchParams(search);
   const view = params.get("view");
-  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations" && view !== "start") return nav;
+  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations" && view !== "start" && view !== "taxes") return nav;
   const places = { ...nav.places };
   if (view === "documents") places.documents = { focus: null, orders: params.has("orders") };
   if (view === "accounts") {

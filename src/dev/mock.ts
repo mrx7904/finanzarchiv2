@@ -93,6 +93,23 @@ const answers: Record<string, (args: Args) => unknown> = {
     { party: 13, name: "Beispiel Film", incoming: false, rhythm: "monatlich", since: "2025-01-20", last: "2025-06-20", next: null, count: 6, cents: -1399, text: "13,99 €", perYearCents: -16788, perYearText: "-167,88 €", change: null, ended: true, category: "Abos und Medien", bookings: [41], history: [] },
   ],
   list_hints: () => [],
+  tax_years: () => [2026],
+  tax_categories: () => [{ key: "arbeitsmittel", label: "Arbeitsmittel", group: "Werbungskosten", elster: "Anlage N · Werbungskosten · Arbeitsmittel" }, { key: "fortbildung", label: "Fortbildung und Studium", group: "Werbungskosten", elster: "Anlage N · Werbungskosten · Fortbildungskosten" }],
+  tax_year: (args) => {
+    const amount = (cents: number) => ({ cents, text: `${(cents / 100).toFixed(2).replace(".", ",")} €` });
+    return {
+      year: args?.year ?? 2026, notice: "Keine Steuerberatung, bitte alles selbst prüfen.", valuesSource: "Steueränderungsgesetz 2025, Stand 31.10.2026",
+      profile: { commuteKm: 18, commuteDays: 150, ownCar: true, employerCommuteCents: 12000, homeofficeDays: 60 },
+      sections: [
+        { category: { key: "fortbildung", label: "Fortbildung und Studium", group: "Werbungskosten", elster: "Anlage N · Werbungskosten · Fortbildungskosten" }, counted: amount(100000), entries: [{ document: 1, booking: null, day: "2026-01-08", gross: amount(300000), counted: amount(100000), notes: [] }] },
+        { category: { key: "arbeitsmittel", label: "Arbeitsmittel", group: "Werbungskosten", elster: "Anlage N · Werbungskosten · Arbeitsmittel" }, counted: amount(8990), entries: [{ document: 4, booking: null, day: "2026-03-01", gross: amount(8990), counted: amount(8990), notes: ["Jahr nach Rechnungsdatum, keine Zahlung gefunden"] }] },
+      ],
+      entfernungspauschale: amount(90600), homeoffice: amount(36000), werbungskosten: amount(235590), pauschbetrag: amount(123000), abovePauschbetrag: amount(112590), erstausbildung: amount(0), haushaltReduction: amount(0), handwerkerReduction: amount(0),
+    };
+  },
+  set_tax_profile: () => null,
+  assign_tax: () => null,
+  unassign_tax: () => null,
   rename_account: () => null,
   list_folders: () => [{ id: 1, path: "D:\\Beispiel\\Eingang", isInbox: true, problem: null }],
   downloads_state: () => ({ on: false, taken: 0, leftOut: 0, lying: 0 }),

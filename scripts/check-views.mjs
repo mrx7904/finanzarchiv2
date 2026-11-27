@@ -29,6 +29,7 @@ const VIEWS = [
   "view=accounts&recurring",
   "view=evaluations",
   "view=start",
+  "view=taxes",
   ...["ordner", "postfaecher", "namen", "kategorien", "modell", "archiv", "darstellung", "ueber"].map((page) => `view=settings&page=${page}`),
 ];
 const LISTS = ["view=documents", "view=documents&orders", "view=review", "view=accounts", "view=accounts&bookings=all"];

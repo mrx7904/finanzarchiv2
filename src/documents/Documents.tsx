@@ -6,6 +6,7 @@ import { BarActions, Button, Consequences, Dialog, EmptyState, Icon, List, ListR
 import { countsLine, filterRows, kindLabel, rowDetail, rowState } from "./describe";
 import { Filing } from "./Filing";
 import { MailMark, MailText } from "./MailText";
+import { AssignTax } from "../taxes/Taxes";
 import { PageImage } from "./PageImage";
 
 // "Dokumente" as designed (#46, knowledge/decision-views.md): the list with its search, kind and state at the left,
@@ -201,6 +202,7 @@ function Values({ row, onChanged, onDeleted, onJump, onOpenBooking }: ValuesProp
   const [detail, setDetail] = useState<DocumentDetail | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [taxing, setTaxing] = useState(false);
   useEffect(() => {
     void commands.documentDetail(row.id).then((result) => {
       if (result.status === "ok") setDetail(result.data);
@@ -220,6 +222,7 @@ function Values({ row, onChanged, onDeleted, onJump, onOpenBooking }: ValuesProp
           align="end"
           entries={[
             { label: "Umbenennen …", onSelect: () => setRenaming(true) },
+            { label: "Für die Steuer …", icon: "scale", onSelect: () => setTaxing(true) },
             { label: "Datei im Ordner zeigen", icon: "folder", onSelect: () => void commands.revealDocument(row.id) },
             { label: "Löschen …", icon: "trash", danger: true, onSelect: () => setDeleting(true) },
           ]}
@@ -263,6 +266,7 @@ function Values({ row, onChanged, onDeleted, onJump, onOpenBooking }: ValuesProp
 
       <Filing document={row.id} onChanged={onChanged} />
 
+      <AssignTax open={taxing} document={row.id} onClose={() => setTaxing(false)} />
       <RenameDialog open={renaming} document={row.id} name={row.name} onClose={() => setRenaming(false)} onRenamed={onChanged} />
       <Dialog
         open={deleting}
