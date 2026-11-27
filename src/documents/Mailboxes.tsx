@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { type MailboxRow_Serialize as MailboxRow, commands } from "../bindings";
-import { Button, Dialog, TextField } from "../ui";
+import { ConfirmRemove, Page, Panel } from "../settings/Page";
+import { Button, TextField } from "../ui";
 import { mailboxLine } from "./describe";
 
 // "Postfächer" of #29: the owner's Gmail, read only. A mailbox is added once its login worked, the
 // app password goes to the keychain of the system and is never shown again. Its mails are read every
 // 15 minutes and at "Jetzt lesen" (#31).
-export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function MailboxesPage() {
+  const [removing, setRemoving] = useState<MailboxRow | null>(null);
   const [mailboxes, setMailboxes] = useState<MailboxRow[]>([]);
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
@@ -14,13 +16,10 @@ export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => voi
   const [busy, setBusy] = useState<"add" | "read" | number | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-    setError(null);
-    setPassword("");
     void commands.listMailboxes().then((result) => {
       if (result.status === "ok") setMailboxes(result.data);
     });
-  }, [open]);
+  }, []);
 
   const run = async (which: "add" | "read" | number, call: () => ReturnType<typeof commands.listMailboxes>) => {
     setBusy(which);
@@ -45,28 +44,20 @@ export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Postfächer"
-      description="Das Archiv liest dein Gmail nur: Es verschiebt, löscht, sendet und markiert nichts. Das App-Passwort liegt im Schlüsselbund des Systems."
+    <Page
       actions={
-        <>
-          {mailboxes.length > 0 ? (
-            <Button busy={busy === "read"} disabled={busy !== null} onClick={() => void run("read", () => commands.readMailNow())}>
-              Jetzt lesen
-            </Button>
-          ) : null}
-          <Button kind="primary" onClick={onClose}>
-            Fertig
+        mailboxes.length > 0 ? (
+          <Button kind="primary" busy={busy === "read"} disabled={busy !== null} onClick={() => void run("read", () => commands.readMailNow())}>
+            Jetzt lesen
           </Button>
-        </>
+        ) : undefined
       }
     >
       {mailboxes.length > 0 ? (
-        <ul className="mb-4 flex flex-col gap-2">
+        <Panel>
+        <ul className="flex flex-col">
           {mailboxes.map((mailbox) => (
-            <li key={mailbox.id} className="flex items-center justify-between gap-3">
+            <li key={mailbox.id} className="flex min-h-14 items-center justify-between gap-3 border-b border-line py-2 last:border-b-0">
               <span className="min-w-0">
                 <span className="block truncate text-body">{mailbox.address}</span>
                 <span className={mailbox.problem ? "text-small text-danger" : "text-small text-fg-muted"}>{mailboxLine(mailbox)}</span>
@@ -75,15 +66,16 @@ export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => voi
                 <Button size="small" kind="plain" busy={busy === mailbox.id} disabled={busy !== null} onClick={() => void run(mailbox.id, () => commands.testMailbox(mailbox.id))}>
                   Anmeldung prüfen
                 </Button>
-                <Button size="small" kind="plain" icon="trash" disabled={busy !== null} onClick={() => void run(mailbox.id, () => commands.removeMailbox(mailbox.id))}>
+                <Button size="small" kind="plain" icon="trash" disabled={busy !== null} onClick={() => setRemoving(mailbox)}>
                   Entfernen
                 </Button>
               </span>
             </li>
           ))}
         </ul>
+        </Panel>
       ) : null}
-      <form className="flex flex-col gap-2.5 border-t border-line pt-3" onSubmit={(event) => void add(event)}>
+      <form className="flex flex-col gap-2.5 rounded-panel bg-surface px-4 py-3 shadow-panel" onSubmit={(event) => void add(event)}>
         <span className="text-body font-medium">Gmail hinzufügen</span>
         <TextField label="Adresse" type="email" autoComplete="off" value={address} onChange={setAddress} />
         <TextField
@@ -100,7 +92,19 @@ export function Mailboxes({ open, onClose }: { open: boolean; onClose: () => voi
           </Button>
         </div>
       </form>
-      {error ? <p className="mt-2 text-small text-danger">{error}</p> : null}
-    </Dialog>
+      {error ? <p className="text-small text-danger">{error}</p> : null}
+      <ConfirmRemove
+        open={removing !== null}
+        title="Postfach entfernen?"
+        goes={["Die Anmeldung und das App-Passwort im Schlüsselbund", "Das Lesen neuer Mails"]}
+        stays={["Die Mails im Postfach", "Die Dokumente im Archiv"]}
+        onCancel={() => setRemoving(null)}
+        onRemove={() => {
+          const mailbox = removing;
+          setRemoving(null);
+          if (mailbox) void run(mailbox.id, () => commands.removeMailbox(mailbox.id));
+        }}
+      />
+    </Page>
   );
 }

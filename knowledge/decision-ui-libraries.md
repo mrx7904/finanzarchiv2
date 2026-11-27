@@ -80,7 +80,7 @@ The owner's words were "clean und elegant" in 1.0 and a dislike of "zu bunt". Gr
 
 The Beautiful UI files were read at `raw.githubusercontent.com/slev12397/beautiful-ui/main` on 2026-11-25. Its licence: MIT, Copyright (c) 2026 Shane Levine. Each adapted file names it in its header.
 
-The app has no "Über" view yet. The list of pieces and licences moves into the app with the settings view of a later stage, from this table.
+The pieces and packages with their licences stand in the app under Einstellungen › Über (#49, `licences` in `src/settings/Settings.tsx`), taken from this table. A piece added here gets its line there in the same change.
 
 ## RareUI is idea only
 

@@ -10,6 +10,7 @@ import { moneyPath } from "./money/describe";
 import { initialNav, navigate, type ViewId } from "./navigation";
 import { reviewPath } from "./review/keys";
 import { Review } from "./review/Review";
+import { Settings, settingsPages, type SettingsPageId } from "./settings/Settings";
 import { AppShell, Icon, Kbd, QuickSearch, SidebarRow, isMac, useQuickSearchKey, type IconName, type SearchEntry } from "./ui";
 
 // The showcase of the design system (#07), only in the dev build: the branch is removed from the release.
@@ -91,7 +92,12 @@ export function App() {
 
   const { review, documents, accounts } = nav.places;
   const openDocument = (document: number) => dispatch({ type: "jump", to: { view: "documents", place: { focus: document } } });
-  const entries: SearchEntry[] = searchEntries({ findings, go: (view) => dispatch({ type: "go", view }), openDocument, openBookings: (bookingsOf, text) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf, text } } }), back: nav.back.length > 0 ? back : null });
+  const openSettings = (page: SettingsPageId) => {
+    dispatch({ type: "set", spot: { view: "settings", place: { page } } });
+    dispatch({ type: "go", view: "settings" });
+  };
+  const entries: SearchEntry[] = searchEntries({ findings, go: (view) => dispatch({ type: "go", view }), openDocument, openBookings: (bookingsOf, text) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf, text } } }), openSettings, back: nav.back.length > 0 ? back : null });
+  const settingsLabel = settingsPages.find((entry) => entry.id === nav.places.settings.page)?.label ?? "";
 
   return (
     <>
@@ -109,7 +115,9 @@ export function App() {
                 ? moneyPath(accounts.bookingsOf?.name ?? null, accounts.bookingsOf !== undefined, {
                     toAccounts: () => dispatch({ type: "set", spot: { view: "accounts", place: { bookingsOf: undefined, text: "" } } }),
                   })
-                : [{ label: "Dokumente" }]
+                : nav.view === "settings"
+                  ? [{ label: "Einstellungen", onSelect: () => openSettings("ordner") }, { label: settingsLabel }]
+                  : [{ label: "Dokumente" }]
         }
         sidebar={
           ready ? (
@@ -141,7 +149,10 @@ export function App() {
                   </ul>
                 ))}
               </nav>
-              <IntakeLine />
+              <div className="flex flex-col gap-px">
+                <IntakeLine />
+                <SidebarRow label="Einstellungen" icon="gear" selected={nav.view === "settings"} onSelect={() => dispatch({ type: "go", view: "settings" })} />
+              </div>
             </div>
           ) : undefined
         }
@@ -154,6 +165,8 @@ export function App() {
               onJump={openDocument}
             />
           </main>
+        ) : nav.view === "settings" ? (
+          <Settings page={nav.places.settings.page} onPage={openSettings} version={loaded.status === "ok" ? loaded.data.version : null} />
         ) : nav.view === "review" ? (
           <main className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-8 py-8">
             <Review at={review} onAt={(at) => dispatch({ type: "set", spot: { view: "review", place: at } })} onAnswered={countWaiting} />
@@ -201,12 +214,17 @@ type SearchContext = {
   go: (view: ViewId) => void;
   openDocument: (document: number) => void;
   openBookings: (bookingsOf: { id: number; name: string } | null, text: string) => void;
+  openSettings: (page: SettingsPageId) => void;
   back: (() => void) | null;
 };
 
 /** What the quick search finds and runs (rule 22): the views, the actions, and what the archive holds. */
-export function searchEntries({ findings, go, openDocument, openBookings, back }: SearchContext): SearchEntry[] {
+export function searchEntries({ findings, go, openDocument, openBookings, openSettings, back }: SearchContext): SearchEntry[] {
   const entries: SearchEntry[] = groups.flat().map((view) => ({ id: `view:${view.id}`, group: "Ansichten", label: view.label, icon: view.icon, onSelect: () => go(view.id) }));
+  entries.push({ id: "view:settings", group: "Ansichten", label: "Einstellungen", icon: "gear", onSelect: () => go("settings") });
+  for (const page of settingsPages) {
+    entries.push({ id: `settings:${page.id}`, group: "Einstellungen", label: page.label, keywords: [page.words], icon: page.icon, onSelect: () => openSettings(page.id) });
+  }
   if (back) entries.push({ id: "action:back", group: "Aktionen", label: "Zurück", icon: "back", onSelect: back });
   entries.push({ id: "action:pause", group: "Aktionen", label: "Eingang pausieren oder fortsetzen", icon: "inbox", onSelect: () => void togglePause() });
   if (Showcase) entries.push({ id: "action:showcase", group: "Aktionen", label: "Gestaltung ansehen", icon: "more", onSelect: () => (window.location.hash = "gestaltung") });

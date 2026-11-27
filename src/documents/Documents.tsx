@@ -5,11 +5,9 @@ import { useIntakeChanged } from "../intake/useIntakeChanged";
 import { Button, EmptyState, List, ListRow } from "../ui";
 import { formatDay, kindLabel, stateLabel, textStateLabel } from "./describe";
 import { Filing } from "./Filing";
-import { Folders } from "./Folders";
 import { MailMark, MailText } from "./MailText";
-import { Mailboxes } from "./Mailboxes";
 import { Orders } from "./Orders";
-import { DocumentName, TemplatesDialog } from "./Names";
+import { DocumentName } from "./Names";
 import { PageImage } from "./PageImage";
 
 // The documents of #04 in the pieces of the design system (#07), imports through the queue of #05,
@@ -34,9 +32,6 @@ export function Documents({ focus = null, onChoose, onJump }: DocumentsProps) {
   };
   const [queued, setQueued] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [naming, setNaming] = useState(false);
-  const [folders, setFolders] = useState(false);
-  const [mailboxes, setMailboxes] = useState(false);
   const [orders, setOrders] = useState(false);
 
   const reload = useCallback(async () => {
@@ -64,14 +59,6 @@ export function Documents({ focus = null, onChoose, onJump }: DocumentsProps) {
       <Button icon="folder" disabled={busy} onClick={() => void pick("folder")}>
         Ordner importieren …
       </Button>
-      <Button kind="plain" icon="folder" onClick={() => setFolders(true)}>
-        Ordner …
-      </Button>
-      <Folders open={folders} onClose={() => setFolders(false)} />
-      <Button kind="plain" icon="mail" onClick={() => setMailboxes(true)}>
-        Postfächer …
-      </Button>
-      <Mailboxes open={mailboxes} onClose={() => setMailboxes(false)} />
       <Button kind="plain" onClick={() => setOrders(true)}>
         Bestellungen …
       </Button>
@@ -83,10 +70,6 @@ export function Documents({ focus = null, onChoose, onJump }: DocumentsProps) {
           setChosen(document);
         }}
       />
-      <Button kind="plain" onClick={() => setNaming(true)}>
-        Namensvorlagen …
-      </Button>
-      <TemplatesDialog open={naming} onClose={() => setNaming(false)} onChanged={() => void reload()} />
     </div>
   );
   const selected = rows.find((row) => row.id === chosen) ?? null;

@@ -111,7 +111,7 @@ Order of work: #33 first, then #43 (added by the owner's answer of 2026-11-26), 
 | [#46](046-documents-view.md) | The view "Dokumente" as designed | FA-49 | #44, #45 | open |
 | [#47](047-review-view.md) | The view "Prüfen" as designed | FA-49 | #44, #45 | open |
 | [#48](048-accounts-and-bookings-view.md) | The views "Konten" and "Umsätze" as designed | FA-49 | #44, #45 | open |
-| [#49](049-settings-view.md) | The view "Einstellungen" | FA-50 | #44, #45 | open |
+| [#49](049-settings-view.md) | The view "Einstellungen" | FA-50 | #44, #45 | built, the owner looks |
 | [#50](050-views-of-stage-5.md) | The views of stage 5 in the frame | FA-51 | #44, #45, #51 | open |
 | [#51](051-check-of-the-views.md) | A check that every view keeps the rules | FA-52 | #46, #47, #48, #49 | open |
 | [#52](052-recurring-payments-page.md) | The page "Wiederkehrend" under Konten | FA-49 | #34, #48 | open |

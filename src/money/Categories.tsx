@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { type CategoryRow, commands } from "../bindings";
-import { Button, Dialog, SelectField, TextField } from "../ui";
+import { Page } from "../settings/Page";
+import { Button, SelectField, TextField } from "../ui";
 
-// The categories of #25 in a dialog: rename, remove and add, each sent to the core at once.
-export function Categories({ open, onClose }: { open: boolean; onClose: () => void }) {
+// The categories of #25, a page of Einstellungen since #49: rename, remove and add, each sent to the core at once.
+export function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [names, setNames] = useState<Record<number, string>>({});
   const [added, setAdded] = useState("");
@@ -15,12 +16,10 @@ export function Categories({ open, onClose }: { open: boolean; onClose: () => vo
     setNames(Object.fromEntries(rows.map((row) => [row.id, row.name])));
   };
   useEffect(() => {
-    if (!open) return;
-    setError(null);
     void commands.listCategories().then((result) => {
       if (result.status === "ok") take(result.data);
     });
-  }, [open]);
+  }, []);
 
   const run = async (call: () => ReturnType<typeof commands.listCategories>) => {
     const result = await call();
@@ -31,18 +30,8 @@ export function Categories({ open, onClose }: { open: boolean; onClose: () => vo
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Kategorien"
-      description="Eine Buchung bekommt die Kategorie ihrer Partei, solange du ihr keine eigene gibst."
-      actions={
-        <Button kind="primary" onClick={onClose}>
-          Fertig
-        </Button>
-      }
-    >
-      <div className="flex max-h-[50vh] flex-col gap-1.5 overflow-y-auto">
+    <Page>
+      <div className="flex flex-col gap-1.5 rounded-panel bg-surface px-4 py-3 shadow-panel">
         {categories.map((category) => (
           <div key={category.id} className="flex items-end gap-2">
             <TextField
@@ -59,7 +48,7 @@ export function Categories({ open, onClose }: { open: boolean; onClose: () => vo
         ))}
       </div>
       <form
-        className="mt-3 flex items-end gap-2"
+        className="flex items-end gap-2 rounded-panel bg-surface px-4 py-3 shadow-panel"
         onSubmit={(event) => {
           event.preventDefault();
           void run(() => commands.addCategory(added, direction)).then(() => setAdded(""));
@@ -79,7 +68,7 @@ export function Categories({ open, onClose }: { open: boolean; onClose: () => vo
           Hinzufügen
         </Button>
       </form>
-      {error ? <p className="mt-2 text-small text-danger">{error}</p> : null}
-    </Dialog>
+      {error ? <p className="text-small text-danger">{error}</p> : null}
+    </Page>
   );
 }
