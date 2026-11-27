@@ -89,3 +89,84 @@ export function ListRow({ title, detail, leading, figure, state, selected = fals
     </div>
   );
 }
+
+type DenseRowProps = {
+  /** The first column, such as the day. */
+  lead?: string;
+  title: string;
+  /** Text after the title on the same line, dropped first when the row is narrow. */
+  detail?: string;
+  figure?: string;
+  selected?: boolean;
+  onSelect: () => void;
+  /** Buttons at the right that show on hover or focus. The row keeps its height either way (rule 8). */
+  actions?: ReactNode;
+};
+
+/** A row of 40 px for long lists such as Umsätze (rule 7), with the arrow keys of `List`. */
+export function DenseRow({ lead, title, detail, figure, selected = false, onSelect, actions }: DenseRowProps) {
+  return (
+    <div
+      role="option"
+      aria-selected={selected}
+      tabIndex={selected ? 0 : -1}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      className={cn(
+        "group relative flex h-(--dense-height) cursor-default items-center gap-3 rounded-row px-2.5 outline-offset-[-2px] transition-quick select-none",
+        selected ? "bg-selected" : "hover:bg-hover",
+      )}
+    >
+      {selected && <span aria-hidden className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-mark" />}
+      {lead && <span className="w-12 shrink-0 text-small text-fg-muted tabular-nums">{lead}</span>}
+      <span className="min-w-0 flex-1 truncate">
+        <span className="font-medium text-fg">{title}</span>
+        {detail && <span className="text-fg-muted"> · {detail}</span>}
+      </span>
+      {actions && <RowActions>{actions}</RowActions>}
+      {figure !== undefined && <span className="w-28 shrink-0 text-right font-medium text-fg tabular-nums">{figure}</span>}
+    </div>
+  );
+}
+
+/** The actions of a row: hidden until the row is hovered or holds the focus, never changing its height. */
+export function RowActions({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1 opacity-0 transition-quick group-focus-within:opacity-100 group-hover:opacity-100 focus-within:opacity-100">
+      {children}
+    </span>
+  );
+}
+
+/** The head of a group of rows, such as a month with its sums. It stays at the top while its rows scroll. */
+export function GroupHead({ title, figures }: { title: string; figures?: ReactNode }) {
+  return (
+    <div className="sticky top-0 z-10 flex h-8 items-center gap-3 bg-surface/95 px-2.5 text-small font-medium text-fg-muted backdrop-blur-sm">
+      <span className="flex-1 truncate">{title}</span>
+      {figures && <span className="flex shrink-0 items-center gap-3 tabular-nums">{figures}</span>}
+    </div>
+  );
+}
+
+/** A filter a jump has set, as a mark with "×" in the head of a list (rule 9). */
+export function FilterMark({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex h-6 max-w-64 items-center gap-1 rounded-full bg-selected pr-0.5 pl-2.5 text-small font-medium text-fg">
+      <span className="truncate">{label}</span>
+      <button
+        type="button"
+        aria-label={`Filter „${label}“ entfernen`}
+        onClick={onClear}
+        className="flex size-5 shrink-0 items-center justify-center rounded-full text-fg-muted transition-quick hover:bg-hover hover:text-fg"
+      >
+        ×
+      </button>
+    </span>
+  );
+}
