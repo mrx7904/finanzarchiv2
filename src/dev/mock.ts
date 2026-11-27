@@ -108,6 +108,11 @@ const answers: Record<string, (args: Args) => unknown> = {
     };
   },
   set_tax_profile: () => null,
+  list_chats: () => [{ id: 1, title: "Was habe ich im März ausgegeben?", createdAt: "2026-03-30T10:00:00Z" }],
+  chat_messages: () => [
+    { id: 1, role: "owner", text: "Was habe ich im März ausgegeben?", sources: [], askedAt: "2026-03-30T10:00:00Z" },
+    { id: 2, role: "archive", text: "Im März 2026 hast du 1.689,00 € ausgegeben, am meisten für Miete und Wohnen mit 780,00 €.", sources: [{ document: 1, booking: null }, { document: null, booking: 4 }], askedAt: "2026-03-30T10:00:05Z" },
+  ],
   assign_tax: () => null,
   unassign_tax: () => null,
   rename_account: () => null,
