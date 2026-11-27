@@ -200,6 +200,7 @@ export function App() {
           <Taxes onOpenDocument={openDocument} onOpenBooking={() => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: null, text: "" } } })} />
         ) : nav.view === "start" ? (
           <Start
+            onOpenDocument={openDocument}
             onTarget={(target) => {
               if (target.view === "review") dispatch({ type: "go", view: "review" });
               else if (target.view === "evaluations") dispatch({ type: "go", view: "evaluations" });

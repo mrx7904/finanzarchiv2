@@ -13,7 +13,7 @@ const page = (title: string, lines: string[]) =>
   )}`;
 
 const documents = [
-  { id: 1, name: "Rechnung Beispiel Musik 2026-03", kind: "invoice", state: "filed", importedAt: "2026-03-04T08:00:00Z", originalName: "rechnung-0815.pdf" },
+  { id: 1, name: "Rechnung Beispiel Musik 2026-03", kind: "invoice", state: "filed", importedAt: new Date(Date.now() - 86400000).toISOString(), originalName: "rechnung-0815.pdf" },
   { id: 2, name: "Quittung Beispiel Markt 2026-03-11", kind: "receipt", state: "waiting", importedAt: "2026-03-11T17:20:00Z", originalName: "scan_0031.pdf" },
   { id: 3, name: "Kontoauszug Girokonto 2026-02", kind: "statement", state: "filed", importedAt: "2026-03-02T09:00:00Z", originalName: "auszug_02_2026.pdf" },
   { id: 4, name: "Rechnung Stadtwerke Musterstadt 2026-02", kind: "invoice", state: "filed", importedAt: "2026-02-20T10:00:00Z", originalName: "SW-2026-0413.pdf" },
