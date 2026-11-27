@@ -8,8 +8,8 @@ import type { SettingsPageId } from "./settings/Settings";
 /** The place inside each view that is built. A view that is not built yet has none and is not shown. */
 export type Places = {
   review: ReviewAt;
-  /** The document chosen in Dokumente. */
-  documents: { focus: number | null };
+  /** The document chosen in Dokumente, and whether its page "Bestellungen" is open. */
+  documents: { focus: number | null; orders: boolean };
   /** In Konten: the account whose bookings are open, all of them (null), or none open (undefined); and a text a jump set. */
   accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string };
   /** The page of Einstellungen. */
@@ -36,7 +36,7 @@ export const initialNav: Nav = {
   view: "documents",
   places: {
     review: { group: null, question: null },
-    documents: { focus: null },
+    documents: { focus: null, orders: false },
     accounts: { bookingsOf: undefined, text: "" },
     settings: { page: "ordner" },
   },

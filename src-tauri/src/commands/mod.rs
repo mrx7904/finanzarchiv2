@@ -3,6 +3,7 @@
 
 pub mod balances;
 pub mod chat;
+pub mod document_view;
 pub mod documents;
 pub mod evaluations;
 pub mod folders;
@@ -188,6 +189,12 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             chat::ask_chat,
             settings::archive_info,
             settings::model_status,
+            document_view::document_detail,
+            document_view::delete_document,
+            document_view::reveal_document,
+            document_view::set_order_needs_invoice,
+            document_view::order_invoice_candidates,
+            document_view::assign_order_invoice,
             money::list_categories,
             money::add_category,
             money::rename_category,

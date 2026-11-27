@@ -39,7 +39,8 @@ export function IntakeLine() {
         )}
         <span className="flex-1 truncate">{line}</span>
       </button>
-      <div id={id} popover="auto" className="fa-menu fixed inset-auto bottom-14 left-3 m-0 flex w-[380px] flex-col rounded-dialog bg-raised text-fg shadow-raised">
+      <div id={id} popover="auto" className="fa-menu fixed inset-auto bottom-14 left-3 m-0 w-[380px] rounded-dialog bg-raised text-fg shadow-raised">
+        <div className="flex flex-col">
         <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
           <span className="text-heading font-semibold">Eingang</span>
           <Button size="small" onClick={() => void commands.setIntakePaused(!overview.paused).then(reload)}>
@@ -86,6 +87,7 @@ export function IntakeLine() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </>
   );

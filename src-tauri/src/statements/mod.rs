@@ -354,6 +354,10 @@ pub fn forget(conn: &Connection, document: i64) -> rusqlite::Result<()> {
         detach(conn, earlier)?;
     }
     conn.execute(
+        "DELETE FROM tax_assignments WHERE booking_id IN (SELECT b.id FROM bookings b JOIN statements s ON s.id = b.statement_id WHERE s.document_id = ?1)",
+        [document],
+    )?;
+    conn.execute(
         "DELETE FROM bookings WHERE statement_id IN (SELECT id FROM statements WHERE document_id = ?1)",
         [document],
     )?;

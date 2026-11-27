@@ -307,7 +307,11 @@ pub fn list_documents(
     let Opened::Ready(ready) = &*opened else {
         return Ok(Vec::new());
     };
-    let conn = ready.connection();
+    document_rows(ready.connection())
+}
+
+/// The rows of Dokumente, each with its pair (#32). Measured on the owner's archive (#46).
+pub fn document_rows(conn: &rusqlite::Connection) -> Result<Vec<DocumentRow>, CommandError> {
     let rows = documents::list(conn).map_err(|_| CommandError::internal())?;
     let names: std::collections::HashMap<i64, String> =
         rows.iter().map(|row| (row.id, row.name.clone())).collect();

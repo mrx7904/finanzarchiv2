@@ -6,7 +6,8 @@ import { cn } from "../ui";
  * A page of a document as the core renders it. It asks only once it comes into view, so a list
  * of two hundred documents renders the pages one sees, and the core keeps each in its cache.
  */
-export function PageImage({ document, page = 1, width, className, label }: { document: number; page?: number; width: number; className?: string; label: string }) {
+/** `fit`: the whole page in its box, by width or by height, whichever is smaller (the page column of #46). */
+export function PageImage({ document, page = 1, width, className, label, fit = false }: { document: number; page?: number; width: number; className?: string; label: string; fit?: boolean }) {
   const [source, setSource] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -37,8 +38,8 @@ export function PageImage({ document, page = 1, width, className, label }: { doc
   }, [document, page, width]);
 
   return (
-    <div ref={box} className={cn("overflow-hidden bg-canvas", className)}>
-      {source ? <img src={source} alt={label} className="block h-auto w-full" /> : null}
+    <div ref={box} className={cn("overflow-hidden", fit ? "flex h-full w-full items-center justify-center" : "bg-canvas", className)}>
+      {source ? <img src={source} alt={label} className={fit ? "block max-h-full max-w-full rounded-control object-contain shadow-panel" : "block h-auto w-full"} /> : null}
       {failed ? <span className="sr-only">Keine Vorschau</span> : null}
     </div>
   );

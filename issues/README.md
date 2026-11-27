@@ -108,7 +108,7 @@ Order of work: #33 first, then #43 (added by the owner's answer of 2026-11-26), 
 |---|---|---|---|---|
 | [#44](044-frame-and-navigation.md) | The frame of the views and how one moves | FA-47 | #07, #26 | done |
 | [#45](045-pieces-for-the-views.md) | The pieces the views need | FA-48 | #07 | done |
-| [#46](046-documents-view.md) | The view "Dokumente" as designed | FA-49 | #44, #45 | open |
+| [#46](046-documents-view.md) | The view "Dokumente" as designed | FA-49 | #44, #45 | built, the owner looks |
 | [#47](047-review-view.md) | The view "Prüfen" as designed | FA-49 | #44, #45 | open |
 | [#48](048-accounts-and-bookings-view.md) | The views "Konten" and "Umsätze" as designed | FA-49 | #44, #45 | open |
 | [#49](049-settings-view.md) | The view "Einstellungen" | FA-50 | #44, #45 | built, the owner looks |

@@ -431,6 +431,7 @@ pub fn delete(conn: &Connection, root: &Path, id: i64) -> rusqlite::Result<Optio
         "links",
         "link_questions",
         "intake_jobs",
+        "tax_assignments",
     ] {
         tx.execute(&format!("DELETE FROM {table} WHERE document_id = ?1"), [id])?;
     }
