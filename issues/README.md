@@ -86,7 +86,7 @@ Order of work: #27 first, then #28 and #29, then #30 and #31, then #32.
 |---|---|---|---|---|
 | [#33](033-income-and-spending.md) | Income and spending from the bookings | FA-37 | #23, #25 | done |
 | [#34](034-recurring-payments.md) | Recurring payments | FA-38 | #33 | done, the owner checks a sample |
-| [#35](035-salary-from-payslips.md) | Salary from the payslips | FA-39 | #13 | open |
+| [#35](035-salary-from-payslips.md) | Salary from the payslips | FA-39 | #13 | done, measured once payslips are in |
 | [#36](036-balances-over-time.md) | Balances over time | FA-40 | #22 | open |
 | [#37](037-evaluation-variants.md) | Variants of the evaluations, chosen by the owner | FA-41 | #33, #34, #35, #36 | open |
 | [#38](038-evaluations-view.md) | The view "Auswertungen" | FA-41 | #37, #44, #45 | open |

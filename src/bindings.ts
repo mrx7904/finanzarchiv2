@@ -66,6 +66,8 @@ export const commands = {
 	 *  day of its first payment, as `list_recurring` gave them.
 	 */
 	notRecurring: (party: number, incoming: boolean, rhythm: string, since: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("not_recurring", { party, incoming, rhythm, since }, options)),
+	/**  The years of the payslips, newest first. */
+	salaryYears: (options?: InvokeOptions) => typedError<SalaryYearRow_Serialize[], CommandError>(__TAURI_INVOKE("salary_years", undefined, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -798,6 +800,57 @@ export type ReviewReading_Serialize = {
 	page: number | null,
 	/**  The line on the page as fractions of its width and height from the top left: left, top, width, height. */
 	mark: (number | null)[] | null,
+};
+
+/**  An amount with its field and its German name. */
+export type SalaryAmount = {
+	field: string,
+	label: string,
+	cents: number,
+	text: string,
+};
+
+/**  A month: its amounts, or `missing` ("fehlt") with none. */
+export type SalaryMonthRow = SalaryMonthRow_Serialize | SalaryMonthRow_Deserialize;
+
+/**  A month: its amounts, or `missing` ("fehlt") with none. */
+export type SalaryMonthRow_Deserialize = {
+	/**  `YYYY-MM`. */
+	month: string,
+	missing: boolean,
+	payslips: number[],
+	amounts: SalaryAmount[],
+	paidText?: string | null,
+	/**  What the bookings brought minus the Netto, "-50,00 €", when they differ. */
+	differenceText?: string | null,
+};
+
+/**  A month: its amounts, or `missing` ("fehlt") with none. */
+export type SalaryMonthRow_Serialize = {
+	/**  `YYYY-MM`. */
+	month: string,
+	missing: boolean,
+	payslips: number[],
+	amounts: SalaryAmount[],
+	paidText: string | null,
+	/**  What the bookings brought minus the Netto, "-50,00 €", when they differ. */
+	differenceText: string | null,
+};
+
+export type SalaryYearRow = SalaryYearRow_Serialize | SalaryYearRow_Deserialize;
+
+export type SalaryYearRow_Deserialize = {
+	year: number,
+	months: SalaryMonthRow_Deserialize[],
+	totals: SalaryAmount[],
+	missing: number,
+};
+
+export type SalaryYearRow_Serialize = {
+	year: number,
+	months: SalaryMonthRow_Serialize[],
+	totals: SalaryAmount[],
+	missing: number,
 };
 
 export type SnapshotInfo = {

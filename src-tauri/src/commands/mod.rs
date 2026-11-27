@@ -9,6 +9,7 @@ pub mod money;
 pub mod names;
 pub mod recurring;
 pub mod review;
+pub mod salary;
 
 use std::sync::{Arc, Mutex};
 
@@ -166,6 +167,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             evaluations::evaluation_year,
             recurring::list_recurring,
             recurring::not_recurring,
+            salary::salary_years,
             money::list_categories,
             money::add_category,
             money::rename_category,

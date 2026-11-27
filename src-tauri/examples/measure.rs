@@ -1017,6 +1017,63 @@ fn measure_csv(folder: &Path, out: &Path) {
     write(&out.join("private").join("files-csv.json"), &result);
 }
 
+/// The salary on a writable copy of the owner's archive (#35): months with a payslip, missing
+/// months, months whose Netto has a booking and those that differ from it. Counts only.
+fn measure_salary(database: &Path, out: &Path) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let months = finanzarchiv2_lib::salary::months(ready.connection()).unwrap_or_default();
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    counts.insert("Monate".into(), months.len());
+    counts.insert(
+        "mit Abrechnung".into(),
+        months.iter().filter(|m| !m.missing()).count(),
+    );
+    counts.insert(
+        "fehlt".into(),
+        months.iter().filter(|m| m.missing()).count(),
+    );
+    counts.insert(
+        "mit Brutto und Netto".into(),
+        months
+            .iter()
+            .filter(|m| m.amounts.contains_key("brutto") && m.amounts.contains_key("netto"))
+            .count(),
+    );
+    counts.insert(
+        "Netto mit Buchung".into(),
+        months.iter().filter(|m| m.paid.is_some()).count(),
+    );
+    counts.insert(
+        "Netto weicht ab".into(),
+        months.iter().filter(|m| m.difference().is_some()).count(),
+    );
+    counts.insert(
+        "zwei Abrechnungen".into(),
+        months.iter().filter(|m| m.payslips.len() > 1).count(),
+    );
+    for (field, _) in finanzarchiv2_lib::salary::FIELDS {
+        counts.insert(
+            format!("Feld {field}"),
+            months
+                .iter()
+                .filter(|m| m.amounts.contains_key(field))
+                .count(),
+        );
+    }
+    for (key, count) in &counts {
+        println!("  {key}: {count}");
+    }
+    write(
+        &out.join("private").join("salary.json"),
+        &json!({ "reader": "salary", "counts": counts }),
+    );
+}
+
 /// The recurring payments on a writable copy of the owner's archive (#34): how many per rhythm and
 /// direction, how many ended and how many changed their amount. Counts only; the names go to a
 /// sample in `private/` for the owner to check.
@@ -1824,6 +1881,14 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "salary" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader salary braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_salary(Path::new(&database), &out);
         return;
     }
     if reader == "recurring" {
