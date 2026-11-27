@@ -92,7 +92,7 @@ Order of work: #27 first, then #28 and #29, then #30 and #31, then #32.
 | [#38](038-evaluations-view.md) | The view "Auswertungen" | FA-41 | #37, #44, #45 | built, the owner looks |
 | [#39](039-savings-hints.md) | Savings hints | FA-42 | #34, #33 | done, the owner checks a sample |
 | [#40](040-start-view.md) | The start view | FA-43 | #38, #39, #44, #45 | built, the owner looks |
-| [#41](041-taxes.md) | Taxes for the return | FA-44 | #33, #24, #44, #45 | core done, view open |
+| [#41](041-taxes.md) | Taxes for the return | FA-44 | #33, #24, #44, #45 | built, the owner looks |
 | [#42](042-chat.md) | The chat over the archive | FA-45 | #33, #34, #35, #41, #44, #45 | core done, view and measurement open |
 | [#43](043-categories-by-model.md) | Categories by the model | FA-46 | #25, #14 | done |
 
