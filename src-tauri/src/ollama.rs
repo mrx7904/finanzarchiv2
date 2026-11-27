@@ -154,6 +154,24 @@ impl Ollama {
         .map(|_| ())
     }
 
+    /// Whether Ollama answers and has the model installed (`/api/tags`), for "Verbindung testen".
+    pub fn installed(&self) -> Result<bool, ModelError> {
+        let mut response = self
+            .agent
+            .get(format!("{}/api/tags", self.base))
+            .call()
+            .map_err(|error| self.failure(&error))?;
+        let tags: Value = response
+            .body_mut()
+            .read_json()
+            .map_err(|error| ModelError::BadAnswer(error.to_string()))?;
+        Ok(tags["models"].as_array().is_some_and(|models| {
+            models
+                .iter()
+                .any(|model| model["name"].as_str() == Some(self.model.as_str()))
+        }))
+    }
+
     /// How many bytes of the model lie in GPU memory, while it is loaded.
     pub fn loaded_bytes(&self) -> Option<u64> {
         let mut response = self

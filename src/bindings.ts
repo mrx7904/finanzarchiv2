@@ -88,6 +88,9 @@ export const commands = {
 	deleteChat: (chat: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_chat", { chat }, options)),
 	/**  Asks the archive, in a new chat or one that exists. The answer is checked before it is kept. */
 	askChat: (chat: number | null, question: string, options?: InvokeOptions) => typedError<ChatAnswer_Serialize, CommandError>(__TAURI_INVOKE("ask_chat", { chat, question }, options)),
+	archiveInfo: (options?: InvokeOptions) => typedError<ArchiveInfo, CommandError>(__TAURI_INVOKE("archive_info", undefined, options)),
+	/**  Whether the local model answers: "Verbindung testen" calls it again. */
+	modelStatus: (options?: InvokeOptions) => typedError<ModelStatus_Serialize, CommandError>(__TAURI_INVOKE("model_status", undefined, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -178,6 +181,14 @@ export type AccountRow_Serialize = {
 export type AppStatus = {
 	version: string,
 	archive: ArchiveStatus,
+};
+
+export type ArchiveInfo = {
+	folder: string,
+	documents: number,
+	bookings: number,
+	accounts: number,
+	snapshots: SnapshotRow[],
 };
 
 /**  The state of the archive as the window shows it. */
@@ -723,6 +734,26 @@ export type MailboxRow_Serialize = {
 	taken: number,
 };
 
+export type ModelStatus = ModelStatus_Serialize | ModelStatus_Deserialize;
+
+export type ModelStatus_Deserialize = {
+	name: string,
+	address: string,
+	reached: boolean,
+	installed: boolean,
+	/**  Why it is not ready, German, when it is not. */
+	problem?: string | null,
+};
+
+export type ModelStatus_Serialize = {
+	name: string,
+	address: string,
+	reached: boolean,
+	installed: boolean,
+	/**  Why it is not ready, German, when it is not. */
+	problem: string | null,
+};
+
 /**  A move a booking is half of. */
 export type MoveOf = MoveOf_Serialize | MoveOf_Deserialize;
 
@@ -994,6 +1025,14 @@ export type SnapshotInfo = {
 	name: string,
 	/**  UTC, ISO 8601. */
 	takenAt: string,
+};
+
+export type SnapshotRow = {
+	name: string,
+	/**  UTC, ISO 8601. */
+	takenAt: string,
+	/**  "täglich", "vor einer Umstellung" or "nach einem Import". */
+	reason: string,
 };
 
 /**  The statement a booking was read from. */

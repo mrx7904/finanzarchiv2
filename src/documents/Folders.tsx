@@ -1,25 +1,25 @@
 import { useEffect, useState } from "react";
 import { type DownloadsState, type FolderRow, commands } from "../bindings";
-import { Button, Dialog } from "../ui";
+import { ConfirmRemove, Page, Panel } from "../settings/Page";
+import { Button } from "../ui";
 import { downloadsLine } from "./describe";
 
-// "Ordner" of #27: the watched folders with the inbox first. A file saved into one of them comes
-// into the archive by itself, nothing in them is moved or deleted.
-export function Folders({ open, onClose }: { open: boolean; onClose: () => void }) {
+// "Ordner" of #27, a page of Einstellungen since #49: the watched folders with the inbox first. A file saved into one
+// of them comes into the archive by itself, nothing in them is moved or deleted.
+export function FoldersPage() {
+  const [removing, setRemoving] = useState<FolderRow | null>(null);
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [downloads, setDownloads] = useState<DownloadsState | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-    setError(null);
     void commands.listFolders().then((result) => {
       if (result.status === "ok") setFolders(result.data);
     });
     void commands.downloadsState().then((result) => {
       if (result.status === "ok") setDownloads(result.data);
     });
-  }, [open]);
+  }, []);
 
   const switchDownloads = async (call: () => ReturnType<typeof commands.downloadsState>) => {
     const result = await call();
@@ -38,25 +38,17 @@ export function Folders({ open, onClose }: { open: boolean; onClose: () => void 
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Ordner"
-      description="Was du in einen dieser Ordner legst, kommt von selbst ins Archiv. Dort wird nichts verschoben oder gelöscht."
+    <Page
       actions={
-        <>
-          <Button icon="plus" onClick={() => void run(() => commands.addFolder())}>
-            Ordner hinzufügen …
-          </Button>
-          <Button kind="primary" onClick={onClose}>
-            Fertig
-          </Button>
-        </>
+        <Button kind="primary" icon="plus" onClick={() => void run(() => commands.addFolder())}>
+          Ordner hinzufügen …
+        </Button>
       }
     >
-      <ul className="flex flex-col gap-2">
+      <Panel>
+      <ul className="flex flex-col">
         {folders.map((folder) => (
-          <li key={folder.id} className="flex items-center justify-between gap-3">
+          <li key={folder.id} className="flex min-h-14 items-center justify-between gap-3 border-b border-line py-2 last:border-b-0">
             <span className="min-w-0">
               <span className="block truncate text-body">{folder.path}</span>
               <span className={folder.problem ? "text-small text-danger" : "text-small text-fg-muted"}>
@@ -72,7 +64,7 @@ export function Folders({ open, onClose }: { open: boolean; onClose: () => void 
                   Verlegen …
                 </Button>
               ) : (
-                <Button size="small" kind="plain" icon="trash" onClick={() => void run(() => commands.removeFolder(folder.id))}>
+                <Button size="small" kind="plain" icon="trash" onClick={() => setRemoving(folder)}>
                   Entfernen
                 </Button>
               )}
@@ -80,8 +72,9 @@ export function Folders({ open, onClose }: { open: boolean; onClose: () => void 
           </li>
         ))}
       </ul>
+      </Panel>
       {downloads ? (
-        <div className="mt-4 flex flex-col gap-1.5 border-t border-line pt-3">
+        <div className="flex flex-col gap-1.5 rounded-panel bg-surface px-4 py-3 shadow-panel">
           <div className="flex items-center justify-between gap-3">
             <span className="text-body font-medium">Downloads beobachten</span>
             <Button size="small" kind={downloads.on ? "plain" : "secondary"} onClick={() => void switchDownloads(() => commands.setDownloads(!downloads.on))}>
@@ -98,7 +91,19 @@ export function Folders({ open, onClose }: { open: boolean; onClose: () => void 
           ) : null}
         </div>
       ) : null}
-      {error ? <p className="mt-2 text-small text-danger">{error}</p> : null}
-    </Dialog>
+      {error ? <p className="text-small text-danger">{error}</p> : null}
+      <ConfirmRemove
+        open={removing !== null}
+        title="Ordner nicht mehr beobachten?"
+        goes={["Das Beobachten dieses Ordners"]}
+        stays={["Die Dateien im Ordner", "Die Dokumente im Archiv"]}
+        onCancel={() => setRemoving(null)}
+        onRemove={() => {
+          const folder = removing;
+          setRemoving(null);
+          if (folder) void run(() => commands.removeFolder(folder.id));
+        }}
+      />
+    </Page>
   );
 }

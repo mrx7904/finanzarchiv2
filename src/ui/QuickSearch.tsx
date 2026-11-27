@@ -10,7 +10,8 @@ import { Icon, type IconName } from "./icons";
 import { cn } from "./motion";
 import { matchScore } from "./search";
 
-export type SearchEntry = { id: string; group: string; label: string; detail?: string; icon: IconName; onSelect: () => void };
+/** `keywords` are words the entry is found by without showing them, such as the owner's words for a page of Einstellungen. */
+export type SearchEntry = { id: string; group: string; label: string; detail?: string; keywords?: string[]; icon: IconName; onSelect: () => void };
 
 export function Kbd({ children }: { children: ReactNode }) {
   return (
@@ -97,7 +98,7 @@ export function QuickSearch({ open, onClose, entries }: QuickSearchProps) {
                     <Command.Item
                       key={entry.id}
                       value={entry.id}
-                      keywords={entry.detail ? [entry.label, entry.detail] : [entry.label]}
+                      keywords={[entry.label, ...(entry.detail ? [entry.detail] : []), ...(entry.keywords ?? [])]}
                       onSelect={() => {
                         onClose();
                         entry.onSelect();

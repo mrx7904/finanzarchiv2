@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { type NameTemplates, commands } from "../bindings";
-import { Button, Dialog, TextField } from "../ui";
+import { Page } from "../settings/Page";
+import { Button, TextField } from "../ui";
 import { kindLabel } from "./describe";
 
 // Names by template of #18: the owner renames a document, or changes the template of a kind.
@@ -55,21 +56,21 @@ export function DocumentName({ document, name, originalName, byOwner, onChanged 
   );
 }
 
-/** The dialog with one template per kind and the placeholders it may use. */
-export function TemplatesDialog({ open, onClose, onChanged }: { open: boolean; onClose: () => void; onChanged: () => void }) {
+/** The page "Namen" of Einstellungen (#49): one template per kind and the placeholders it may use. */
+export function TemplatesPage() {
+  const [saved, setSaved] = useState(false);
   const [templates, setTemplates] = useState<NameTemplates | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!open) return;
     void commands.nameTemplates().then((result) => {
       if (result.status !== "ok") return;
       setTemplates(result.data);
       setDrafts(Object.fromEntries(result.data.templates.map((entry) => [entry.kind, entry.template])));
       setErrors({});
     });
-  }, [open]);
+  }, []);
 
   const save = async () => {
     if (!templates) return;
@@ -81,23 +82,14 @@ export function TemplatesDialog({ open, onClose, onChanged }: { open: boolean; o
       if (result.status === "error") failed[entry.kind] = result.error.message;
     }
     setErrors(failed);
-    if (Object.keys(failed).length === 0) {
-      onChanged();
-      onClose();
-    }
+    setSaved(Object.keys(failed).length === 0);
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Namensvorlagen"
-      description="Abgelegte Dokumente heißen nach der Vorlage ihrer Art. Ein Name, den du selbst gibst, bleibt."
+    <Page
       actions={
         <>
-          <Button kind="plain" onClick={onClose}>
-            Abbrechen
-          </Button>
+          {saved && <span className="text-small text-fg-muted">Gesichert</span>}
           <Button kind="primary" onClick={() => void save()}>
             Sichern
           </Button>
@@ -111,7 +103,10 @@ export function TemplatesDialog({ open, onClose, onChanged }: { open: boolean; o
               key={entry.kind}
               label={kindLabel(entry.kind)}
               value={drafts[entry.kind] ?? ""}
-              onChange={(value) => setDrafts({ ...drafts, [entry.kind]: value })}
+              onChange={(value) => {
+                setDrafts({ ...drafts, [entry.kind]: value });
+                setSaved(false);
+              }}
               hint={`Leer: ${entry.defaultTemplate}`}
               error={errors[entry.kind]}
             />
@@ -119,6 +114,6 @@ export function TemplatesDialog({ open, onClose, onChanged }: { open: boolean; o
           <p className="text-small text-fg-muted">{templates.placeholders.map((placeholder) => `{${placeholder.name}} ${placeholder.meaning}`).join(" · ")}</p>
         </div>
       ) : null}
-    </Dialog>
+    </Page>
   );
 }

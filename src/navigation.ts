@@ -3,6 +3,7 @@
 // and a view keeps its place; a jump opens its target in the target's own view and can be gone back; the arrow at the
 // left of the path and Alt+Left go back.
 import type { ReviewAt } from "./review/Review";
+import type { SettingsPageId } from "./settings/Settings";
 
 /** The place inside each view that is built. A view that is not built yet has none and is not shown. */
 export type Places = {
@@ -11,6 +12,8 @@ export type Places = {
   documents: { focus: number | null };
   /** In Konten: the account whose bookings are open, all of them (null), or none open (undefined); and a text a jump set. */
   accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string };
+  /** The page of Einstellungen. */
+  settings: { page: SettingsPageId };
 };
 
 export type ViewId = keyof Places;
@@ -35,6 +38,7 @@ export const initialNav: Nav = {
     review: { group: null, question: null },
     documents: { focus: null },
     accounts: { bookingsOf: undefined, text: "" },
+    settings: { page: "ordner" },
   },
   back: [],
 };

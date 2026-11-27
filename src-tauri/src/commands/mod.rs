@@ -13,6 +13,7 @@ pub mod names;
 pub mod recurring;
 pub mod review;
 pub mod salary;
+pub mod settings;
 pub mod taxes;
 
 use std::sync::{Arc, Mutex};
@@ -185,6 +186,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             chat::chat_messages,
             chat::delete_chat,
             chat::ask_chat,
+            settings::archive_info,
+            settings::model_status,
             money::list_categories,
             money::add_category,
             money::rename_category,

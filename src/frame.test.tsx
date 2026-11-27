@@ -11,10 +11,10 @@ describe("the frame", () => {
   it("lists only the views that are built and no line about a healthy archive", () => {
     expect(app).not.toContain("Das Archiv ist bereit");
     expect(app).not.toContain("<Intake />");
-    const views = searchEntries({ findings: null, go: () => undefined, openDocument: () => undefined, openBookings: () => undefined, back: null })
+    const views = searchEntries({ findings: null, go: () => undefined, openDocument: () => undefined, openBookings: () => undefined, openSettings: () => undefined, back: null })
       .filter((entry) => entry.group === "Ansichten")
       .map((entry) => entry.label);
-    expect(views).toEqual(["Prüfen", "Dokumente", "Konten"]);
+    expect(views).toEqual(["Prüfen", "Dokumente", "Konten", "Einstellungen"]);
   });
 
   it("shows the arrow back only while there is a way back", () => {
@@ -41,6 +41,7 @@ describe("the frame", () => {
       go: () => undefined,
       openDocument,
       openBookings,
+      openSettings: () => undefined,
       back: () => undefined,
     });
     expect(entries.map((entry) => entry.group)).toEqual(expect.arrayContaining(["Ansichten", "Aktionen", "Dokumente", "Konten", "Partner", "Buchungen"]));
