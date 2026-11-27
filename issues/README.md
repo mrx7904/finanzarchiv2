@@ -113,7 +113,7 @@ Order of work: #33 first, then #43 (added by the owner's answer of 2026-11-26), 
 | [#48](048-accounts-and-bookings-view.md) | The views "Konten" and "Umsätze" as designed | FA-49 | #44, #45 | built, the owner looks |
 | [#49](049-settings-view.md) | The view "Einstellungen" | FA-50 | #44, #45 | built, the owner looks |
 | [#50](050-views-of-stage-5.md) | The views of stage 5 in the frame | FA-51 | #44, #45, #51 | done, the owner looks |
-| [#51](051-check-of-the-views.md) | A check that every view keeps the rules | FA-52 | #46, #47, #48, #49 | done but removing the drawing |
+| [#51](051-check-of-the-views.md) | A check that every view keeps the rules | FA-52 | #46, #47, #48, #49 | done |
 | [#52](052-recurring-payments-page.md) | The page "Wiederkehrend" under Konten | FA-49 | #34, #48 | built, the owner looks |
 | [#53](053-fitting-a-view.md) | Fitting a view: widths, the rail, folded columns, the size | FA-53 | #44, #45, #46, #48, #51 | built, the owner looks |
 | [#54](054-reading-and-focus.md) | Reading a document large, and the focus of "Prüfen" | FA-54 | #46, #47 | built, the owner looks |
