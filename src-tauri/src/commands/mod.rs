@@ -2,6 +2,7 @@
 //! `src/bindings.ts` are generated from them (FA-06), and a test fails when they drift apart.
 
 pub mod balances;
+pub mod chat;
 pub mod documents;
 pub mod evaluations;
 pub mod folders;
@@ -180,6 +181,10 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             taxes::assign_tax,
             taxes::unassign_tax,
             taxes::set_tax_profile,
+            chat::list_chats,
+            chat::chat_messages,
+            chat::delete_chat,
+            chat::ask_chat,
             money::list_categories,
             money::add_category,
             money::rename_category,
