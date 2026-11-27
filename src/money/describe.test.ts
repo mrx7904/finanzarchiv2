@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bankLine, bookingFilter, bookingWho, cardLine, formatIsoDay, moneyPath, partyYearLine } from "./describe";
+import { accountState, amountText, bankLine, bookingFilter, bookingWho, cardLine, centsOf, formatIsoDay, monthGroups, moneyPath, partyYearLine } from "./describe";
 
 describe("Konten and Umsätze", () => {
   it("says the bank's last balance with its day", () => {
@@ -40,5 +40,31 @@ describe("an opened booking", () => {
     );
     expect(cardLine("Rechnung", "R-7", "2026-02-01", "85,00 €")).toBe("Rechnung · Nr. R-7 · 01.02.2026 · 85,00 €");
     expect(cardLine("Zahlungsbeleg", null, undefined, "12,00 €")).toBe("Zahlungsbeleg · 12,00 €");
+  });
+});
+
+describe("Konten and Umsätze as designed (#48)", () => {
+  it("reads and writes amounts in whole cents, money in with a +", () => {
+    expect(centsOf("1.234,56 €")).toBe(123456);
+    expect(centsOf("-0,05 €")).toBe(-5);
+    expect(amountText(259440)).toBe("+2.594,40 €");
+    expect(amountText(-7800, false)).toBe("78,00 €");
+    expect(amountText(7800, false)).toBe("78,00 €");
+  });
+  it("groups the bookings by month, newest first, with the month's sums", () => {
+    const groups = monthGroups([
+      { day: "2026-03-28", amount: "2.594,40 €", incoming: true },
+      { day: "2026-03-01", amount: "780,00 €", incoming: false },
+      { day: "2026-02-12", amount: "34,12 €", incoming: false },
+    ]);
+    expect(groups.map((g) => [g.title, g.income, g.spending, g.rows.length])).toEqual([
+      ["März 2026", 259440, 78000, 2],
+      ["Februar 2026", 0, 3412, 1],
+    ]);
+  });
+  it("says how an account stands against its bank", () => {
+    expect(accountState({ findings: [], bankBalance: "1,00 €" }).label).toBe("stimmt");
+    expect(accountState({ findings: ["Am 01.03. …"], bankBalance: "1,00 €" }).label).toBe("prüfen");
+    expect(accountState({ findings: [], bankBalance: null }).label).toBe("ohne Bank");
   });
 });

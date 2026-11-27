@@ -127,7 +127,7 @@ export function DenseRow({ lead, title, detail, figure, selected = false, onSele
       {lead && <span className="w-12 shrink-0 text-small text-fg-muted tabular-nums">{lead}</span>}
       <span className="min-w-0 flex-1 truncate">
         <span className="font-medium text-fg">{title}</span>
-        {detail && <span className="text-fg-muted"> · {detail}</span>}
+        {detail && <span className="text-fg-muted max-[1299px]:hidden"> · {detail}</span>}
       </span>
       {actions && <RowActions>{actions}</RowActions>}
       {figure !== undefined && <span className="w-28 shrink-0 text-right font-medium text-fg tabular-nums">{figure}</span>}

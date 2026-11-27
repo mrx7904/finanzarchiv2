@@ -50,3 +50,45 @@ export function partyYearLine(year: { party: string; year: number; count: number
 export function cardLine(kind: string, number: string | null | undefined, day: string | null | undefined, amount: string | null | undefined): string {
   return [kind, number ? `Nr. ${number}` : null, day ? formatIsoDay(day) : null, amount].filter(Boolean).join(" · ");
 }
+
+/** Whole cents of an amount as the core writes it ("1.234,56 €", "-0,05 €"), so sums stay exact (#48). */
+export function centsOf(text: string): number {
+  const negative = text.trim().startsWith("-");
+  const digits = text.replace(/[^\d]/g, "");
+  return (negative ? -1 : 1) * Number(digits || "0");
+}
+
+/** Cents as the window shows them, money in with a "+" and money out without a sign (rule 13). */
+export function amountText(cents: number, incoming = cents > 0): string {
+  const magnitude = Math.abs(cents);
+  const euros = Math.floor(magnitude / 100).toLocaleString("de-DE");
+  const text = `${euros},${String(magnitude % 100).padStart(2, "0")} €`;
+  return incoming ? `+${text}` : text;
+}
+
+const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+/** The bookings grouped by month, newest first, each month with its money in and out. */
+export function monthGroups<T extends { day: string; amount: string; incoming: boolean }>(rows: T[]): { key: string; title: string; income: number; spending: number; rows: T[] }[] {
+  const groups: { key: string; title: string; income: number; spending: number; rows: T[] }[] = [];
+  for (const row of rows) {
+    const key = row.day.slice(0, 7);
+    let group = groups.find((one) => one.key === key);
+    if (!group) {
+      group = { key, title: `${MONTHS[Number(key.slice(5, 7)) - 1] ?? ""} ${key.slice(0, 4)}`, income: 0, spending: 0, rows: [] };
+      groups.push(group);
+    }
+    group.rows.push(row);
+    const cents = Math.abs(centsOf(row.amount));
+    if (row.incoming) group.income += cents;
+    else group.spending += cents;
+  }
+  return groups.sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : 0));
+}
+
+/** An account against its bank: "stimmt", "prüfen" when something does not match, "ohne Bank" without a balance of it. */
+export function accountState(account: { findings: string[]; bankBalance?: string | null }): { tone: "ok" | "warn" | "neutral"; label: string } {
+  if (account.findings.length > 0) return { tone: "warn", label: "prüfen" };
+  if (!account.bankBalance) return { tone: "neutral", label: "ohne Bank" };
+  return { tone: "ok", label: "stimmt" };
+}

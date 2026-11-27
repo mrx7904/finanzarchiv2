@@ -169,6 +169,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             money::booking_detail,
             money::link_to_booking,
             money::list_orders,
+            money::rename_account,
             evaluations::evaluation_years,
             evaluations::evaluation_year,
             recurring::list_recurring,

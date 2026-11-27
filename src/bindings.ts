@@ -57,6 +57,8 @@ export const commands = {
 	/**  The owner links a candidate document to the booking, as the answer of its question in "Prüfen". */
 	linkToBooking: (booking: number, document: number, options?: InvokeOptions) => typedError<BookingDetail_Serialize, CommandError>(__TAURI_INVOKE("link_to_booking", { booking, document }, options)),
 	listOrders: (options?: InvokeOptions) => typedError<OrderRow_Serialize[], CommandError>(__TAURI_INVOKE("list_orders", undefined, options)),
+	/**  "Konto umbenennen …" (#48). */
+	renameAccount: (account: number, name: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("rename_account", { account, name }, options)),
 	evaluationYears: (options?: InvokeOptions) => typedError<number[], CommandError>(__TAURI_INVOKE("evaluation_years", undefined, options)),
 	evaluationYear: (year: number, options?: InvokeOptions) => typedError<YearRow_Serialize, CommandError>(__TAURI_INVOKE("evaluation_year", { year }, options)),
 	/**  The recurring payments, the running first. */
