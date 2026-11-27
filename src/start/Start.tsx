@@ -9,7 +9,8 @@ import { type Step, type StepTarget, nextSteps, startSentence } from "./steps";
 // "Start" (#40, FA-43): one sentence on what waits, then "Als Nächstes", the most pressing first, each with one button
 // that does it, and beside them the key figures of the running year, each opening Auswertungen. The steps are derived
 // from the archive every time and never stored.
-export function Start({ onTarget }: { onTarget: (target: StepTarget) => void }) {
+export function Start({ onTarget, onOpenDocument }: { onTarget: (target: StepTarget) => void; onOpenDocument: (document: number) => void }) {
+  const [filed, setFiled] = useState<{ id: number; name: string }[]>([]);
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [figures, setFigures] = useState<{ year: number; income: number; spending: number; period: string } | null>(null);
 
@@ -34,6 +35,11 @@ export function Start({ onTarget }: { onTarget: (target: StepTarget) => void }) 
         hints: hints.status === "ok" ? hints.data : [],
       }),
     );
+    const documents = await commands.listDocuments();
+    if (documents.status === "ok") {
+      const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      setFiled(documents.data.filter((row) => row.state === "filed" && Date.parse(row.importedAt) >= week).map((row) => ({ id: row.id, name: row.name })));
+    }
     const years = await commands.evaluationYears();
     const year = years.status === "ok" ? years.data[0] : undefined;
     if (year === undefined) return;
@@ -72,6 +78,21 @@ export function Start({ onTarget }: { onTarget: (target: StepTarget) => void }) 
                 </ul>
               </div>
             )
+          )}
+          {filed.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-small font-medium text-fg-muted">In den letzten 7 Tagen abgelegt · {filed.length}</span>
+              <ul className="flex flex-col rounded-panel bg-surface shadow-panel">
+                {filed.slice(0, 5).map((document) => (
+                  <li key={document.id} className="border-b border-line last:border-b-0">
+                    <button type="button" onClick={() => onOpenDocument(document.id)} className="flex h-10 w-full items-center gap-2.5 px-4 text-left transition-quick hover:bg-hover">
+                      <Icon name="document" size={16} className="text-fg-muted" />
+                      <span className="truncate">{document.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
         {figures && (
