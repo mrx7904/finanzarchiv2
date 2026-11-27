@@ -21,6 +21,8 @@ export type Places = {
   start: Record<string, never>;
   /** Steuern keeps its year inside the view. */
   taxes: Record<string, never>;
+  /** The chat keeps the chosen chat inside the view. */
+  chat: Record<string, never>;
   /** The page of Einstellungen. */
   settings: { page: SettingsPageId };
 };
@@ -51,6 +53,7 @@ export const initialNav: Nav = {
     evaluations: { year: null },
     start: {},
     taxes: {},
+    chat: {},
   },
   back: [],
 };
@@ -90,7 +93,7 @@ export function navigate(nav: Nav, action: NavAction): Nav {
 export function navFromUrl(nav: Nav, search: string): Nav {
   const params = new URLSearchParams(search);
   const view = params.get("view");
-  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations" && view !== "start" && view !== "taxes") return nav;
+  if (view !== "documents" && view !== "review" && view !== "accounts" && view !== "settings" && view !== "evaluations" && view !== "start" && view !== "taxes" && view !== "chat") return nav;
   const places = { ...nav.places };
   if (view === "documents") places.documents = { focus: null, orders: params.has("orders") };
   if (view === "accounts") {

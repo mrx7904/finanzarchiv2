@@ -5,6 +5,7 @@ import { Documents } from "./documents/Documents";
 import { Evaluations } from "./evaluations/Evaluations";
 import { Start } from "./start/Start";
 import { Taxes } from "./taxes/Taxes";
+import { Chat } from "./chat/Chat";
 import { OrdersPage } from "./documents/Orders";
 import { IntakeLine } from "./intake/IntakeLine";
 import { useIntakeChanged } from "./intake/useIntakeChanged";
@@ -44,6 +45,7 @@ const groups: { id: ViewId; label: string; icon: IconName }[][] = [
   [
     { id: "evaluations", label: "Auswertungen", icon: "upDown" },
     { id: "taxes", label: "Steuern", icon: "scale" },
+    { id: "chat", label: "Chat", icon: "mail" },
   ],
 ];
 
@@ -136,6 +138,8 @@ export function App() {
                   ? [{ label: "Start" }]
                 : nav.view === "taxes"
                   ? [{ label: "Steuern" }]
+                : nav.view === "chat"
+                  ? [{ label: "Chat" }]
                 : nav.view === "settings"
                   ? [{ label: "Einstellungen", onSelect: () => openSettings("ordner") }, { label: settingsLabel }]
                   : documents.orders
@@ -190,6 +194,8 @@ export function App() {
             onOpenBooking={(account) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: account, text: "" } } })}
             onOrders={() => dispatch({ type: "set", spot: { view: "documents", place: { ...documents, orders: true } } })}
           />
+        ) : nav.view === "chat" ? (
+          <Chat onOpenDocument={openDocument} onOpenBookings={() => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: null, text: "" } } })} />
         ) : nav.view === "taxes" ? (
           <Taxes onOpenDocument={openDocument} onOpenBooking={() => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: null, text: "" } } })} />
         ) : nav.view === "start" ? (
