@@ -59,6 +59,13 @@ export const commands = {
 	listOrders: (options?: InvokeOptions) => typedError<OrderRow_Serialize[], CommandError>(__TAURI_INVOKE("list_orders", undefined, options)),
 	evaluationYears: (options?: InvokeOptions) => typedError<number[], CommandError>(__TAURI_INVOKE("evaluation_years", undefined, options)),
 	evaluationYear: (year: number, options?: InvokeOptions) => typedError<YearRow_Serialize, CommandError>(__TAURI_INVOKE("evaluation_year", { year }, options)),
+	/**  The recurring payments, the running first. */
+	listRecurring: (options?: InvokeOptions) => typedError<RecurringRow_Serialize[], CommandError>(__TAURI_INVOKE("list_recurring", undefined, options)),
+	/**
+	 *  "Ist keine": the owner says a found payment is none. Named by party, direction, rhythm and the
+	 *  day of its first payment, as `list_recurring` gave them.
+	 */
+	notRecurring: (party: number, incoming: boolean, rhythm: string, since: string, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("not_recurring", { party, incoming, rhythm, since }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -685,6 +692,49 @@ export type Placeholder = {
 /**  How many files an import put into the queue. */
 export type Queued = {
 	files: number,
+};
+
+/**  A recurring payment as the window takes it. */
+export type RecurringRow = RecurringRow_Serialize | RecurringRow_Deserialize;
+
+/**  A recurring payment as the window takes it. */
+export type RecurringRow_Deserialize = {
+	party: number,
+	name: string,
+	incoming: boolean,
+	/**  "monatlich", "vierteljährlich" or "jährlich". */
+	rhythm: string,
+	since: string,
+	last: string,
+	next?: string | null,
+	count: number,
+	cents: number,
+	text: string,
+	perYearCents: number,
+	perYearText: string,
+	/**  "seit März 2026 2,00 € mehr". */
+	change?: string | null,
+	ended: boolean,
+};
+
+/**  A recurring payment as the window takes it. */
+export type RecurringRow_Serialize = {
+	party: number,
+	name: string,
+	incoming: boolean,
+	/**  "monatlich", "vierteljährlich" or "jährlich". */
+	rhythm: string,
+	since: string,
+	last: string,
+	next: string | null,
+	count: number,
+	cents: number,
+	text: string,
+	perYearCents: number,
+	perYearText: string,
+	/**  "seit März 2026 2,00 € mehr". */
+	change: string | null,
+	ended: boolean,
 };
 
 /**  What the owner answered. */
