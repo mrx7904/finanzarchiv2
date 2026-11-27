@@ -17,5 +17,5 @@ The view follows the map and the rules of [`knowledge/decision-views.md`](../kno
 **Status:** the core and the view are built on 2026-11-27 (`knowledge/decision-taxes.md`), waiting for the owner's look on the real archive.
 
 - "Steuern" in the sidebar as a list with detail: the year in the top bar, the notice to check everything and where the values come from in one line, the sections by form and section (never a line number), the entries of a section with what counts and their notes, an overview with the Werbungskosten against the Pauschbetrag, the lump sums, the § 35a reductions and the tax profile of the year. No tax and no refund is computed.
-- A document is assigned by "Für die Steuer …" in its menu (dialog `AssignTax` with category, share, refund, labour share, and "Keine Steuer"). A booking is not yet assigned from its detail in Umsätze; the dialog takes a booking, the button there is a later step.
+- A document is assigned by "Für die Steuer …" in its menu (dialog `AssignTax` with category, share, refund, labour share, and "Keine Steuer"). A booking is assigned by "Für die Steuer …" in its detail in Umsätze (added on 2026-11-27 before 0.7.0).
 - Seen in Chromium with the stand-in of the core; `npm run check:views`: 0 findings.
