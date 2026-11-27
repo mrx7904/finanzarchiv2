@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { MotionRoot } from "../ui";
-import { Entwurf } from "./Entwurf";
+import { Seite } from "./Seite";
 import "../index.css";
 
 const root = document.getElementById("root");
@@ -9,7 +9,7 @@ if (root) {
   createRoot(root).render(
     <StrictMode>
       <MotionRoot>
-        <Entwurf />
+        <Seite />
       </MotionRoot>
     </StrictMode>,
   );

@@ -5,7 +5,7 @@
 import { useState, type ReactNode } from "react";
 import { AppShell, Button, Capsule, Icon, Kbd, List, ListRow, SelectField, Spinner, TextField, cn, type IconName, type PathSegment, type Tone } from "../ui";
 
-type ViewId = "start" | "pruefen" | "dokumente" | "konten" | "umsaetze" | "auswertungen" | "steuern" | "chat" | "einstellungen";
+export type ViewId = "start" | "pruefen" | "dokumente" | "konten" | "umsaetze" | "auswertungen" | "steuern" | "chat" | "einstellungen";
 
 // Three icons the app does not have yet, on the grid and stroke of src/ui/icons.tsx.
 const glyphs = {
@@ -14,7 +14,7 @@ const glyphs = {
   back: <path d="M11.5 5 6.5 10l5 5" />,
 };
 
-function Glyph({ name, size = 16, className }: { name: keyof typeof glyphs; size?: number; className?: string }) {
+export function Glyph({ name, size = 16, className }: { name: keyof typeof glyphs; size?: number; className?: string }) {
   return (
     <svg className={cn("shrink-0", className)} width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {glyphs[name]}
@@ -53,11 +53,18 @@ function NavRow({ entry, selected }: { entry: Omit<NavEntry, "id">; selected: bo
 }
 
 /** The frame every view stands in: the same sidebar, the path and the actions of the view in the bar. */
-function Frame({ view, path, actions, children }: { view: ViewId; path: string[]; actions?: ReactNode; children: ReactNode }) {
+export function Frame({ view, path, actions, back, intake = false, children }: { view: ViewId; path: string[]; actions?: ReactNode; back?: string; intake?: boolean; children: ReactNode }) {
   const segments: PathSegment[] = path.map((label, at) => (at < path.length - 1 ? { label, onSelect: () => undefined } : { label }));
   const here = view === "umsaetze" ? "konten" : view;
   return (
-    <AppShell
+    <div className={cn("relative h-full", back && "[&_header]:pl-14")}>
+      {back && (
+        <button type="button" aria-label={`Zurück zu ${back}`} title={`Zurück zu ${back}`} className="absolute top-[calc((var(--bar-height)-28px)/2)] left-[calc(var(--sidebar-width)+16px)] z-10 flex size-7 items-center justify-center rounded-control text-fg hover:bg-hover">
+          <Glyph name="back" size={18} />
+        </button>
+      )}
+      {intake && <IntakeOpen />}
+      <AppShell
       system="windows"
       path={segments}
       actions={actions}
@@ -89,7 +96,7 @@ function Frame({ view, path, actions, children }: { view: ViewId; path: string[]
             ))}
           </nav>
           <div className="flex flex-col gap-px">
-            <button type="button" className="flex h-8 w-full items-center gap-2.5 rounded-row px-2 text-left text-fg-muted hover:bg-hover">
+            <button type="button" className={cn("flex h-8 w-full items-center gap-2.5 rounded-row px-2 text-left text-fg-muted hover:bg-hover", intake && "bg-selected text-fg")}>
               <Spinner size={16} />
               <span className="flex-1">3 werden gelesen</span>
             </button>
@@ -99,13 +106,62 @@ function Frame({ view, path, actions, children }: { view: ViewId; path: string[]
       }
     >
       {children}
-    </AppShell>
+      </AppShell>
+    </div>
   );
 }
 
-const panel = "rounded-panel bg-surface shadow-panel";
+/** The intake opened from the foot of the sidebar: what is read right now, what was refused and why, and the pause. */
+function IntakeOpen() {
+  const dot = "flex w-3.5 shrink-0 justify-center";
+  return (
+    <div className="absolute bottom-[92px] left-3 z-20 flex w-[380px] flex-col rounded-dialog bg-raised shadow-raised">
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+        <span className="text-heading font-semibold">Eingang</span>
+        <Button size="small">Pausieren</Button>
+      </div>
+      <div className="flex flex-col px-4 pb-2">
+        {[
+          ["Rechnung_Nov.pdf", "wird gelesen"],
+          ["Kontoauszug_10_2026.pdf", "Buchungen werden geprüft"],
+          ["Scan_0031.pdf", "wartet"],
+        ].map(([name, stage]) => (
+          <div key={name} className="flex h-9 items-center gap-2.5">
+            {stage === "wartet" ? (
+              <span className={dot}>
+                <span className="size-1.5 rounded-full bg-fg-muted" />
+              </span>
+            ) : (
+              <Spinner />
+            )}
+            <span className="min-w-0 flex-1 truncate">{name}</span>
+            <span className="text-small text-fg-muted">{stage}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-1 border-t border-line px-4 py-3">
+        <span className="text-small font-medium text-fg-muted">Nicht angenommen</span>
+        <div className="flex items-center gap-2.5">
+          <span className={dot}>
+            <span className="size-2 rounded-full bg-danger" />
+          </span>
+          <span className="min-w-0 flex-1 truncate">Urlaub_2026.xlsx</span>
+          <span className="text-small text-fg-muted">Tabellen liest das Archiv nicht</span>
+        </div>
+        <div>
+          <Button size="small" kind="plain" className="-ml-2">
+            Ausblenden
+          </Button>
+        </div>
+      </div>
+      <div className="border-t border-line px-4 py-2.5 text-small text-fg-muted">Heute: 23 Dokumente gelesen, 19 ohne dich abgelegt</div>
+    </div>
+  );
+}
 
-function Heading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+export const panel = "rounded-panel bg-surface shadow-panel";
+
+export function Heading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <h2 className="text-heading font-semibold">{children}</h2>
@@ -115,7 +171,7 @@ function Heading({ children, aside }: { children: ReactNode; aside?: ReactNode }
 }
 
 /** A drawn invoice in place of the first page of a document, with the line a question is about marked. */
-function Page({ marked = false, className }: { marked?: boolean; className?: string }) {
+export function Page({ marked = false, className }: { marked?: boolean; className?: string }) {
   return (
     <div className={cn("flex aspect-[210/297] flex-col overflow-hidden bg-white p-[7%] font-serif leading-[1.25] text-[#18181b] shadow-raised [container-type:inline-size]", className)}>
       <div className="flex items-start justify-between">
@@ -146,7 +202,7 @@ function Page({ marked = false, className }: { marked?: boolean; className?: str
   );
 }
 
-function Segments({ options, value }: { options: string[]; value: string }) {
+export function Segments({ options, value }: { options: string[]; value: string }) {
   return (
     <div className="flex h-(--control-height) items-center gap-px rounded-control bg-canvas p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
       {options.map((option) => (
@@ -178,7 +234,7 @@ const months = [
   [31, 24], [31, 27], [31, 22], [33, 30], [31, 25], [31, 21], [36, 34], [31, 26], [31, 23], [31, 28], [34, 19], [0, 0],
 ] as const;
 
-function MonthBars({ height, chosen }: { height: number; chosen?: number }) {
+export function MonthBars({ height, chosen }: { height: number; chosen?: number }) {
   return (
     <div className="flex items-end gap-[3%]" style={{ height }}>
       {months.map(([income, spending], at) => (
@@ -204,11 +260,11 @@ function Figure({ label, value, note }: { label: string; value: string; note: st
   );
 }
 
-function Start() {
+function Start({ intake = false }: { intake?: boolean }) {
   return (
-    <Frame view="start" path={["Start"]}>
+    <Frame view="start" path={["Start"]} intake={intake}>
       <main className="min-h-0 flex-1 overflow-y-auto px-10 py-9">
-        <div className="grid max-w-[1120px] grid-cols-[minmax(0,1fr)_320px] gap-14">
+        <div className="grid max-w-[1120px] grid-cols-1 gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_320px] min-[1200px]:gap-14">
           <section className="flex flex-col gap-6">
             <header className="flex flex-col gap-1">
               <h1 className="text-title font-semibold tracking-[-0.025em]">Vier Dinge warten auf dich.</h1>
@@ -235,7 +291,7 @@ function Start() {
                 {filed.map(([name, detail, amount]) => (
                   <div key={name} className="flex h-10 items-center gap-3">
                     <span aria-hidden className="size-2 shrink-0 rounded-full bg-fg-muted" />
-                    <span className="w-64 shrink-0 truncate font-medium">{name}</span>
+                    <span className="w-48 shrink-0 truncate font-medium min-[1200px]:w-64">{name}</span>
                     <span className="min-w-0 flex-1 truncate text-small text-fg-muted">{detail}</span>
                     <span className="font-medium tabular-nums">{amount}</span>
                   </div>
@@ -250,12 +306,12 @@ function Start() {
           </section>
           <aside className="flex flex-col gap-5 pt-1.5">
             <Heading aside="bis 27.11.">2026</Heading>
-            <div className="flex flex-col">
+            <div className="grid grid-cols-3 gap-8 min-[1200px]:flex min-[1200px]:flex-col min-[1200px]:gap-0 max-[1199px]:[&>*]:border-t-0 max-[1199px]:[&>*]:py-0">
               <Figure label="Einnahmen" value="38.412,60 €" note="2.140,00 € mehr als 2025 bis November" />
               <Figure label="Ausgaben" value="29.870,14 €" note="1.312,48 € weniger als 2025 bis November" />
               <Figure label="Auf allen Konten" value="12.604,33 €" note="Stand der Kontoauszüge vom 31.10." />
             </div>
-            <div className="flex flex-col gap-2 border-t border-line pt-4">
+            <div className="hidden flex-col gap-2 border-t border-line pt-4 min-[1200px]:flex">
               <MonthBars height={72} />
               <div className="flex justify-between text-small text-fg-muted">
                 <span>Jan</span>
@@ -272,7 +328,7 @@ function Start() {
 
 // ---------- Prüfen ----------
 
-function Value({ label, value, source, tone = "ok" }: { label: string; value: string; source: string; tone?: Tone }) {
+export function Value({ label, value, source, tone = "ok" }: { label: string; value: string; source: string; tone?: Tone }) {
   return (
     <div className="flex items-center gap-3 py-2.5">
       <span className="flex min-w-0 flex-1 flex-col">
@@ -356,7 +412,7 @@ const documents: { title: string; detail: string; figure: string; state: { tone:
   { title: "Tonspur", detail: "Rechnung vom 15.10.2026, aus dem Postfach", figure: "10,99 €", state: { tone: "neutral", label: "gelesen" }, icon: "mail" },
 ];
 
-function Dokumente() {
+export function Dokumente({ back, search = false }: { back?: string; search?: boolean }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("");
   const [state, setState] = useState("");
@@ -364,6 +420,7 @@ function Dokumente() {
     <Frame
       view="dokumente"
       path={["Dokumente"]}
+      back={back}
       actions={
         <>
           <Button icon="more" label="Weitere Aktionen" kind="plain" />
@@ -373,7 +430,8 @@ function Dokumente() {
         </>
       }
     >
-      <main className="grid min-h-0 flex-1 grid-cols-[400px_minmax(0,1fr)_360px] gap-5 p-5">
+      <main className="grid min-h-0 flex-1 grid-cols-[340px_minmax(0,1fr)] gap-5 p-5 min-[1200px]:grid-cols-[400px_minmax(0,1fr)_360px]">
+        {search && <SearchOpen />}
         <section className={cn(panel, "flex min-h-0 flex-col")}>
           <div className="flex flex-col gap-2 border-b border-line p-3">
             <TextField label="Suchen" icon="search" placeholder="Absender, Nummer, Betrag" value={query} onChange={setQuery} />
@@ -389,12 +447,13 @@ function Dokumente() {
             ))}
           </List>
         </section>
-        <section aria-label="Seite" className={cn(panel, "flex min-h-0 items-center justify-center overflow-hidden p-5")}>
+        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto min-[1200px]:contents">
+        <section aria-label="Seite" className={cn(panel, "flex h-[360px] min-h-0 shrink-0 items-center justify-center overflow-hidden p-5 min-[1200px]:h-auto")}>
           <div className="flex size-full items-center justify-center [container-type:size]">
             <Page className="h-[min(100cqh,141.4cqw)]" />
           </div>
         </section>
-        <section className={cn(panel, "flex min-h-0 flex-col")}>
+        <section className={cn(panel, "flex shrink-0 flex-col min-[1200px]:min-h-0 min-[1200px]:shrink")}>
           <div className="flex flex-col gap-0.5 px-5 pt-5 pb-3">
             <div className="flex items-start justify-between gap-2">
               <h2 className="text-heading font-semibold">2026-11-14 Stadtwerke Beispielstadt Rechnung</h2>
@@ -431,6 +490,7 @@ function Dokumente() {
             </Button>
           </div>
         </section>
+        </div>
       </main>
     </Frame>
   );
@@ -529,24 +589,25 @@ const bookings: { month: string; sum: string; rows: Booking[] }[] = [
   },
 ];
 
-function Umsaetze() {
+export function Umsaetze({ loading = false }: { loading?: boolean }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [range, setRange] = useState("2026");
   return (
     <Frame view="umsaetze" path={["Konten", "Girokonto"]} actions={<Button icon="more" label="Weitere Aktionen" kind="plain" />}>
-      <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_400px] gap-5 p-5">
+      <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_280px] gap-5 p-5 min-[1200px]:grid-cols-[minmax(0,1fr)_400px]">
         <section className={cn(panel, "flex min-h-0 flex-col")}>
           <div className="flex flex-col gap-2 border-b border-line p-3">
-            <div className="grid grid-cols-[minmax(0,1fr)_200px_140px] items-end gap-2">
-              <TextField label="Suchen" icon="search" placeholder="Wer, Zweck, Betrag" value={query} onChange={setQuery} />
+            <div className="grid grid-cols-[minmax(0,1fr)_110px] items-end gap-2 min-[1200px]:grid-cols-[minmax(0,1fr)_200px_140px]">
+              <TextField label="Suchen" icon="search" placeholder="Wer, Zweck, Betrag" value={query} onChange={setQuery} className="col-span-2 min-[1200px]:col-span-1" />
               <SelectField label="Kategorie" value={category} onChange={setCategory} options={[{ value: "", label: "Alle Kategorien" }]} />
               <SelectField label="Zeitraum" value={range} onChange={setRange} options={[{ value: "2026", label: "2026" }]} />
             </div>
-            <p className="pt-0.5 text-small text-fg-muted tabular-nums">214 Buchungen, Einnahmen 38.412,60 €, Ausgaben 29.870,14 €, Umbuchungen nicht mitgezählt</p>
+            <p className="truncate pt-0.5 text-small text-fg-muted tabular-nums">{loading ? "\u00a0" : "214 Buchungen, Einnahmen 38.412,60 €, Ausgaben 29.870,14 €, Umbuchungen nicht mitgezählt"}</p>
           </div>
-          <div role="listbox" aria-label="Umsätze" className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
-            {bookings.map((group) => (
+          <div role="listbox" aria-label="Umsätze" aria-busy={loading} className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
+            {loading && <SkeletonRows />}
+            {(loading ? [] : bookings).map((group) => (
               <div key={group.month}>
                 <div className="sticky top-0 flex items-baseline justify-between bg-surface px-2.5 pt-3 pb-1.5 text-small text-fg-muted">
                   <span className="font-medium text-fg">{group.month}</span>
@@ -558,11 +619,11 @@ function Umsaetze() {
                     <div key={`${row.day}-${row.who}`} role="option" aria-selected={selected} className={cn("relative flex h-10 items-center gap-3 rounded-row px-2.5", selected ? "bg-selected" : "hover:bg-hover")}>
                       {selected && <span aria-hidden className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-mark" />}
                       <span className="w-12 shrink-0 text-small text-fg-muted tabular-nums">{row.day}</span>
-                      <span className="w-44 shrink-0 truncate font-medium">{row.who}</span>
-                      <span className="min-w-0 flex-1 truncate text-small text-fg-muted">{row.purpose}</span>
-                      <span className="w-36 shrink-0 truncate text-small text-fg-muted">{row.category}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium min-[1200px]:w-44 min-[1200px]:flex-none">{row.who}</span>
+                      <span className="hidden min-w-0 flex-1 truncate text-small text-fg-muted min-[1200px]:block">{row.purpose}</span>
+                      <span className="hidden w-36 shrink-0 truncate text-small text-fg-muted min-[1200px]:block">{row.category}</span>
                       <span className="flex w-5 shrink-0 justify-center text-fg-muted">{row.proof ? <Icon name="document" size={14} /> : null}</span>
-                      <span className="w-28 shrink-0 text-right font-medium tabular-nums">{row.amount}</span>
+                      <span className="w-24 shrink-0 text-right font-medium tabular-nums min-[1200px]:w-28">{row.amount}</span>
                     </div>
                   );
                 })}
@@ -570,7 +631,8 @@ function Umsaetze() {
             ))}
           </div>
         </section>
-        <section className={cn(panel, "flex min-h-0 flex-col")}>
+        {loading && <section className={cn(panel, "flex min-h-0 items-center justify-center p-8 text-center text-small text-fg-muted")}>Wähle eine Buchung, um ihren Beleg zu sehen.</section>}
+        <section className={cn(panel, "flex min-h-0 flex-col overflow-y-auto", loading && "hidden")}>
           <div className="flex flex-col gap-1 p-5">
             <span className="text-small text-fg-muted">18.11.2026, Girokonto</span>
             <h2 className="text-heading font-semibold">Stadtwerke Beispielstadt</h2>
@@ -869,21 +931,30 @@ const pages: [string, IconName, string][] = [
   ["Über", "home", "Version 0.5.0"],
 ];
 
-function Einstellungen() {
-  const [address, setAddress] = useState("");
-  const [password, setPassword] = useState("");
+export function Einstellungen({ page, children }: { page: string; children?: ReactNode }) {
   return (
-    <Frame view="einstellungen" path={["Einstellungen", "Postfächer"]}>
+    <Frame view="einstellungen" path={["Einstellungen", page]}>
       <main className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)] gap-5 p-5">
         <section className={cn(panel, "min-h-0 overflow-y-auto")}>
           <List label="Einstellungen">
             {pages.map(([name, icon, detail]) => (
-              <ListRow key={name} title={name} detail={detail} leading={<Icon name={icon} size={16} />} selected={name === "Postfächer"} onSelect={() => undefined} />
+              <ListRow key={name} title={name} detail={detail} leading={<Icon name={icon} size={16} />} selected={name === page} onSelect={() => undefined} />
             ))}
           </List>
         </section>
         <section className="min-h-0 overflow-y-auto">
-          <div className="flex max-w-[640px] flex-col gap-5">
+          <div className="flex max-w-[640px] flex-col gap-5">{children ?? <Postfaecher />}</div>
+        </section>
+      </main>
+    </Frame>
+  );
+}
+
+function Postfaecher() {
+  const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
+  return (
+    <>
             <div className={cn(panel, "flex flex-col")}>
               <div className="flex items-center gap-3 px-5 py-4">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-canvas text-fg-muted">
@@ -919,33 +990,82 @@ function Einstellungen() {
               </div>
             </form>
             <p className="px-1 text-small text-fg-muted">Finanzarchiv liest deine Postfächer nur. Es verschiebt, markiert und löscht dort nichts, und das App-Passwort liegt im Schlüsselbund deines Systems.</p>
-          </div>
-        </section>
-      </main>
-    </Frame>
+    </>
   );
 }
 
-const views: Record<ViewId, () => ReactNode> = {
-  start: Start,
-  pruefen: Pruefen,
-  dokumente: Dokumente,
-  konten: Konten,
-  umsaetze: Umsaetze,
-  auswertungen: Auswertungen,
-  steuern: Steuern,
-  chat: Chat,
-  einstellungen: Einstellungen,
-};
-
-export function Entwurf() {
-  const query = new URLSearchParams(window.location.search);
-  const asked = query.get("v") ?? "start";
-  const View = views[(asked in views ? asked : "start") as ViewId];
-  const theme = query.get("t");
+/** Gray rows in the shape of the list while it loads, never a spinner in the middle of the window. */
+export function SkeletonRows() {
   return (
-    <div data-theme={theme === "light" || theme === "dark" ? theme : undefined} className="h-full">
-      <View />
+    <div aria-hidden className="flex flex-col pt-3">
+      <div className="px-2.5 pb-1.5">
+        <span className="block h-3 w-28 rounded-full bg-hover" />
+      </div>
+      {[62, 80, 48, 70, 56, 76, 44, 66, 58, 72, 50].map((width, at) => (
+        <div key={at} className="flex h-10 items-center gap-3 px-2.5" style={{ opacity: 1 - at * 0.07 }}>
+          <span className="h-3 w-10 rounded-full bg-hover" />
+          <span className="h-3 rounded-full bg-hover" style={{ width: `${width * 2}px` }} />
+          <span className="flex-1" />
+          <span className="h-3 w-16 rounded-full bg-hover" />
+        </div>
+      ))}
     </div>
   );
 }
+
+/** The quick search as it lies over a view, drawn still: the real piece is src/ui/QuickSearch.tsx. */
+function SearchOpen() {
+  const groups: [string, [IconName, string, string, boolean][]][] = [
+    ["Dokumente", [["receipt", "2026-11-14 Stadtwerke Beispielstadt Rechnung", "86,40 €", true], ["receipt", "2026-10-14 Stadtwerke Beispielstadt Rechnung", "80,00 €", false]]],
+    ["Absender", [["search", "Stadtwerke Beispielstadt", "11 Buchungen, 12 Dokumente", false]]],
+    ["Buchungen", [["card", "18.11.2026 Stadtwerke Beispielstadt", "86,40 €", false]]],
+    ["Aktionen", [["upload", "Importieren", "Dokumente", false], ["mail", "Postfächer einrichten", "Einstellungen", false]]],
+  ];
+  return (
+    <div className="fixed inset-0 z-30 flex justify-center bg-backdrop pt-[12vh]">
+      <div className="h-fit w-[min(92vw,40rem)] overflow-hidden rounded-dialog bg-raised text-fg shadow-raised">
+        <div className="flex h-12 items-center gap-2.5 border-b border-line px-4">
+          <Icon name="search" size={16} className="shrink-0 text-fg-muted" />
+          <span className="min-w-0 flex-1 text-heading">stadtw</span>
+          <Kbd>Esc</Kbd>
+        </div>
+        <div className="p-1.5">
+          {groups.map(([group, rows]) => (
+            <div key={group}>
+              <p className="px-2.5 pt-2 pb-1 text-small font-medium text-fg-muted">{group}</p>
+              {rows.map(([icon, label, detail, selected]) => (
+                <div key={label} className={cn("flex h-10 items-center gap-3 rounded-row px-2.5", selected && "bg-selected")}>
+                  <Icon name={icon} size={16} className="shrink-0 text-fg-muted" />
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  <span className="shrink-0 text-small text-fg-muted">{detail}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 border-t border-line px-4 py-2 text-small text-fg-muted">
+          <span className="flex items-center gap-1">
+            <Kbd>↑</Kbd>
+            <Kbd>↓</Kbd> auswählen
+          </span>
+          <span className="flex items-center gap-1">
+            <Kbd>↵</Kbd> öffnen
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const hauptansichten = {
+  start: () => <Start />,
+  pruefen: () => <Pruefen />,
+  dokumente: () => <Dokumente />,
+  konten: () => <Konten />,
+  umsaetze: () => <Umsaetze />,
+  auswertungen: () => <Auswertungen />,
+  steuern: () => <Steuern />,
+  chat: () => <Chat />,
+  einstellungen: () => <Einstellungen page="Postfächer" />,
+  "start-eingang": () => <Start intake />,
+} satisfies Record<string, () => ReactNode>;
