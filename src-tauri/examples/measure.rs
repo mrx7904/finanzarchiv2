@@ -1017,6 +1017,51 @@ fn measure_csv(folder: &Path, out: &Path) {
     write(&out.join("private").join("files-csv.json"), &result);
 }
 
+/// The balances over time on a writable copy of the owner's archive (#36): the balance counted at
+/// each statement's end against the bank's, and the days of the series. Counts only.
+fn measure_balances(database: &Path, out: &Path) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let started = std::time::Instant::now();
+    let Ok((accounts, total)) = finanzarchiv2_lib::balances::all(ready.connection()) else {
+        eprintln!("Die Kontostände ließen sich nicht zählen");
+        std::process::exit(1);
+    };
+    let seconds = started.elapsed().as_secs_f64();
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    counts.insert("Konten mit Startsaldo".into(), accounts.len());
+    counts.insert(
+        "Tage aller Konten".into(),
+        accounts.iter().map(|a| a.days.len()).sum(),
+    );
+    counts.insert("Tage der Summe".into(), total.len());
+    let ends: Vec<_> = accounts
+        .iter()
+        .flat_map(|a| a.days.iter().filter(|d| d.bank.is_some()))
+        .collect();
+    counts.insert("Auszugsenden".into(), ends.len());
+    counts.insert(
+        "Auszugsende stimmt".into(),
+        ends.iter().filter(|d| d.difference().is_none()).count(),
+    );
+    counts.insert(
+        "Auszugsende weicht ab".into(),
+        ends.iter().filter(|d| d.difference().is_some()).count(),
+    );
+    for (key, count) in &counts {
+        println!("  {key}: {count}");
+    }
+    println!("  {seconds:.2} s");
+    write(
+        &out.join("private").join("balances.json"),
+        &json!({ "reader": "balances", "counts": counts, "seconds": seconds }),
+    );
+}
+
 /// The salary on a writable copy of the owner's archive (#35): months with a payslip, missing
 /// months, months whose Netto has a booking and those that differ from it. Counts only.
 fn measure_salary(database: &Path, out: &Path) {
@@ -1881,6 +1926,14 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "balances" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader balances braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_balances(Path::new(&database), &out);
         return;
     }
     if reader == "salary" {

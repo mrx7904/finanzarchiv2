@@ -5,7 +5,9 @@
 
 ## Done when
 
-- [ ] The balance of an account at the end of each day from its opening and its bookings, the same as `accounts::balance_on`, and the sum of all accounts.
-- [ ] Where the bank printed a balance, it is the one shown, and a difference to the bookings is named as in "Konten".
-- [ ] Quick for ten years of daily balances (one pass over the bookings, not a query per day).
-- [ ] Tests with invented statements. Measured on a copy of the owner's archive: the balance at each statement's end against the bank's.
+- [x] The balance of an account at the end of each day from its opening and its bookings, the same as `accounts::balance_on`, and the sum of all accounts.
+- [x] Where the bank printed a balance, it is the one shown, and a difference to the bookings is named as in "Konten".
+- [x] Quick for ten years of daily balances (one pass over the bookings, not a query per day).
+- [x] Tests with invented statements. Measured on a copy of the owner's archive: the balance at each statement's end against the bank's.
+
+**Status:** done on 2026-11-27, measured in `knowledge/decision-balances.md`.

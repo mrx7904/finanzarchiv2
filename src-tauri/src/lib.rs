@@ -2,6 +2,7 @@
 
 pub mod accounts;
 pub mod archive;
+pub mod balances;
 pub mod categorize;
 pub mod checks;
 pub mod commands;
