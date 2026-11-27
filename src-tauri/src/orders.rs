@@ -129,11 +129,13 @@ pub struct Listed {
     pub total: Option<Cents>,
     /// The invoice and its name, once there is one.
     pub invoice: Option<(i64, String)>,
+    /// The owner said it needs no invoice (#46).
+    pub no_invoice: bool,
 }
 
 pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
     conn.prepare(
-        "SELECT o.id, o.shop, o.order_number, o.ordered_at, o.total_cents, o.document_id, coalesce(d.name, d.original_name)
+        "SELECT o.id, o.shop, o.order_number, o.ordered_at, o.total_cents, o.document_id, coalesce(d.name, d.original_name), o.no_invoice_at IS NOT NULL
          FROM orders o LEFT JOIN documents d ON d.id = o.document_id
          ORDER BY coalesce(o.ordered_at, o.found_at) DESC, o.id DESC",
     )?
@@ -147,9 +149,103 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<Listed>> {
             day: row.get(3)?,
             total: row.get::<_, Option<i64>>(4)?.map(Cents::new),
             invoice: document.zip(name),
+            no_invoice: row.get(7)?,
         })
     })?
     .collect()
+}
+
+/// "Braucht keine Rechnung" and its undoing (#46). An invoice linked later counts over it.
+pub fn set_needs_invoice(
+    conn: &Connection,
+    order: i64,
+    needs: bool,
+    now: jiff::Timestamp,
+) -> rusqlite::Result<bool> {
+    let changed = if needs {
+        conn.execute(
+            "UPDATE orders SET no_invoice_at = NULL WHERE id = ?1",
+            [order],
+        )?
+    } else {
+        conn.execute(
+            "UPDATE orders SET no_invoice_at = coalesce(no_invoice_at, ?2) WHERE id = ?1",
+            rusqlite::params![order, now.to_string()],
+        )?
+    };
+    Ok(changed > 0)
+}
+
+/// "Rechnung zuordnen …": the owner links an invoice to an order. It ends "Braucht keine Rechnung".
+pub fn assign(conn: &Connection, order: i64, document: i64) -> rusqlite::Result<bool> {
+    let changed = conn.execute(
+        "UPDATE orders SET document_id = ?2, no_invoice_at = NULL WHERE id = ?1
+         AND EXISTS (SELECT 1 FROM documents WHERE id = ?2 AND kind = 'invoice')",
+        rusqlite::params![order, document],
+    )?;
+    Ok(changed > 0)
+}
+
+/// An invoice that may belong to an order: its name, gross and day.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Candidate {
+    pub document: i64,
+    pub name: String,
+    pub gross: Option<Cents>,
+    pub day: Option<String>,
+}
+
+/// The invoices no order holds, the likeliest for this order first: the same total, then the
+/// nearest day, then the newest.
+pub fn candidates(conn: &Connection, order: i64) -> rusqlite::Result<Vec<Candidate>> {
+    let (total, ordered): (Option<i64>, Option<String>) = conn.query_row(
+        "SELECT total_cents, ordered_at FROM orders WHERE id = ?1",
+        [order],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let ids: Vec<(i64, String)> = conn
+        .prepare(
+            "SELECT d.id, coalesce(d.name, d.original_name) FROM documents d WHERE d.kind = 'invoice'
+             AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.document_id = d.id) ORDER BY d.id DESC",
+        )?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let ordered = ordered.and_then(|day| {
+        day.get(..10)
+            .and_then(|day| day.parse::<jiff::civil::Date>().ok())
+    });
+    let mut found = Vec::new();
+    for (document, name) in ids {
+        let chosen = crate::checks::chosen(&crate::checks::values(conn, document)?);
+        let gross = chosen
+            .get("gross")
+            .and_then(|seen| seen.value.parse::<i64>().ok())
+            .map(Cents::new);
+        let day = chosen.get("invoice_date").map(|seen| seen.value.clone());
+        found.push(Candidate {
+            document,
+            name,
+            gross,
+            day,
+        });
+    }
+    let distance = |candidate: &Candidate| -> i32 {
+        let day = candidate
+            .day
+            .as_deref()
+            .and_then(|day| day.parse::<jiff::civil::Date>().ok());
+        match (ordered, day) {
+            (Some(ordered), Some(day)) => (day - ordered).get_days().abs(),
+            _ => i32::MAX,
+        }
+    };
+    found.sort_by_key(|candidate| {
+        (
+            total.is_none() || candidate.gross.map(Cents::value) != total,
+            distance(candidate),
+        )
+    });
+    Ok(found)
 }
 
 #[cfg(test)]

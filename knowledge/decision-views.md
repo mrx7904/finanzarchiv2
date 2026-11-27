@@ -147,6 +147,11 @@ Not changed in the draft, they are the work of #45:
 - **UNVERIFIED in the app:** everything was seen in Chromium, nothing in the Tauri window, on Windows or on the Mac. WebView2 is Chromium. WKWebView is not, and the Mac is still unseen for the design system too (#08).
 - The owner saw pictures, not a running app. A view is accepted when the owner has used it on the real archive, as every stage is (`spec/concept.md`, "One open stage").
 - Drawn but not asked of the core: "Neu lesen lassen" at a document, "Buchung von Hand" in Umsätze, "Braucht keine Rechnung" at an order, "Beim Start öffnen" in Darstellung, "Als Tabelle exportieren". Each is named in the issue of its view as something to decide there, none is promised by this file.
+- Decided on 2026-11-27 by Fable 5.2 on the owner's behalf (the owner was away and asked for that), the owner can change it:
+  - "Neu lesen lassen": **no**. The readers read the same lines the same way, a better reader reaches the filed documents by itself (`READERS_VERSION`), a wrong value is corrected at the value in Prüfen, and a statement read again would store its bookings anew. The menu at a document holds "Umbenennen …", "Datei im Ordner zeigen" and "Löschen …".
+  - "Braucht keine Rechnung" at an order: **yes**, undone by "Rückgängig" at the invoice of the order. The order then reads "vollständig", an invoice that comes after all is linked and counts over it (#46, migration 0027).
+  - "Buchung von Hand": **not now**. Every account has statements, a booking by hand would double one once the statement comes. Accounts without statements (cash) need their own kind, an issue of its own when the owner asks.
+  - "Konto umbenennen …" in the menu of an account: **yes** (#48).
 
 ## Rejected
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { downloadsLine, formatDay, mailParts, mailboxLine, ordersLine, kindLabel, textStateLabel, filingLine, stateLabel } from "./describe";
+import { countsLine, downloadsLine, filterRows, formatDay, mailParts, mailboxLine, orderCountsLine, orderState, ordersLine, kindLabel, rowDetail, rowState, textStateLabel, filingLine, stateLabel } from "./describe";
 
 describe("the list of documents", () => {
   it("names every kind in German", () => {
@@ -80,5 +80,32 @@ describe("the orders of #32", () => {
     expect(ordersLine([{ invoice: 3 }, { invoice: 4 }])).toBe("Jede der 2 Bestellungen hat ihre Rechnung.");
     expect(ordersLine([{ invoice: 3 }, { invoice: null }])).toMatch(/^1 Bestellung wartet auf die Rechnung\./);
     expect(ordersLine([{}, { invoice: null }])).toMatch(/^2 Bestellungen warten/);
+  });
+});
+
+describe("a row of Dokumente (#46)", () => {
+  const row = (state: string, kind = "invoice", name = "Rechnung Beispiel Musik") => ({ state, kind, name, originalName: "r.pdf", importedAt: "2026-03-02T08:00:00Z" });
+  it("says its state in the words of rule 11", () => {
+    expect(rowState("filed")).toEqual({ tone: "ok", label: "bestätigt" });
+    expect(rowState("waiting").label).toBe("prüfen");
+    expect(rowState("held").label).toBe("prüfen");
+    expect(rowState("open")).toEqual({ tone: "neutral", label: "läuft" });
+  });
+  it("has its kind and day as detail and the counts say what waits", () => {
+    expect(rowDetail(row("filed"))).toBe("Rechnung · 02.03.2026");
+    expect(countsLine([row("filed"), row("waiting"), row("filed")])).toBe("3 Dokumente · 1 prüfen");
+    expect(countsLine([row("filed")])).toBe("1 Dokument");
+  });
+  it("is left by a search, a kind and a state", () => {
+    const rows = [row("filed"), row("waiting", "receipt", "Quittung Beispiel Markt"), row("filed", "statement", "Kontoauszug März")];
+    expect(filterRows(rows, "beispiel", "", "").length).toBe(2);
+    expect(filterRows(rows, "", "statement", "").map((r) => r.name)).toEqual(["Kontoauszug März"]);
+    expect(filterRows(rows, "", "", "prüfen").map((r) => r.kind)).toEqual(["receipt"]);
+  });
+  it("an order is complete with an invoice or when it needs none", () => {
+    expect(orderState({ invoice: 4, noInvoice: false }).label).toBe("vollständig");
+    expect(orderState({ invoice: null, noInvoice: true }).label).toBe("vollständig");
+    expect(orderState({ invoice: null, noInvoice: false })).toEqual({ tone: "danger", label: "fehlt" });
+    expect(orderCountsLine([{ invoice: null, noInvoice: false }, { invoice: 1, noInvoice: false }])).toBe("2 Bestellungen · 1 fehlt");
   });
 });

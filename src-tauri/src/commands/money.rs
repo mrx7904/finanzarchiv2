@@ -315,6 +315,8 @@ pub struct OrderRow {
     pub total: Option<String>,
     pub invoice: Option<u32>,
     pub invoice_name: Option<String>,
+    /// The owner said it needs no invoice (#46).
+    pub no_invoice: bool,
 }
 
 #[tauri::command]
@@ -337,6 +339,7 @@ pub fn list_orders(archive: State<'_, Arc<Mutex<Opened>>>) -> Result<Vec<OrderRo
                         .map(|(id, _)| id32(*id))
                         .transpose()?,
                     invoice_name: order.invoice.map(|(_, name)| name),
+                    no_invoice: order.no_invoice,
                 })
             })
             .collect()

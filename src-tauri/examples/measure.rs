@@ -1023,6 +1023,30 @@ enum Expected {
     Nothing,
 }
 
+/// How quick the list of Dokumente stands with the owner's archive (#46): the documents and the
+/// time of the rows the window gets, the best of five. Counts only.
+fn measure_documents_list(database: &Path, out: &Path) {
+    let Ok(finanzarchiv2_lib::archive::Opened::Ready(ready)) =
+        finanzarchiv2_lib::archive::open(database, jiff::Timestamp::now())
+    else {
+        eprintln!("Die Kopie des Archivs ließ sich nicht öffnen");
+        std::process::exit(1);
+    };
+    let mut best = f64::MAX;
+    let mut count = 0;
+    for _ in 0..5 {
+        let started = std::time::Instant::now();
+        count = finanzarchiv2_lib::commands::documents::document_rows(ready.connection())
+            .map_or(0, |rows| rows.len());
+        best = best.min(started.elapsed().as_secs_f64() * 1000.0);
+    }
+    println!("  {count} Dokumente in {best:.1} ms");
+    write(
+        &out.join("private").join("documents-list.json"),
+        &json!({ "reader": "documents-list", "documents": count, "milliseconds": best }),
+    );
+}
+
 /// The chat on a writable copy of the owner's archive (#42), migrated first, then asked on a
 /// read-only connection: whether each answer names the amount the core computes, or the fixed
 /// sentence where there is nothing, and the time per answer. Counts only; the answers go to
@@ -2099,6 +2123,14 @@ fn main() {
             std::process::exit(1);
         };
         measure_accounts(Path::new(&database), &out);
+        return;
+    }
+    if reader == "documents-list" {
+        let Some(database) = value("--archive") else {
+            eprintln!("--reader documents-list braucht --archive <Kopie der Datenbank>");
+            std::process::exit(1);
+        };
+        measure_documents_list(Path::new(&database), &out);
         return;
     }
     if reader == "chat" {

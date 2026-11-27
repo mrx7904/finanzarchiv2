@@ -4,57 +4,8 @@ import { Page } from "../settings/Page";
 import { Button, TextField } from "../ui";
 import { kindLabel } from "./describe";
 
-// Names by template of #18: the owner renames a document, or changes the template of a kind.
-
-/** The name of a document in the preview, with the file name it came as and "Umbenennen". */
-export function DocumentName({ document, name, originalName, byOwner, onChanged }: { document: number; name: string; originalName: string; byOwner: boolean; onChanged: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(name);
-  useEffect(() => {
-    setEditing(false);
-    setText(name);
-  }, [document, name]);
-
-  const save = async (value: string) => {
-    const result = await commands.renameDocument(document, value);
-    if (result.status === "ok") {
-      setEditing(false);
-      onChanged();
-    }
-  };
-
-  if (editing) {
-    return (
-      <form
-        className="flex items-end gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save(text);
-        }}
-      >
-        <TextField label="Name" value={text} onChange={setText} className="flex-1" hint="Leer lassen, um den Namen nach der Vorlage zu bilden." />
-        <Button type="submit" size="small" kind="primary">
-          Sichern
-        </Button>
-        <Button size="small" kind="plain" onClick={() => setEditing(false)}>
-          Abbrechen
-        </Button>
-      </form>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-body font-medium">{name}</p>
-        <Button size="small" kind="plain" onClick={() => setEditing(true)}>
-          Umbenennen
-        </Button>
-      </div>
-      {name !== originalName ? <p className="text-small text-fg-muted">Datei: {originalName}</p> : null}
-      {byOwner ? <p className="text-small text-fg-muted">Von dir benannt, keine Vorlage ändert diesen Namen.</p> : null}
-    </div>
-  );
-}
+// Names by template of #18: the template of each kind, a page of Einstellungen since #49. A document is renamed by
+// "Umbenennen …" at the document (#46).
 
 /** The page "Namen" of Einstellungen (#49): one template per kind and the placeholders it may use. */
 export function TemplatesPage() {

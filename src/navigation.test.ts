@@ -20,7 +20,7 @@ describe("the navigation", () => {
 
   it("opens a jump in the target's view and goes back to where it came from", () => {
     let nav = inAccounts();
-    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 42 } } });
+    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 42, orders: false } } });
     expect(nav.view).toBe("documents");
     expect(nav.places.documents.focus).toBe(42);
     expect(nav.back).toHaveLength(1);
@@ -34,8 +34,8 @@ describe("the navigation", () => {
 
   it("goes back from a jump from a jump one place at a time", () => {
     let nav = inAccounts();
-    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 42 } } });
-    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 7 } } });
+    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 42, orders: false } } });
+    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 7, orders: false } } });
     expect(nav.back.map((spot) => spot.view)).toEqual(["accounts", "documents"]);
     nav = navigate(nav, { type: "back" });
     expect(nav.places.documents.focus).toBe(42);
@@ -45,15 +45,15 @@ describe("the navigation", () => {
 
   it("leaves the way back when the owner changes the view by the sidebar", () => {
     let nav = inAccounts();
-    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 42 } } });
+    nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: 42, orders: false } } });
     nav = navigate(nav, { type: "go", view: "review" });
     expect(nav.back).toHaveLength(0);
   });
 
   it("moves inside a view without a way back and keeps at most a limit of places", () => {
-    let nav = navigate(initialNav, { type: "set", spot: { view: "documents", place: { focus: 1 } } });
+    let nav = navigate(initialNav, { type: "set", spot: { view: "documents", place: { focus: 1, orders: false } } });
     expect(nav.back).toHaveLength(0);
-    for (let at = 0; at < BACK_LIMIT + 5; at += 1) nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: at } } });
+    for (let at = 0; at < BACK_LIMIT + 5; at += 1) nav = navigate(nav, { type: "jump", to: { view: "documents", place: { focus: at, orders: false } } });
     expect(nav.back).toHaveLength(BACK_LIMIT);
   });
 });

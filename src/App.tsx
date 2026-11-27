@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useReducer, useState } from "re
 import { type LoadedStatus, describeLoaded } from "./archive-status";
 import { type DocumentRow_Serialize as DocumentRow, commands } from "./bindings";
 import { Documents } from "./documents/Documents";
+import { OrdersPage } from "./documents/Orders";
 import { IntakeLine } from "./intake/IntakeLine";
 import { useIntakeChanged } from "./intake/useIntakeChanged";
 import { Accounts } from "./money/Accounts";
@@ -91,7 +92,7 @@ export function App() {
   if (loaded && !ready) return <ArchiveProblem loaded={loaded} />;
 
   const { review, documents, accounts } = nav.places;
-  const openDocument = (document: number) => dispatch({ type: "jump", to: { view: "documents", place: { focus: document } } });
+  const openDocument = (document: number) => dispatch({ type: "jump", to: { view: "documents", place: { focus: document, orders: false } } });
   const openSettings = (page: SettingsPageId) => {
     dispatch({ type: "set", spot: { view: "settings", place: { page } } });
     dispatch({ type: "go", view: "settings" });
@@ -117,7 +118,9 @@ export function App() {
                   })
                 : nav.view === "settings"
                   ? [{ label: "Einstellungen", onSelect: () => openSettings("ordner") }, { label: settingsLabel }]
-                  : [{ label: "Dokumente" }]
+                  : documents.orders
+                    ? [{ label: "Dokumente", onSelect: () => dispatch({ type: "set", spot: { view: "documents", place: { ...documents, orders: false } } }) }, { label: "Bestellungen" }]
+                    : [{ label: "Dokumente" }]
         }
         sidebar={
           ready ? (
@@ -157,14 +160,16 @@ export function App() {
           ) : undefined
         }
       >
-        {!loaded ? null : nav.view === "documents" ? (
-          <main className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-8 py-8">
-            <Documents
-              focus={documents.focus}
-              onChoose={(focus) => dispatch({ type: "set", spot: { view: "documents", place: { focus } } })}
-              onJump={openDocument}
-            />
-          </main>
+        {!loaded ? null : nav.view === "documents" && documents.orders ? (
+          <OrdersPage onOpenDocument={openDocument} />
+        ) : nav.view === "documents" ? (
+          <Documents
+            focus={documents.focus}
+            onChoose={(focus) => dispatch({ type: "set", spot: { view: "documents", place: { focus, orders: false } } })}
+            onJump={openDocument}
+            onOpenBooking={(account) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: account, text: "" } } })}
+            onOrders={() => dispatch({ type: "set", spot: { view: "documents", place: { ...documents, orders: true } } })}
+          />
         ) : nav.view === "settings" ? (
           <Settings page={nav.places.settings.page} onPage={openSettings} version={loaded.status === "ok" ? loaded.data.version : null} />
         ) : nav.view === "review" ? (

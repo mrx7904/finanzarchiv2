@@ -91,6 +91,21 @@ export const commands = {
 	archiveInfo: (options?: InvokeOptions) => typedError<ArchiveInfo, CommandError>(__TAURI_INVOKE("archive_info", undefined, options)),
 	/**  Whether the local model answers: "Verbindung testen" calls it again. */
 	modelStatus: (options?: InvokeOptions) => typedError<ModelStatus_Serialize, CommandError>(__TAURI_INVOKE("model_status", undefined, options)),
+	/**  The read values of a document and the bookings that paid it. */
+	documentDetail: (document: number, options?: InvokeOptions) => typedError<DocumentDetail, CommandError>(__TAURI_INVOKE("document_detail", { document }, options)),
+	/**
+	 *  "Löschen …": the document and every row about it go, a statement with its bookings. The file
+	 *  goes to the Papierkorb of the archive.
+	 */
+	deleteDocument: (document: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("delete_document", { document }, options)),
+	/**  "Datei im Ordner zeigen": the file manager of the system opens with the file chosen. */
+	revealDocument: (document: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("reveal_document", { document }, options)),
+	/**  "Braucht keine Rechnung" (`needs` false) and its undoing (`needs` true). */
+	setOrderNeedsInvoice: (order: number, needs: boolean, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("set_order_needs_invoice", { order, needs }, options)),
+	/**  The invoices no order holds, the likeliest for this order first. */
+	orderInvoiceCandidates: (order: number, options?: InvokeOptions) => typedError<InvoiceCandidate_Serialize[], CommandError>(__TAURI_INVOKE("order_invoice_candidates", { order }, options)),
+	/**  "Rechnung zuordnen …". */
+	assignOrderInvoice: (order: number, document: number, options?: InvokeOptions) => typedError<null, CommandError>(__TAURI_INVOKE("assign_order_invoice", { order, document }, options)),
 	listCategories: (options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("list_categories", undefined, options)),
 	addCategory: (name: string, direction: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("add_category", { name, direction }, options)),
 	renameCategory: (category: number, name: string, options?: InvokeOptions) => typedError<CategoryRow[], CommandError>(__TAURI_INVOKE("rename_category", { category, name }, options)),
@@ -543,6 +558,11 @@ export type DocumentChecks_Serialize = {
 	checks: CheckRow_Serialize[],
 };
 
+export type DocumentDetail = {
+	values: DocumentValue[],
+	paidBy: PaidBy[],
+};
+
 export type DocumentRow = DocumentRow_Serialize | DocumentRow_Deserialize;
 
 export type DocumentRow_Deserialize = {
@@ -587,6 +607,16 @@ export type DocumentRow_Serialize = {
 	arrival: string | null,
 	/**  The other document of a pair of an invoice and its PayPal receipt (#32). */
 	paired: PairedDocument | null,
+};
+
+/**  A read value: its name, the value as the window shows it, and where it stands. */
+export type DocumentValue = {
+	field: string,
+	name: string,
+	value: string,
+	amount: boolean,
+	/**  "read", "checked", "sender" or "owner". */
+	source: string,
 };
 
 /**  The downloads as "Ordner" shows them: switched on or not, and what they gave. */
@@ -669,6 +699,24 @@ export type IntakeOverview_Serialize = {
 	failed: JobRow_Serialize[],
 	/**  New documents of the last 24 hours. */
 	addedToday: number,
+};
+
+export type InvoiceCandidate = InvoiceCandidate_Serialize | InvoiceCandidate_Deserialize;
+
+export type InvoiceCandidate_Deserialize = {
+	document: number,
+	name: string,
+	gross?: string | null,
+	/**  ISO day. */
+	day?: string | null,
+};
+
+export type InvoiceCandidate_Serialize = {
+	document: number,
+	name: string,
+	gross: string | null,
+	/**  ISO day. */
+	day: string | null,
 };
 
 export type JobRow = JobRow_Serialize | JobRow_Deserialize;
@@ -800,6 +848,8 @@ export type OrderRow_Deserialize = {
 	total?: string | null,
 	invoice?: number | null,
 	invoiceName?: string | null,
+	/**  The owner said it needs no invoice (#46). */
+	noInvoice: boolean,
 };
 
 /**  An order as "Bestellungen" shows it (#32). */
@@ -812,6 +862,19 @@ export type OrderRow_Serialize = {
 	total: string | null,
 	invoice: number | null,
 	invoiceName: string | null,
+	/**  The owner said it needs no invoice (#46). */
+	noInvoice: boolean,
+};
+
+/**  A booking that paid a document. */
+export type PaidBy = {
+	booking: number,
+	account: number,
+	accountName: string,
+	/**  ISO day. */
+	day: string,
+	amount: string,
+	incoming: boolean,
 };
 
 /**  The invoice of a PayPal receipt, or the PayPal receipt of an invoice. */

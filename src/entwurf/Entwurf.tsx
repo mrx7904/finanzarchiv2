@@ -656,7 +656,6 @@ export function Dokumente({ back, search = false, rail = false, resize = false, 
                 entries={[
                   { label: "Umbenennen …", icon: "document", onSelect: nothing },
                   { label: "Datei im Ordner zeigen", icon: "folder", onSelect: nothing },
-                  { label: "Neu lesen lassen", icon: "search", onSelect: nothing },
                   { label: "Löschen …", icon: "trash", danger: true, onSelect: nothing },
                 ]}
               />
