@@ -6,8 +6,8 @@ import { type Zoom, pageStep, requestWidth, zoomLabel, zoomStep } from "./pages"
 // The page of a document with its tools under it (#54): the page and the count with back and forward, smaller and
 // larger from "Ganze Seite", and "Groß lesen". A document of one page shows no paging. The page is asked from the core
 // at the width it is shown, so it stays sharp at 200 %. The column keeps the room of its scroll bar, so a page that
-// grows higher than its box does not narrow it and ask again (#55). `overlay` draws on the page, such as the marked place of a
-// question in Prüfen.
+// grows higher than its box does not narrow it and ask again (#55). `overlay` draws on the image of a page, such as the
+// marked place of a question in Prüfen, and is asked per page, so a mark shows only on its own page (#57).
 
 function useWidth() {
   const ref = useRef<HTMLDivElement>(null);
@@ -28,7 +28,7 @@ type PageViewProps = {
   pages: number;
   page?: number;
   onLarge?: () => void;
-  overlay?: ReactNode;
+  overlay?: (page: number) => ReactNode;
   /** Prüfen starts at the column's width, so the marked place stands on the page. */
   startZoom?: Zoom;
 };
@@ -37,10 +37,9 @@ export function PageView({ document, name, pages, page: start = 1, onLarge, over
   const [page, setPage] = useState(start);
   const [zoom, setZoom] = useState<Zoom>(startZoom);
   const [ref, width] = useWidth();
-  useEffect(() => {
-    setPage(start);
-    setZoom(startZoom);
-  }, [document, start, startZoom]);
+  useEffect(() => setPage(start), [document, start]);
+  // Turning to the page of another reading keeps the zoom, another document starts at its own.
+  useEffect(() => setZoom(startZoom), [document, startZoom]);
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-2">
       <div ref={ref} className={cn("relative min-h-0 w-full flex-1", zoom === "fit" ? "flex items-center justify-center overflow-hidden" : "overflow-auto [scrollbar-gutter:stable]")}>
@@ -51,21 +50,19 @@ export function PageView({ document, name, pages, page: start = 1, onLarge, over
   );
 }
 
-function Page({ document, name, page, zoom, column, overlay }: { document: number; name: string; page: number; zoom: Zoom; column: number; overlay?: ReactNode }) {
+function Page({ document, name, page, zoom, column, overlay }: { document: number; name: string; page: number; zoom: Zoom; column: number; overlay?: (page: number) => ReactNode }) {
   const ratio = typeof window === "undefined" ? 1 : window.devicePixelRatio;
   const request = requestWidth(column, zoom, ratio);
   if (zoom === "fit") {
     return (
       <div className="relative flex h-full max-h-full items-center justify-center">
-        <PageImage document={document} page={page} width={request} label={`Seite ${page} von ${name}`} fit />
-        {overlay}
+        <PageImage document={document} page={page} width={request} label={`Seite ${page} von ${name}`} fit overlay={overlay?.(page)} />
       </div>
     );
   }
   return (
     <div className="relative mx-auto" style={{ width: (column * zoom) / 100 }}>
-      <PageImage document={document} page={page} width={request} label={`Seite ${page} von ${name}`} className="rounded-control shadow-panel" />
-      {overlay}
+      <PageImage document={document} page={page} width={request} label={`Seite ${page} von ${name}`} className="rounded-control shadow-panel" overlay={overlay?.(page)} />
     </div>
   );
 }

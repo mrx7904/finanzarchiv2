@@ -3,7 +3,7 @@
 //! checks again (knowledge/decision-checks.md).
 
 use jiff::Timestamp;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::checks::{self, ACCEPT, AGREE, DUPLICATE, KIND, PRESENT, SOURCE, SUM, UNDONE};
 use crate::kinds::Kind;
@@ -117,6 +117,8 @@ pub struct Reading {
     pub page: Option<u32>,
     /// left, bottom, right, top in PDF points.
     pub rect: Option<[f64; 4]>,
+    /// The width and height of the reading's own page in PDF points, so its mark is placed on that page (#57).
+    pub size: Option<(f64, f64)>,
 }
 
 /// A question about one waiting document.
@@ -128,9 +130,10 @@ pub struct Question {
     pub field: Option<String>,
     pub text: String,
     pub readings: Vec<Reading>,
-    /// The page to show and its size in PDF points, for marking the line.
+    /// The page to show first: the page of the first reading.
     pub page: u32,
-    pub page_size: Option<(f64, f64)>,
+    /// The pages of the document, so every page can be reached (#57).
+    pub pages: u32,
 }
 
 fn reader_label(reader: &str) -> String {
@@ -168,8 +171,18 @@ fn readings(conn: &Connection, document: i64, field: &str) -> rusqlite::Result<V
                 value: row.get(2)?,
                 page: row.get(3)?,
                 rect,
+                size: None,
             })
         })?
+        .collect::<rusqlite::Result<Vec<Reading>>>()?
+        .into_iter()
+        .map(|reading| {
+            let size = match reading.page {
+                Some(page) => page_size(conn, document, page)?,
+                None => None,
+            };
+            Ok(Reading { size, ..reading })
+        })
         .collect::<rusqlite::Result<_>>()?;
     // One reading per distinct value, the first reader that gave it.
     let mut distinct: Vec<Reading> = Vec::new();
@@ -179,6 +192,28 @@ fn readings(conn: &Connection, document: i64, field: &str) -> rusqlite::Result<V
         }
     }
     Ok(distinct)
+}
+
+fn page_size(conn: &Connection, document: i64, page: u32) -> rusqlite::Result<Option<(f64, f64)>> {
+    conn.query_row(
+        "SELECT width, height FROM pages WHERE document_id = ?1 AND number = ?2",
+        params![document, page],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )
+    .optional()
+}
+
+/// The pages of a document, at least one.
+fn page_count(conn: &Connection, document: i64) -> rusqlite::Result<u32> {
+    let pages: Option<i64> = conn.query_row(
+        "SELECT coalesce(pages, (SELECT max(number) FROM pages WHERE document_id = ?1)) FROM documents WHERE id = ?1",
+        [document],
+        |row| row.get(0),
+    )?;
+    Ok(pages
+        .and_then(|pages| u32::try_from(pages).ok())
+        .unwrap_or(1)
+        .max(1))
 }
 
 fn amount_of(value: &str) -> String {
@@ -266,13 +301,7 @@ fn question(conn: &Connection, document: i64, key: &str) -> rusqlite::Result<Que
         .first()
         .and_then(|reading| reading.page)
         .unwrap_or(1);
-    let page_size = conn
-        .query_row(
-            "SELECT width, height FROM pages WHERE document_id = ?1 AND number = ?2",
-            params![document, page],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )
-        .ok();
+    let pages = page_count(conn, document)?.max(page);
     Ok(Question {
         document,
         name,
@@ -281,7 +310,7 @@ fn question(conn: &Connection, document: i64, key: &str) -> rusqlite::Result<Que
         text,
         readings,
         page,
-        page_size,
+        pages,
     })
 }
 
@@ -317,6 +346,7 @@ fn link_question(conn: &Connection, document: i64) -> rusqlite::Result<Option<Qu
                 value: id.to_string(),
                 page: None,
                 rect: None,
+                size: None,
             }
         })
         .collect();
@@ -328,7 +358,7 @@ fn link_question(conn: &Connection, document: i64) -> rusqlite::Result<Option<Qu
         text: format!("Welche Buchung hat das Dokument{sender} bezahlt?"),
         readings,
         page: 1,
-        page_size: None,
+        pages: page_count(conn, document)?,
     }))
 }
 

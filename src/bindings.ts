@@ -1017,7 +1017,10 @@ export type ReviewQuestion_Deserialize = {
 	field?: string | null,
 	text: string,
 	readings: ReviewReading_Deserialize[],
+	/**  The page shown first, the page of the first reading. */
 	page: number,
+	/**  The pages of the document (#57). */
+	pages: number,
 };
 
 /**  A question about a waiting document. */
@@ -1028,7 +1031,10 @@ export type ReviewQuestion_Serialize = {
 	field: string | null,
 	text: string,
 	readings: ReviewReading_Serialize[],
+	/**  The page shown first, the page of the first reading. */
 	page: number,
+	/**  The pages of the document (#57). */
+	pages: number,
 };
 
 /**  One reading of the field a question is about. */

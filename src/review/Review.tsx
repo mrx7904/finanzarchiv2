@@ -42,6 +42,8 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  /** The reading whose mark and page are shown: the first, or the one the owner points at (#57). */
+  const [pointed, setPointed] = useState(0);
   const [listWidth, listDivider] = useColumn({ key: "review.list", initial: 380, least: 280, most: 560, label: "Breite der Liste" });
 
   const loadGroups = useCallback(async () => {
@@ -90,6 +92,7 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
     setDenied(false);
     setTyped("");
     setError(null);
+    setPointed(0);
   }, [at.question]);
 
   const open = (question: ReviewQuestion | undefined) => {
@@ -146,6 +149,9 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
   if (at.question) {
     const question = at.question;
     const first = question.readings[0];
+    const marked = question.readings[pointed] ?? first;
+    const markedPage = marked?.page ?? question.page;
+    const point = (number: number) => ({ onMouseEnter: () => setPointed(number), onFocus: () => setPointed(number) });
     const isKind = question.key === "check:kind";
     const isDuplicate = question.key === "check:duplicate";
     const isUndone = question.key === "check:undone";
@@ -169,10 +175,10 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
             key={`${question.document}-${question.key}`}
             document={question.document}
             name={question.name}
-            pages={Math.max(question.page, 1)}
-            page={question.page}
+            pages={Math.max(question.pages, question.page, 1)}
+            page={markedPage}
             startZoom={100}
-            overlay={first?.mark ? <span aria-hidden className="absolute rounded-[2px] bg-accent/20 shadow-[0_0_0_2px_var(--accent)]" style={markStyle(first.mark)} /> : undefined}
+            overlay={(page) => (marked?.mark && page === markedPage ? <span aria-hidden data-mark className="absolute rounded-[2px] bg-accent/20 shadow-[0_0_0_2px_var(--accent)]" style={markStyle(marked.mark)} /> : null)}
           />
         </div>
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-panel bg-surface p-5 shadow-panel">
@@ -231,7 +237,7 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
               {question.readings.length > 1 ? (
                 <div className="grid grid-cols-2 gap-2">
                   {question.readings.map((reading, number) => (
-                    <Button key={`${reading.reader}-${reading.shown}`} busy={busy} onClick={() => send({ answer: "reading", index: number })}>
+                    <Button key={`${reading.reader}-${reading.shown}`} busy={busy} {...point(number)} onClick={() => send({ answer: "reading", index: number })}>
                       {`${number + 1} · ${reading.shown} (${reading.reader})`}
                     </Button>
                   ))}
@@ -293,7 +299,7 @@ export function Review({ at, onAt, onAnswered, focusing = false, onFocus }: Revi
           </List>
         </div>
         <div className="flex min-h-0 items-center justify-center overflow-hidden rounded-panel bg-surface p-4 shadow-panel">
-          {chosen ? <PageImage key={chosen.document} document={chosen.document} page={chosen.page} width={900} label={`Seite ${chosen.page} von ${chosen.name}`} fit /> : null}
+          {chosen ? <PageImage key={chosen.document} document={chosen.document} page={chosen.page} label={`Seite ${chosen.page} von ${chosen.name}`} fit /> : null}
         </div>
       </section>
     );

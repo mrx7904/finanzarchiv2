@@ -132,7 +132,7 @@ Faults and gaps found when 0.7.0 was read against the requirements, the concept 
 |---|---|---|---|---|
 | [#55](055-page-stands-still.md) | The page of a document stands still | FA-55 | #54 | built, the owner looks |
 | [#56](056-wheel-through-pages.md) | Through the pages of a document by the wheel | FA-56 | #55 | open |
-| [#57](057-pages-and-mark-in-review.md) | Every page and the right mark in "Prüfen" | FA-57 | #55 | open |
+| [#57](057-pages-and-mark-in-review.md) | Every page and the right mark in "Prüfen" | FA-57 | #55 | built, the owner looks |
 | [#58](058-jump-to-one-booking.md) | A jump leads to the one booking | FA-58 | #48, #50 | open |
 | [#59](059-failures-show.md) | Failures show, and an answer that is overtaken does not count | FA-59 | #46, #48 | open |
 | [#60](060-window-stays-fluid.md) | The window stays fluid while the archive works | FA-60 | #55 | open |
@@ -149,12 +149,13 @@ Faults and gaps found when 0.7.0 was read against the requirements, the concept 
 | [#71](071-running-in-the-background.md) | The archive fills while the window is closed | FA-71 | #70 | open, needs the owner's word |
 | [#72](072-handling-documents.md) | Handling documents: the drop, the keys, several at once | FA-72 | #46, #48, #61 | open |
 | [#73](073-what-belongs-together.md) | What belongs together, as one picture | FA-73 | #58, #66 | open |
+| [#74](074-choosing-from-a-list.md) | A field that chooses from a list looks like the app | FA-74 | #45 | open |
 
 **This block is done when the owner works through a week of real documents in the installed app without one of the faults of #55 to #60, and finds each function of #61 to #73 that was built where its issue puts it.**
 
 **Status:** Cut on 2026-11-27 on the owner's word ("Bitte erstelle eine ausführliche Analyse mit neuen Issues", then "schau auch mal noch nach Funktionalitäten, ob Usability oder Feature, die noch fehlen und lege dafür ebenfalls neue Issues an"). Like the views it is no stage of `spec/concept.md`. #55 was reproduced, the other faults were found by reading the code and are to be seen in the window by their issue. #68 and #71 wait for the owner's word before they begin.
 
-Order of work: #55 first, then #56, #57 and #59, then #58 and #60. After the faults: #70, then #61, #62 and #64, then #63, #65, #66 and #67, then #69 and #72, then #73, and #68 and #71 once the owner decided. #73 and the dragging of a page in #56 were added on 2026-11-27 on the owner's question about a canvas.
+Order of work: #55 first, then #56, #57 and #59, then #58 and #60. After the faults: #74 (reported by the owner on 2026-11-27, before #64 uses the piece), then #70, then #61, #62 and #64, then #63, #65, #66 and #67, then #69 and #72, then #73, and #68 and #71 once the owner decided. #73 and the dragging of a page in #56 were added on 2026-11-27 on the owner's question about a canvas.
 
 ## Later stages
 
