@@ -15,6 +15,43 @@ const widths = {
   wide: "w-[min(94vw,72rem)]",
 } as const;
 
+/**
+ * The focus of an opened dialog (#45): its first field, else its safe action (the first button of its foot that does
+ * not remove and is not the main action), else the main action. Never the close button.
+ */
+export function focusFirst(dialog: HTMLElement): void {
+  const field = dialog.querySelector<HTMLElement>("[data-autofocus], input:not([type='hidden']), textarea, select");
+  const buttons = [...dialog.querySelectorAll<HTMLElement>("footer button")];
+  const safe = buttons.find((button) => button.dataset.kind !== "danger" && button.dataset.kind !== "primary");
+  (field ?? safe ?? buttons.at(-1))?.focus();
+}
+
+/** What a dialog that removes or moves lists below its question: what goes and what stays (rule 18). */
+export function Consequences({ goes, stays }: { goes: string[]; stays?: string[] }) {
+  return (
+    <div className="flex flex-col gap-3 text-body">
+      <ConsequenceList title="Geht" items={goes} dot="bg-danger" />
+      {stays && stays.length > 0 && <ConsequenceList title="Bleibt" items={stays} dot="bg-ok" />}
+    </div>
+  );
+}
+
+function ConsequenceList({ title, items, dot }: { title: string; items: string[]; dot: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-small font-medium text-fg-muted">{title}</span>
+      <ul className="flex flex-col gap-1">
+        {items.map((item) => (
+          <li key={item} className="flex items-start gap-2 text-fg">
+            <span aria-hidden className={cn("mt-2 size-1.5 shrink-0 rounded-full", dot)} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 type DialogProps = {
   open: boolean;
   onClose: () => void;
@@ -35,7 +72,10 @@ export function Dialog({ open, onClose, title, description, size = "regular", ac
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      focusFirst(dialog);
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 

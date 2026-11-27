@@ -37,7 +37,9 @@ export function Menu({ entries, trigger, align = "start" }: MenuProps) {
       const anchor = triggerRef.current?.getBoundingClientRect();
       if (anchor) {
         menu.style.top = `${anchor.bottom + 4}px`;
-        menu.style.left = align === "start" ? `${anchor.left}px` : `${anchor.right - menu.offsetWidth}px`;
+        const wanted = align === "start" ? anchor.left : anchor.right - menu.offsetWidth;
+        // Inside the window, 8 px from its edges, whichever way it opens.
+        menu.style.left = `${Math.max(8, Math.min(wanted, window.innerWidth - menu.offsetWidth - 8))}px`;
       }
       menu.querySelector<HTMLElement>("[role='menuitem']")?.focus();
     };
@@ -88,7 +90,7 @@ export function Menu({ entries, trigger, align = "start" }: MenuProps) {
         onMouseLeave={() => {
           if (!menuRef.current?.contains(document.activeElement)) setGlide(null);
         }}
-        className="fa-menu fixed m-0 min-w-48 rounded-panel bg-raised p-1 text-fg shadow-raised"
+        className="fa-menu fixed m-0 overflow-hidden w-max max-w-[min(90vw,26rem)] min-w-48 rounded-panel bg-raised p-1 text-fg shadow-raised"
       >
         <span
           aria-hidden
@@ -103,12 +105,12 @@ export function Menu({ entries, trigger, align = "start" }: MenuProps) {
             tabIndex={-1}
             onClick={() => choose(entry)}
             className={cn(
-              "relative z-10 flex h-8 w-full items-center gap-2 rounded-row px-2 text-left text-body outline-none",
+              "relative z-10 flex h-8 w-full items-center gap-2 rounded-row pr-3 pl-2 text-left text-body whitespace-nowrap outline-none",
               entry.danger ? "text-danger" : "text-fg",
             )}
           >
             {entry.icon && <Icon name={entry.icon} size={15} className={entry.danger ? undefined : "text-fg-muted"} />}
-            {entry.label}
+            <span className="min-w-0 truncate">{entry.label}</span>
           </button>
         ))}
       </div>

@@ -81,6 +81,8 @@
   --spacing: 4px;
   --control-height: 34px;
   --row-height: 56px;
+  /* The dense row of long lists such as Umsätze (#45, rule 7). */
+  --dense-height: 40px;
   --sidebar-width: 232px;
   /* The top bar is the title bar of the window: page title, actions, and the window buttons or the traffic lights. */
   --bar-height: 47px;

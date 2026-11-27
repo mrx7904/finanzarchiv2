@@ -26,6 +26,7 @@ import {
   type SearchEntry,
   type WindowSystem,
 } from "../ui";
+import { Pieces } from "./Pieces";
 import { categories, documents, formatCents, type SampleDocument } from "./sample";
 
 type Theme = "system" | "light" | "dark";
@@ -48,6 +49,7 @@ const views: { id: string; label: string; icon: IconName; count?: number }[][] =
     { id: "zahlungen", label: "Zahlungen", icon: "card" },
     { id: "steuern", label: "Steuern", icon: "scale" },
   ],
+  [{ id: "bausteine", label: "Bausteine", icon: "more" }],
 ];
 
 export function Showcase() {
@@ -156,6 +158,7 @@ export function Showcase() {
           </div>
         }
       >
+          {view === "bausteine" ? <Pieces /> : <>
           <p className="px-6 pt-4 pb-4 text-fg-muted">Alles, was im Archiv liegt. Wähle ein Dokument, um seine Angaben zu prüfen.</p>
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(320px,400px)_minmax(0,1fr)_minmax(280px,340px)] gap-4 px-6 pb-6">
             <section aria-label="Liste" className="flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
@@ -234,6 +237,7 @@ export function Showcase() {
               )}
             </section>
           </div>
+          </>}
       </AppShell>
 
         <Dialog

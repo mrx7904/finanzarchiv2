@@ -55,7 +55,7 @@ The owner's words were "clean und elegant" in 1.0 and a dislike of "zu bunt". Gr
 - **Contrast checked by a test.** `src/ui/tokens.test.ts` reads the token file and checks every pair of a text color and a surface it stands on, in light and dark, for at least 4.5 to 1 (WCAG 2.2): 30 pairs, 60 checks. A text or surface token without its pairs fails the test. While the owner picked, the same test ran over all four variants (314 checks), and three colors were deepened until each passed.
 - **Reduced motion stops everything.** `src/ui/motion.tsx` is the only file that imports Motion. Under reduced motion of the system it sets `MotionGlobalConfig.skipAnimations`, which makes every animation of Motion jump to its end, opacity and height included (Motion's own `reducedMotion="user"` stops transforms and layout only). It follows the setting while the app runs. For CSS, the duration tokens go to zero and a rule with `!important` stops every transition and animation, inline ones included. `src/ui/motion.test.ts` checks the gate, its listening to a change, that no other file imports Motion, and that no stylesheet times a transition without the tokens.
 - **The dialog and the menu are native.** The dialog is `<dialog>` with `showModal()` (focus kept inside, the rest inert, Escape, focus returned), the menu a `popover`. Both lie in the top layer. Their entry is CSS with `@starting-style`. This is why base-ui stays out: the browser of both systems gives what base-ui would add (WebView2 is Chromium, WKWebView needs Safari 17.5 or newer for `light-dark()` and `@starting-style`).
-- **The showcase stays** as `src/showcase/`, opened by "Gestaltung ansehen" in the dev build only, so a new piece is looked at in light and dark before a view uses it.
+- **The showcase stays** as `src/showcase/`, opened by "Gestaltung ansehen" in the dev build only, so a new piece is looked at in light and dark before a view uses it. The pieces of #45 stand on its page "Bausteine" (`src/showcase/Pieces.tsx`).
 
 ## What was taken from where
 
@@ -72,6 +72,11 @@ The owner's words were "clean und elegant" in 1.0 and a dislike of "zu bunt". Gr
 | `AppShell.tsx`: `AppShell`, `TopBar`, the window buttons | none of the six sources has a window title bar. After the idea of the custom title bar of the Tauri guide (v2.tauri.app/learn/window-customization) and the caption buttons of Windows 11, see `decision-app-shell.md` | Tauri docs MIT, idea only | idea |
 | `Path.tsx`: `PathNav`, `collapsePath` | none of the six sources has a path for a title bar. After the idea of the breadcrumbs listed on 21st.dev and the path bar of the Finder, the folded pages in the `Menu` (Beautiful UI "Glide Menu"), see `decision-app-shell.md` | 21st.dev per component, idea only | idea |
 | `icons.tsx` | drawn for this app | none | own |
+| `List.tsx`: `DenseRow`, `GroupHead`, `RowActions`, `FilterMark` (#45) | the row of Beautiful UI "Task Rows" made dense (40 px), the head of a month that stays at the top after the section headers of the Finder, the mark of a filter after the idea of the "Badge" with a close button listed on 21st.dev | MIT, 21st.dev idea only | code adapted, idea |
+| `Choice.tsx`: `Switch`, `Segmented` (#45) | after the idea of RareUI "Soft Button" and "Animated Tab": a track with one moving part | RareUI idea only (see below) | idea |
+| `Loading.tsx`: `LoadingRows`, `useDelayed` (#45) | after the idea of "Skeleton" by shadcn on 21st.dev: blocks in the shape of the content, here without a shimmer and only after 200 ms | 21st.dev idea only | idea |
+| `Values.tsx`: `ValueRow` (#45) | drawn for this app after the rows of `List`, the dot in the colors of the states | none | own |
+| `Dialog.tsx`: `Consequences`, `focusFirst` (#45) | drawn for this app after rule 18 of `decision-views.md` | none | own |
 
 The Beautiful UI files were read at `raw.githubusercontent.com/slev12397/beautiful-ui/main` on 2026-11-25. Its licence: MIT, Copyright (c) 2026 Shane Levine. Each adapted file names it in its header.
 

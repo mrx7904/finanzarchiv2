@@ -5,7 +5,7 @@
 // Aceternity License: its source must not be re-distributed, so only the idea is taken). The spinner is after the
 // idea of RareUI "Loading Spinner" (rareui.in, now ShitUI, MIT with Commons Clause and an attribution duty since
 // 2026, so its code is not copied): a still track and one turning arc. The pressed state of .98 is the one 1.0 took.
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { Icon, type IconName } from "./icons";
 import { cn } from "./motion";
 
@@ -26,11 +26,15 @@ type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   /** An icon-only button needs its name for a screen reader. */
   label?: string;
   children?: ReactNode;
+  /** So a button can be the trigger of a `Menu` (#45). */
+  ref?: Ref<HTMLButtonElement>;
 };
 
-export function Button({ kind = "secondary", size = "regular", icon, busy = false, label, className, disabled, children, type, ...props }: ButtonProps) {
+export function Button({ kind = "secondary", size = "regular", icon, busy = false, label, className, disabled, children, type, ref, ...props }: ButtonProps) {
   return (
     <button
+      ref={ref}
+      data-kind={kind}
       type={type ?? "button"}
       aria-label={label}
       aria-busy={busy || undefined}
