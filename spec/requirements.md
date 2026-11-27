@@ -339,3 +339,121 @@ Issue: #53
 Every page of a document can be turned to and zoomed, and a document can be read over the whole window. In "Prüfen" the owner can hide everything but the page and the question.
 
 Issue: #54
+
+## After the first look
+
+Faults and gaps found when 0.7.0 was read against these requirements, the concept and what 1.0 could do (2026-11-27).
+
+### FA-55 A page that is shown stands still
+
+A page of a document never flickers. It is asked from the core once per size, and the image shown stays until the next one is there.
+
+Issue: #55
+
+### FA-56 Scrolling through a document
+
+The pages of a document scroll by the wheel, one under the other, wherever a document is read, Strg with the wheel zooms, and a zoomed page is moved by dragging it.
+
+Issue: #56
+
+### FA-57 Every page and the right mark in a question
+
+A question of "Prüfen" reaches every page of its document, and the mark of a reading lies on its line, on its page only, at every zoom.
+
+Issue: #57
+
+### FA-58 A named booking opens
+
+Wherever the window names one booking, a click opens that booking in "Umsätze" with its detail, and the arrow leads back.
+
+Issue: #58
+
+### FA-59 Failures are told
+
+A command that fails or refuses says so at the place of the action. A view never shows the answer to a question it no longer asks, and no rule of the archive is derived from a sentence in the window.
+
+Issue: #59
+
+### FA-60 A fluid window
+
+No click waits for the core for more than 100 ms, measured on the owner's archive, also while an import runs and the model reads.
+
+Issue: #60
+
+### FA-61 Correcting at the document
+
+A value and the kind of a document are corrected in Dokumente, stored as the owner's with a way back, and the document is checked again. A waiting document leads to its question.
+
+Issue: #61
+
+### FA-62 Finding by content
+
+A document is found by the text of its pages, its sender, its number or its amount, narrowed by time and sorted as the owner chooses.
+
+Issue: #62
+
+### FA-63 Open invoices and bookings without a document
+
+The archive tells which invoices are paid, open or overdue, and which bookings have no document, decided by the core.
+
+Issue: #63
+
+### FA-64 Filters of the bookings
+
+"Umsätze" filters by a month or a range, by direction, by "without category" and by amount, and a figure of "Auswertungen" opens exactly the bookings it sums.
+
+Issue: #64
+
+### FA-65 Everything the evaluations know
+
+The parties of a year, Brutto, deductions and Netto of every month, and every savings hint with its bookings and "Ausblenden" stand in the window.
+
+Issue: #65
+
+### FA-66 Parties in the window
+
+The owner sees each party with its spellings and its category, renames it, joins two and parts a spelling, each with a way back.
+
+Issue: #66
+
+### FA-67 The model and the Papierkorb
+
+The owner chooses the model among those installed, is told what to do when Ollama or the model is missing, sets the workers of the intake and empties the Papierkorb.
+
+Issue: #67
+
+### FA-68 Money without a statement
+
+An account can be given its opening balance. Once the owner decided for it, accounts without statements take bookings by hand, which no statement can double.
+
+Issue: #68
+
+### FA-69 Out of the archive as files
+
+The entries and documents of a tax year, and any filtered list, are written as files into a folder the owner picks. The archive is unchanged and nothing is sent.
+
+Issue: #69
+
+### FA-70 A log and one instance
+
+The core writes a log without any value of the archive, and a second start shows the running window.
+
+Issue: #70
+
+### FA-71 Filling in the background
+
+When the owner switches it on, the app starts with the system and keeps reading folders and mailboxes while its window is closed.
+
+Issue: #71
+
+### FA-72 Handling documents
+
+A drop is shown, the lists are moved through by the keys, a document opens in the program of the system, and several documents or bookings take one action at once.
+
+Issue: #72
+
+### FA-73 What belongs together
+
+At a document or a booking one picture, drawn by the app from the links, shows everything joined to it with the rule of each join, and each part opens with a click.
+
+Issue: #73
