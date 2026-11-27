@@ -31,3 +31,28 @@ export function reviewPath(group: string | null, document: string | null, back: 
   if (document) path.push({ label: document });
   return path;
 }
+
+/** The key of "Der Reihe nach prüfen": every question of every reason, as one group (#47). */
+export const SEQUENCE = "*";
+
+/**
+ * The questions in the order "Der Reihe nach prüfen" goes: the reasons in their order, inside a reason its documents
+ * in theirs, each document once (a document waiting for two reasons is asked where it comes first).
+ */
+export function inSequence<Q extends { document: number }>(groups: { key: string }[], byKey: Record<string, Q[]>): Q[] {
+  const seen = new Set<number>();
+  const order: Q[] = [];
+  for (const group of groups) {
+    for (const question of byKey[group.key] ?? []) {
+      if (seen.has(question.document)) continue;
+      seen.add(question.document);
+      order.push(question);
+    }
+  }
+  return order;
+}
+
+/** "Frage n von m" in the top bar. */
+export function questionLine(index: number, count: number): string {
+  return `Frage ${index + 1} von ${count}`;
+}
