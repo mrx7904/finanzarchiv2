@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { type BookingPage, type BookingRow, type CategoryRow, commands } from "../bindings";
 import { useIntakeChanged } from "../intake/useIntakeChanged";
-import { BarActions, Button, DenseRow, Dialog, FilterMark, GroupHead, List, LoadingRows, Menu, SelectField, TextField } from "../ui";
+import { BarActions, Button, columnStyle, DenseRow, readFlag, useColumn, writeLayout, Dialog, FilterMark, GroupHead, List, LoadingRows, Menu, SelectField, TextField } from "../ui";
 import type { BookingJump } from "../navigation";
 import { BookingDetail } from "./BookingDetail";
 import { amountText, bookingFilter, bookingWho, formatIsoDay, monthGroups } from "./describe";
@@ -32,6 +32,8 @@ export function Bookings({ account, onOpenDocument, text: jumped = "", filter, o
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [chosen, setChosen] = useState<number | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [width, divider] = useColumn({ key: "bookings.detail", initial: 340, least: 280, most: 520, side: "right", label: "Breite der Buchung" });
+  const [detailShown, setDetailShown] = useState(() => readFlag("bookings.detail.shown", true));
   const text = jumped || search;
 
   const load = useCallback(
@@ -67,12 +69,25 @@ export function Bookings({ account, onOpenDocument, text: jumped = "", filter, o
 
   return (
     <>
+      <BarActions>
+        <Button
+          kind="plain"
+          aria-pressed={detailShown}
+          className={detailShown ? "bg-selected" : undefined}
+          onClick={() => {
+            setDetailShown(!detailShown);
+            writeLayout("bookings.detail.shown", detailShown ? false : null);
+          }}
+        >
+          Detail
+        </Button>
+      </BarActions>
       {account && (
         <BarActions>
           <Menu align="end" entries={[{ label: "Konto umbenennen …", onSelect: () => setRenaming(true) }]} trigger={(props) => <Button {...props} kind="plain" icon="more" label="Mehr" />} />
         </BarActions>
       )}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(300px,380px)] gap-4 px-6 pt-4 pb-6">
+      <div style={columnStyle("--detail", width)} className={`grid min-h-0 flex-1 gap-4 px-6 pt-4 pb-6 ${detailShown ? "grid-cols-[minmax(0,1fr)_var(--detail)]" : "grid-cols-1"}`}>
         <section aria-label="Umsätze" className="flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
           <div className="flex flex-col gap-2 border-b border-line p-3">
             <div className="grid grid-cols-[minmax(0,1fr)_180px_140px] gap-2">
@@ -124,7 +139,8 @@ export function Bookings({ account, onOpenDocument, text: jumped = "", filter, o
             )}
           </div>
         </section>
-        <section aria-label="Buchung" className="flex min-h-0 flex-col gap-3 overflow-y-auto rounded-panel bg-surface p-4 shadow-panel">
+        <section aria-label="Buchung" className={`${detailShown ? "flex" : "hidden"} relative min-h-0 flex-col gap-3 overflow-y-auto rounded-panel bg-surface p-4 shadow-panel`}>
+          {divider}
           {selected ? (
               <BookingDetail
                 key={selected.id}

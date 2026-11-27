@@ -17,7 +17,7 @@ import { initialNav, navFromUrl, navigate, type ViewId } from "./navigation";
 import { reviewPath } from "./review/keys";
 import { Review } from "./review/Review";
 import { Settings, settingsPages, type SettingsPageId } from "./settings/Settings";
-import { AppShell, Icon, Kbd, QuickSearch, SidebarRow, isMac, useQuickSearchKey, type IconName, type SearchEntry } from "./ui";
+import { AppShell, Icon, Kbd, QuickSearch, SidebarRow, applySize, isMac, readFlag, readSize, sizeStep, useQuickSearchKey, writeLayout, type IconName, type SearchEntry } from "./ui";
 
 // The showcase of the design system (#07), only in the dev build: the branch is removed from the release.
 const Showcase = import.meta.env.DEV ? lazy(() => import("./showcase/Showcase").then((module) => ({ default: module.Showcase }))) : null;
@@ -64,6 +64,33 @@ export function App() {
   const [searching, setSearching] = useState(false);
   // The focus of Prüfen (#54) hides the sidebar.
   const [focusing, setFocusing] = useState(false);
+  // The sidebar folded to a rail, and the size of the view (#53), kept on the computer.
+  const [rail, setRailHere] = useState(() => readFlag("rail", false));
+  const setRail = useCallback((on: boolean) => {
+    setRailHere(on);
+    writeLayout("rail", on ? true : null);
+  }, []);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setRailHere((on) => {
+          writeLayout("rail", on ? null : true);
+          return !on;
+        });
+        return;
+      }
+      const step = event.key === "+" || event.key === "=" ? "+" : event.key === "-" ? "-" : event.key === "0" ? "0" : null;
+      if (!step) return;
+      event.preventDefault();
+      const size = sizeStep(readSize(), step);
+      writeLayout("size", size === "mittel" ? null : size);
+      void applySize(size);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [findings, setFindings] = useState<Findings | null>(null);
   const countWaiting = () =>
     void commands.reviewGroups().then((result) => {
@@ -119,6 +146,20 @@ export function App() {
   return (
     <>
       <AppShell
+        rail={rail}
+        appName={
+          ready ? (
+            <button
+              type="button"
+              aria-label={rail ? "Seitenleiste ausklappen" : "Seitenleiste einklappen"}
+              title={`${rail ? "Ausklappen" : "Einklappen"} (${isMac ? "⌘" : "Strg"}+B)`}
+              onClick={() => setRail(!rail)}
+              className="flex size-7 items-center justify-center rounded-control text-fg-muted transition-quick hover:bg-hover hover:text-fg"
+            >
+              <Icon name={rail ? "chevronRight" : "back"} size={15} />
+            </button>
+          ) : undefined
+        }
         onBack={nav.back.length > 0 ? back : undefined}
         path={
           !ready
@@ -150,7 +191,12 @@ export function App() {
         }
         sidebar={
           ready && !(focusing && nav.view === "review") ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3">
+            <div className={`flex min-h-0 flex-1 flex-col gap-4 pb-3 ${rail ? "items-center px-2" : "px-3"}`}>
+              {rail ? (
+                <button type="button" aria-label="Suchen" title={`Suchen (${isMac ? "⌘" : "Strg"}+K)`} onClick={openSearch} className="flex size-8 items-center justify-center rounded-row bg-field text-fg-muted shadow-[inset_0_0_0_1px_var(--line)]">
+                  <Icon name="search" size={15} />
+                </button>
+              ) : (
               <button
                 type="button"
                 onClick={openSearch}
@@ -161,12 +207,14 @@ export function App() {
                 <Kbd>{isMac ? "⌘" : "Strg"}</Kbd>
                 <Kbd>K</Kbd>
               </button>
+              )}
               <nav aria-label="Ansichten" className="flex flex-1 flex-col gap-4">
                 {groups.map((group) => (
                   <ul key={group[0]?.id} className="flex flex-col gap-px">
                     {group.map((entry) => (
                       <li key={entry.id}>
                         <SidebarRow
+                          rail={rail}
                           label={entry.label}
                           icon={entry.icon}
                           count={entry.id === "review" ? waiting : undefined}
@@ -179,8 +227,8 @@ export function App() {
                 ))}
               </nav>
               <div className="flex flex-col gap-px">
-                <IntakeLine />
-                <SidebarRow label="Einstellungen" icon="gear" selected={nav.view === "settings"} onSelect={() => dispatch({ type: "go", view: "settings" })} />
+                <IntakeLine rail={rail} />
+                <SidebarRow rail={rail} label="Einstellungen" icon="gear" selected={nav.view === "settings"} onSelect={() => dispatch({ type: "go", view: "settings" })} />
               </div>
             </div>
           ) : undefined

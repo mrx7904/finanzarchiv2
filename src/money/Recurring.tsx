@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { type RecurringRow_Serialize as RecurringRow, commands } from "../bindings";
-import { Button, EmptyState, List, ListRow, LoadingRows, cn } from "../ui";
+import { Button, EmptyState, List, ListRow, LoadingRows, cn, columnStyle, useColumn } from "../ui";
 import { amountText, formatIsoDay } from "./describe";
 import { recurringState, recurringSums } from "./recurrence";
 
@@ -11,6 +11,8 @@ export function RecurringPage({ onBookings }: { onBookings: (text: string) => vo
   const [rows, setRows] = useState<RecurringRow[] | null>(null);
   const [doubled, setDoubled] = useState<Set<number>>(new Set());
   const [chosen, setChosen] = useState<string | null>(null);
+  const [width, divider] = useColumn({ key: "recurring.detail", initial: 340, least: 280, most: 520, side: "right", label: "Breite der Zahlung" });
+
   const reload = useCallback(async () => {
     const [listed, hints] = await Promise.all([commands.listRecurring(), commands.listHints()]);
     if (listed.status === "ok") setRows(listed.data);
@@ -31,7 +33,7 @@ export function RecurringPage({ onBookings }: { onBookings: (text: string) => vo
   }
   const sums = recurringSums(rows ?? []);
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(300px,380px)] gap-4 px-6 pt-4 pb-6">
+    <div style={columnStyle("--detail", width)} className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_var(--detail)] gap-4 px-6 pt-4 pb-6">
       <section aria-label="Wiederkehrend" className="flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
         <div className="flex items-baseline gap-4 border-b border-line p-4">
           <span className="text-[26px] leading-tight font-semibold tabular-nums">{amountText(sums.month, false)}</span>
@@ -59,7 +61,8 @@ export function RecurringPage({ onBookings }: { onBookings: (text: string) => vo
           )}
         </div>
       </section>
-      <section aria-label="Zahlung" className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-panel bg-surface p-4 shadow-panel">
+      <section aria-label="Zahlung" className="relative flex min-h-0 flex-col gap-4 overflow-y-auto rounded-panel bg-surface p-4 shadow-panel">
+        {divider}
         {selected ? (
           <>
             <div className="flex flex-col gap-0.5">

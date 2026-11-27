@@ -42,7 +42,7 @@ describe("the top bar", () => {
     expect(shell.match(/data-tauri-drag-region/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("is granted dragging and the three window buttons, beside the events of #04, and nothing else", () => {
+  it("is granted dragging, the three window buttons, the events of #04 and the zoom of #53, and nothing else", () => {
     expect(capability.windows).toEqual(["main"]);
     expect([...capability.permissions].sort()).toEqual(
       [
@@ -54,6 +54,8 @@ describe("the top bar", () => {
         "core:window:allow-toggle-maximize",
         "core:window:allow-is-maximized",
         "core:window:allow-close",
+        // The sizes Klein, Mittel and Groß as the zoom of the webview (#53).
+        "core:webview:allow-set-webview-zoom",
       ].sort(),
     );
   });

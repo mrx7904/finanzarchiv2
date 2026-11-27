@@ -2,7 +2,22 @@ import { cn } from "./motion";
 import { Icon, type IconName } from "./icons";
 
 /** A row of the sidebar: a view of the app with its icon and, when something waits there, a count. */
-export function SidebarRow({ label, icon, count, selected, onSelect }: { label: string; icon: IconName; count?: number; selected: boolean; onSelect: () => void }) {
+export function SidebarRow({ label, icon, count, selected, onSelect, rail = false }: { label: string; icon: IconName; count?: number; selected: boolean; onSelect: () => void; rail?: boolean }) {
+  if (rail) {
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        title={label}
+        aria-current={selected ? "page" : undefined}
+        onClick={onSelect}
+        className={cn("relative flex size-8 items-center justify-center rounded-row transition-quick", selected ? "bg-selected" : "hover:bg-hover")}
+      >
+        <Icon name={icon} size={16} className={selected ? "text-fg-accent" : "text-fg-muted"} />
+        {count !== undefined && count > 0 && <span className="absolute -top-0.5 -right-1 rounded-full bg-accent px-1 text-[10px] leading-[14px] font-semibold text-on-accent tabular-nums">{count}</span>}
+      </button>
+    );
+  }
   return (
     <button
       type="button"

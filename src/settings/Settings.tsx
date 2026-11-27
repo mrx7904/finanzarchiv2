@@ -7,7 +7,7 @@ import { FoldersPage } from "../documents/Folders";
 import { MailboxesPage } from "../documents/Mailboxes";
 import { TemplatesPage } from "../documents/Names";
 import { CategoriesPage } from "../money/Categories";
-import { Button, Icon, Segmented, cn, type IconName } from "../ui";
+import { Button, Icon, Segmented, applySize, cn, readSize, writeLayout, type IconName, type Size } from "../ui";
 import { Page, Panel } from "./Page";
 import { chooseTheme, storedTheme, type Theme } from "./theme";
 
@@ -151,6 +151,7 @@ function ArchivePage() {
 
 function LookPage() {
   const [theme, setTheme] = useState<Theme>(storedTheme());
+  const [size, setSize] = useState<Size>(readSize());
   return (
     <Page>
       <Panel>
@@ -166,6 +167,22 @@ function LookPage() {
               { value: "system", label: "Wie das System" },
               { value: "light", label: "Hell" },
               { value: "dark", label: "Dunkel" },
+            ]}
+          />
+        </Row>
+        <Row name="Größe">
+          <Segmented
+            label="Größe"
+            value={size}
+            onChange={(value) => {
+              setSize(value);
+              writeLayout("size", value === "mittel" ? null : value);
+              void applySize(value);
+            }}
+            options={[
+              { value: "klein", label: "Klein" },
+              { value: "mittel", label: "Mittel" },
+              { value: "gross", label: "Groß" },
             ]}
           />
         </Row>

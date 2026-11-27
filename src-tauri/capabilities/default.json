@@ -1,8 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "The main window. Each permission is named with the change that needs it (knowledge/conventions.md). core:event listen and unlisten since #04, so the window hears the result of an import by drop. Since the top bar of #07 is the title bar (knowledge/decision-app-shell.md): start-dragging and internal-toggle-maximize to drag the window by the bar and maximize it by a double click, minimize, toggle-maximize and close for the window buttons on Windows, is-maximized so the middle button shows Wiederherstellen.",
-  "windows": ["main"],
+  "description": "The main window. Each permission is named with the change that needs it (knowledge/conventions.md). core:event listen and unlisten since #04, so the window hears the result of an import by drop. Since the top bar of #07 is the title bar (knowledge/decision-app-shell.md): start-dragging and internal-toggle-maximize to drag the window by the bar and maximize it by a double click, minimize, toggle-maximize and close for the window buttons on Windows, is-maximized so the middle button shows Wiederherstellen. core:webview:allow-set-webview-zoom since #53, for the sizes Klein, Mittel and Groß as the zoom of the webview.",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:event:allow-listen",
     "core:event:allow-unlisten",
@@ -11,6 +13,7 @@
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-is-maximized",
-    "core:window:allow-close"
+    "core:window:allow-close",
+    "core:webview:allow-set-webview-zoom"
   ]
 }
