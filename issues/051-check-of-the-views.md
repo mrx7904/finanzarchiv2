@@ -11,13 +11,13 @@ The rules: [`knowledge/decision-views.md`](../knowledge/decision-views.md). 1.0 
 - [x] It runs the views of the app, not the drawn ones, against a core that is replaced at the typed boundary of #03. To be verified in this issue: how the generated bindings are replaced in a browser without Tauri.
 - [x] Its self-test plants one fault per rule and fails on each, as `scripts/check.mjs --self-test` does. Whether it joins the check of the repository or stays a command of its own is decided by its run time.
 - [x] Empty, loading and an error of every list are among the states it opens.
-- [ ] `src/entwurf/` is removed once every view it draws is built, and [`docs/entwurf-ansichten.md`](../docs/entwurf-ansichten.md) says so.
+- [x] `src/entwurf/` is removed once every view it draws is built, and [`docs/entwurf-ansichten.md`](../docs/entwurf-ansichten.md) says so.
 
 ## Out of scope
 
 - The look on the Mac: #08.
 
-**Status:** the check is built on 2026-11-27; `src/entwurf/` stays until Start, Auswertungen, Steuern and Chat are built (#38, #40, #41, #42).
+**Status:** done on 2026-11-27. The check is built, and `src/entwurf/` is removed once every view it drew was built (up to commit c4e63c9 in the history of git).
 
 - The bindings are replaced below themselves: `src/dev/mock.ts` sets `window.__TAURI_INTERNALS__`, which `invoke` of `@tauri-apps/api` calls, so the generated `commands` run unchanged against invented answers. It is loaded with `?mock` in the dev server only; `?mock=empty`, `?mock=error` and `?mock=slow` answer the lists empty, with an error, or after 1.5 s. A view is opened by the URL (`navFromUrl`, dev build only).
 - `scripts/check-views.mjs` starts its own dev server and the Edge or Chrome of the system headless and talks to it over the DevTools protocol with the WebSocket of Node, so no package is added. 14 views and sub pages × 3 sizes × light and dark, and 5 lists × empty, error and loading: 99 pages in 93 s.

@@ -132,7 +132,7 @@ One point departs from 1.0 knowingly. There the actions of a view stood in the t
 
 Seen by the owner as pictures on 2026-11-27: every view, sub page, state and dialog at 1440 × 900 in light, a part of them in dark, Start, Dokumente and Umsätze at 960 × 600, and the four menus. All of them were rendered in Chromium in light and dark.
 
-**The drawn views are the picture a view is built after, not its code.** They hold no state and call nothing. They stay until the last view is built and go with #51.
+**Removed on 2026-11-27 with #51**, once every view it drew was built; the drawing is in the history of git up to commit c4e63c9. **The drawn views are the picture a view is built after, not its code.** They hold no state and call nothing. They stay until the last view is built and go with #51.
 
 Auswertungen is drawn only as a place: its sections and that every figure opens its bookings. How its charts look is chosen by the owner from variants (#37), within rule 12.
 
