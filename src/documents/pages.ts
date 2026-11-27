@@ -1,4 +1,5 @@
 // Turning pages and zooming a document (#54): pure, for its tests.
+import { PAGE_WIDTHS } from "../bindings";
 
 /** "fit" is the whole page in its column; a number is percent of the column's width. */
 export type Zoom = "fit" | number;
@@ -20,8 +21,12 @@ export function zoomLabel(zoom: Zoom): string {
   return zoom === "fit" ? "Ganze Seite" : `${zoom} %`;
 }
 
-/** The width in pixels to ask the core for, so the page stays sharp on the screen it is shown on. */
+/**
+ * The width in pixels to ask the core for, so the page stays sharp on the screen it is shown on. It is one of the
+ * widths the core renders (`previews::WIDTHS`), so a column a few pixels narrower or wider asks nothing new (#55).
+ */
 export function requestWidth(column: number, zoom: Zoom, pixelRatio: number): number {
   const shown = zoom === "fit" ? column : (column * zoom) / 100;
-  return Math.max(160, Math.round(shown * Math.max(1, pixelRatio)));
+  const wanted = Math.round(shown * Math.max(1, pixelRatio));
+  return PAGE_WIDTHS.find((width) => width >= wanted) ?? PAGE_WIDTHS[PAGE_WIDTHS.length - 1] ?? wanted;
 }

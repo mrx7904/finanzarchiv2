@@ -218,6 +218,8 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             mail::read_mail_now,
         ])
         .events(tauri_specta::collect_events![documents::IntakeChanged])
+        // The widths the core renders a page at, so the window asks only for those (#55).
+        .constant("PAGE_WIDTHS", crate::previews::WIDTHS)
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
 

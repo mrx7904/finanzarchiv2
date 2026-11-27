@@ -5,7 +5,8 @@ import { type Zoom, pageStep, requestWidth, zoomLabel, zoomStep } from "./pages"
 
 // The page of a document with its tools under it (#54): the page and the count with back and forward, smaller and
 // larger from "Ganze Seite", and "Groß lesen". A document of one page shows no paging. The page is asked from the core
-// at the width it is shown, so it stays sharp at 200 %. `overlay` draws on the page, such as the marked place of a
+// at the width it is shown, so it stays sharp at 200 %. The column keeps the room of its scroll bar, so a page that
+// grows higher than its box does not narrow it and ask again (#55). `overlay` draws on the page, such as the marked place of a
 // question in Prüfen.
 
 function useWidth() {
@@ -42,7 +43,7 @@ export function PageView({ document, name, pages, page: start = 1, onLarge, over
   }, [document, start, startZoom]);
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-2">
-      <div ref={ref} className={cn("relative min-h-0 w-full flex-1", zoom === "fit" ? "flex items-center justify-center overflow-hidden" : "overflow-auto")}>
+      <div ref={ref} className={cn("relative min-h-0 w-full flex-1", zoom === "fit" ? "flex items-center justify-center overflow-hidden" : "overflow-auto [scrollbar-gutter:stable]")}>
         <Page document={document} name={name} page={page} zoom={zoom} column={width} overlay={overlay} />
       </div>
       <PageTools page={page} pages={pages} zoom={zoom} onPage={setPage} onZoom={setZoom} onLarge={onLarge} />
@@ -157,7 +158,7 @@ export function ReadLarge({ document, name, pages, onClose }: { document: number
             ))}
           </nav>
         )}
-        <div ref={ref} className={cn("min-h-0 flex-1 p-6", zoom === "fit" ? "flex items-center justify-center overflow-hidden" : "overflow-auto")}>
+        <div ref={ref} className={cn("min-h-0 flex-1 p-6", zoom === "fit" ? "flex items-center justify-center overflow-hidden" : "overflow-auto [scrollbar-gutter:stable]")}>
           <Page document={document} name={name} page={page} zoom={zoom} column={width - 48} />
         </div>
       </div>

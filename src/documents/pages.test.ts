@@ -19,8 +19,8 @@ describe("turning pages and zooming (#54)", () => {
   });
 
   it("asks the core for the width the page is shown at", () => {
-    expect(requestWidth(700, "fit", 1.5)).toBe(1050);
-    expect(requestWidth(700, 200, 1.5)).toBe(2100);
+    expect(requestWidth(700, "fit", 1.5)).toBe(1280);
+    expect(requestWidth(700, 200, 1.5)).toBe(2560);
     expect(requestWidth(40, "fit", 1)).toBe(160);
   });
 });
