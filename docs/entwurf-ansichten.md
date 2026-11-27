@@ -2,7 +2,9 @@
 
 **Stand:** 2026-11-27 · **Entwurf, nichts davon ist entschieden.** Der Besitzer geht ihn durch, ändert und wählt. Was bleibt, wird zu einer Entscheidung in `knowledge/` und zu Issues, nach denen das Frontend zusammengeführt wird.
 
-Der Entwurf hat zwei Teile. Die Landkarte sagt, welche Ansichten es gibt, was in welche gehört und wie man von einer zur anderen kommt. Die Regeln sagen, was in jeder Ansicht gleich ist. Bilder in echter Größe folgen danach, je Ansicht in hell und dunkel.
+Der Entwurf hat zwei Teile. Die Landkarte sagt, welche Ansichten es gibt, was in welche gehört und wie man von einer zur anderen kommt. Die Regeln sagen, was in jeder Ansicht gleich ist.
+
+**Die Ansichten als Bilder:** Jede Ansicht der Landkarte ist in `src/entwurf/` aus den Bausteinen von `src/ui/` gezeichnet, mit erfundenen Daten und ohne den Kern. `npm run dev` starten und `http://localhost:1420/src/entwurf/index.html?v=start&t=dark` öffnen. `v` ist eine von `start`, `pruefen`, `dokumente`, `konten`, `umsaetze`, `auswertungen`, `steuern`, `chat`, `einstellungen`, `t` ist `light` oder `dark`. Die Seite gehört nicht zur App und nicht zum Release.
 
 Grundlage sind der Look Graphit und die Bausteine aus `src/ui/` ([`decision-ui-libraries.md`](../knowledge/decision-ui-libraries.md)), die Kopfleiste als Titelleiste ([`decision-app-shell.md`](../knowledge/decision-app-shell.md)), die Anforderungen bis FA-46 ([`requirements.md`](../spec/requirements.md)) und der Satz aus der [Analyse von 1.0](analyse-finanzarchiv-1.0.md), Abschnitt 3.10: weniger und klarere Ansichten.
 
@@ -168,6 +170,8 @@ Stufe 6 (Updates, Profile, Erfolge, Stile, Feedback) bekommt hier ihre Seiten, k
 
 ## Was 1.0 schon gelernt hat
 
+1.0 ist hier eine Quelle von Lehren, keine Grenze (der Besitzer, 2026-11-27: "Lass dich nicht zu weit von Version 1.0 eingrenzen"). Wo 2.0 etwas besser lösen kann, tut es das.
+
 Aus `decision-app-layout.md` von 1.0. Jede Zeile war dort ein Wunsch des Besitzers an die laufende App, und jede ist oben schon Regel, damit sie in 2.0 nicht nachträglich kommt.
 
 | Was in 1.0 geschah | Wo es hier steht |
@@ -188,6 +192,8 @@ Aus `decision-app-layout.md` von 1.0. Jede Zeile war dort ein Wunsch des Besitze
 Ein Punkt weicht bewusst ab. In 1.0 standen die Aktionen ein paar Stunden lang in der oberen Leiste, und der Besitzer fand die Knöpfe dort zu groß und nur zum Füllen hingestellt. Für 2.0 hat der Besitzer am 2026-11-25 entschieden, dass die Kopfleiste Seitentitel und Knöpfe trägt ([`decision-app-shell.md`](../knowledge/decision-app-shell.md)). Der Entwurf folgt der neueren Entscheidung und nimmt aus 1.0 die Lehre mit: Die Knöpfe passen in ihrer Größe zur Leiste, und keiner steht dort, um sie zu füllen (Regel 2).
 
 ## Offene Fragen an den Besitzer
+
+Der Besitzer am 2026-11-27 zu den Vorschlägen: "gefallen mir aber soweit". Die Bilder sind deshalb mit dem jeweiligen Vorschlag gezeichnet. Entschieden ist eine Frage erst, wenn der Besitzer die Ansicht dazu gesehen hat.
 
 1. **"Konten" oder "Geld"?** Die Analyse von 1.0 nennt die Ansicht "Geld", gebaut heißt sie "Konten". Der Entwurf bleibt bei "Konten", weil die Ansicht mit den Konten beginnt.
 2. **Bestellungen unter "Dokumente"?** Eine Bestellung ist kein Dokument, sie wartet auf eines. Die andere Möglichkeit ist eine Seite unter "Konten", neben den PayPal-Zahlungen.
