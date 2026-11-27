@@ -26,12 +26,13 @@ const VIEWS = [
   "view=accounts",
   "view=accounts&bookings=1",
   "view=accounts&bookings=all",
+  "view=accounts&recurring",
   ...["ordner", "postfaecher", "namen", "kategorien", "modell", "archiv", "darstellung", "ueber"].map((page) => `view=settings&page=${page}`),
 ];
 const LISTS = ["view=documents", "view=documents&orders", "view=review", "view=accounts", "view=accounts&bookings=all"];
 const STATES = ["empty", "error", "slow"];
-/** The words of rule 11, and "ohne Bank" that #48 added for an account without a balance of its bank. */
-const WORDS = ["prüfen", "doppelt?", "fehlt", "bestätigt", "stimmt", "vollständig", "gelesen", "läuft", "beendet", "ohne Bank"];
+/** The words of rule 11, "ohne Bank" that #48 added for an account without a balance of its bank, "gestiegen" of #52. */
+const WORDS = ["prüfen", "doppelt?", "fehlt", "bestätigt", "stimmt", "vollständig", "gelesen", "läuft", "beendet", "ohne Bank", "gestiegen"];
 
 /** Runs in the page: every rule, each finding one sentence. */
 const RULES = `(() => {

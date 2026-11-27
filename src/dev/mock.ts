@@ -74,6 +74,12 @@ const answers: Record<string, (args: Args) => unknown> = {
   },
   balances_by_month: () => ({ accounts: [], total: [{ day: "2026-03-31", cents: 234567, text: "2.345,67 €", byBank: false, differenceText: null }] }),
   evaluation_years: () => [2026, 2025],
+  list_recurring: () => [
+    { party: 11, name: "Beispiel Musik", incoming: false, rhythm: "monatlich", since: "2025-04-05", last: "2026-03-05", next: "2026-04-05", count: 12, cents: -1199, text: "11,99 €", perYearCents: -14388, perYearText: "-143,88 €", change: "seit August 2025 2,00 € mehr", ended: false, category: "Abos und Medien", bookings: [21, 22], history: ["2025-04-05", "2025-05-05", "2025-06-05", "2025-07-05", "2025-08-05", "2025-09-05", "2025-10-05", "2025-11-05", "2025-12-05", "2026-01-05", "2026-02-05", "2026-03-05"].map((day, at) => ({ day, cents: at < 4 ? -999 : -1199, text: at < 4 ? "9,99 €" : "11,99 €" })) },
+    { party: 12, name: "Wohnbau Musterstadt eG", incoming: false, rhythm: "monatlich", since: "2024-01-03", last: "2026-03-03", next: "2026-04-03", count: 27, cents: -78000, text: "780,00 €", perYearCents: -936000, perYearText: "-9.360,00 €", change: null, ended: false, category: "Miete und Wohnen", bookings: [31], history: [{ day: "2026-03-03", cents: -78000, text: "780,00 €" }] },
+    { party: 13, name: "Beispiel Film", incoming: false, rhythm: "monatlich", since: "2025-01-20", last: "2025-06-20", next: null, count: 6, cents: -1399, text: "13,99 €", perYearCents: -16788, perYearText: "-167,88 €", change: null, ended: true, category: "Abos und Medien", bookings: [41], history: [] },
+  ],
+  list_hints: () => [],
   rename_account: () => null,
   list_folders: () => [{ id: 1, path: "D:\\Beispiel\\Eingang", isInbox: true, problem: null }],
   downloads_state: () => ({ on: false, taken: 0, leftOut: 0, lying: 0 }),

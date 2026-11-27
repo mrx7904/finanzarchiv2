@@ -929,6 +929,14 @@ export type Queued = {
 	files: number,
 };
 
+/**  One payment of a recurring payment, for its history. */
+export type RecurringPoint = {
+	/**  `YYYY-MM-DD`. */
+	day: string,
+	cents: number,
+	text: string,
+};
+
 /**  A recurring payment as the window takes it. */
 export type RecurringRow = RecurringRow_Serialize | RecurringRow_Deserialize;
 
@@ -950,6 +958,12 @@ export type RecurringRow_Deserialize = {
 	/**  "seit März 2026 2,00 € mehr". */
 	change?: string | null,
 	ended: boolean,
+	/**  The category of its party, when it has one (#52). */
+	category?: string | null,
+	/**  The bookings of the run, oldest first (#52). */
+	bookings: number[],
+	/**  The last twelve payments: day and amount (#52). */
+	history: RecurringPoint[],
 };
 
 /**  A recurring payment as the window takes it. */
@@ -970,6 +984,12 @@ export type RecurringRow_Serialize = {
 	/**  "seit März 2026 2,00 € mehr". */
 	change: string | null,
 	ended: boolean,
+	/**  The category of its party, when it has one (#52). */
+	category: string | null,
+	/**  The bookings of the run, oldest first (#52). */
+	bookings: number[],
+	/**  The last twelve payments: day and amount (#52). */
+	history: RecurringPoint[],
 };
 
 /**  What the owner answered. */

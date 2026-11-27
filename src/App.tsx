@@ -7,6 +7,7 @@ import { IntakeLine } from "./intake/IntakeLine";
 import { useIntakeChanged } from "./intake/useIntakeChanged";
 import { Accounts } from "./money/Accounts";
 import { Bookings } from "./money/Bookings";
+import { RecurringPage } from "./money/Recurring";
 import { moneyPath } from "./money/describe";
 import { initialNav, navFromUrl, navigate, type ViewId } from "./navigation";
 import { reviewPath } from "./review/keys";
@@ -113,7 +114,9 @@ export function App() {
                   toStart: () => dispatch({ type: "set", spot: { view: "review", place: { group: null, question: null } } }),
                   toGroup: () => dispatch({ type: "set", spot: { view: "review", place: { group: review.group, question: null } } }),
                 })
-              : nav.view === "accounts"
+              : nav.view === "accounts" && accounts.recurring
+                ? [{ label: "Konten", onSelect: () => dispatch({ type: "set", spot: { view: "accounts", place: { bookingsOf: undefined, text: "" } } }) }, { label: "Wiederkehrend" }]
+                : nav.view === "accounts"
                 ? moneyPath(accounts.bookingsOf?.name ?? null, accounts.bookingsOf !== undefined, {
                     toAccounts: () => dispatch({ type: "set", spot: { view: "accounts", place: { bookingsOf: undefined, text: "" } } }),
                   })
@@ -179,8 +182,11 @@ export function App() {
           </main>
         ) : (
           <>
-            {accounts.bookingsOf === undefined ? (
+            {accounts.recurring ? (
+              <RecurringPage onBookings={(text) => dispatch({ type: "jump", to: { view: "accounts", place: { bookingsOf: null, text } } })} />
+            ) : accounts.bookingsOf === undefined ? (
               <Accounts
+                onRecurring={() => dispatch({ type: "set", spot: { view: "accounts", place: { bookingsOf: undefined, text: "", recurring: true } } })}
                 onOpen={(account) =>
                   dispatch({ type: "set", spot: { view: "accounts", place: { bookingsOf: account ? { id: account.id, name: account.name } : null, text: "" } } })
                 }

@@ -11,7 +11,7 @@ export type Places = {
   /** The document chosen in Dokumente, and whether its page "Bestellungen" is open. */
   documents: { focus: number | null; orders: boolean };
   /** In Konten: the account whose bookings are open, all of them (null), or none open (undefined); and a text a jump set. */
-  accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string };
+  accounts: { bookingsOf: { id: number; name: string } | null | undefined; text: string; recurring?: boolean };
   /** The page of Einstellungen. */
   settings: { page: SettingsPageId };
 };
@@ -83,7 +83,7 @@ export function navFromUrl(nav: Nav, search: string): Nav {
   if (view === "documents") places.documents = { focus: null, orders: params.has("orders") };
   if (view === "accounts") {
     const bookings = params.get("bookings");
-    places.accounts = { bookingsOf: bookings === null ? undefined : bookings === "all" ? null : { id: Number(bookings), name: "Konto" }, text: "" };
+    places.accounts = { bookingsOf: bookings === null ? undefined : bookings === "all" ? null : { id: Number(bookings), name: "Konto" }, text: "", recurring: params.has("recurring") };
   }
   if (view === "settings") places.settings = { page: (params.get("page") ?? "ordner") as Places["settings"]["page"] };
   return { ...nav, view, places };
