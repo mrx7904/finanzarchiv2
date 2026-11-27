@@ -26,6 +26,7 @@ pub mod previews;
 pub mod readers;
 pub mod recurring;
 pub mod review;
+pub mod salary;
 pub mod statements;
 #[cfg(test)]
 mod testing;
