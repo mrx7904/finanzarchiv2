@@ -58,7 +58,7 @@ The numbers are those of the draft, so a review can name one.
 
 **States and amounts**
 
-11. One vocabulary of states, the same everywhere and of one width: "prüfen" (amber, waits for the owner), "doppelt?" (red), "fehlt" (red, something expected is not there), "bestätigt", "stimmt" and "vollständig" (green), "gelesen", "läuft" and "beendet" (gray). A new word needs a reason in the change that adds it.
+11. One vocabulary of states, the same everywhere and of one width: "prüfen" (amber, waits for the owner), "doppelt?" (red), "fehlt" (red, something expected is not there), "bestätigt", "stimmt" and "vollständig" (green), "gelesen", "läuft" and "beendet" (gray). A new word needs a reason in the change that adds it. Added since: "ohne Bank" (#48, an account without a balance of its bank), "gestiegen" (#52, a recurring payment whose amount rose).
 12. Color stands only for a state. No piece, no chart and no category gets a color for decoration. Charts are gray, the chosen bar is the accent.
 13. Amounts stand right-aligned in tabular digits, in German notation with "€". Money in carries a "+", money out no sign. Money in is not green. This changes `src/money/Bookings.tsx`, where it is green today.
 

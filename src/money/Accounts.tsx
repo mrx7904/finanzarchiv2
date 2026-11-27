@@ -2,12 +2,21 @@ import { useCallback, useEffect, useState } from "react";
 import { type AccountRow, commands } from "../bindings";
 import { useIntakeChanged } from "../intake/useIntakeChanged";
 import { BarActions, Button, EmptyState, List, ListRow } from "../ui";
-import { accountState, bankLine } from "./describe";
+import { accountState, amountText, bankLine } from "./describe";
+import { recurringSums } from "./recurrence";
 
 // "Konten" as designed (#48, knowledge/decision-views.md): the sum over all accounts as the one large figure, how
 // many agree with their bank, then every account with its balance, the bank's balance with its day and "stimmt",
 // "prüfen" or "ohne Bank". The top bar holds "Kontoauszug importieren" and "Alle Umsätze".
-export function Accounts({ onOpen }: { onOpen: (account: AccountRow | null) => void }) {
+export function Accounts({ onOpen, onRecurring }: { onOpen: (account: AccountRow | null) => void; onRecurring?: () => void }) {
+  const [recurring, setRecurring] = useState<{ count: number; month: number } | null>(null);
+  useEffect(() => {
+    void commands.listRecurring().then((result) => {
+      if (result.status !== "ok") return;
+      const sums = recurringSums(result.data);
+      setRecurring({ count: sums.running, month: sums.month });
+    });
+  }, []);
   const [accounts, setAccounts] = useState<AccountRow[] | null>(null);
   const [total, setTotal] = useState<{ text: string; day: string } | null>(null);
   const [queued, setQueued] = useState<string | null>(null);
@@ -66,6 +75,13 @@ export function Accounts({ onOpen }: { onOpen: (account: AccountRow | null) => v
                 ))}
               </List>
             </section>
+            {onRecurring && recurring && recurring.count > 0 && (
+              <section aria-label="Wiederkehrend" className="rounded-panel bg-surface shadow-panel">
+                <List label="Wiederkehrend">
+                  <ListRow title="Wiederkehrend" detail={`${recurring.count} laufend`} figure={`${amountText(recurring.month, false)} im Monat`} onSelect={onRecurring} />
+                </List>
+              </section>
+            )}
           </>
         )}
       </div>

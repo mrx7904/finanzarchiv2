@@ -32,14 +32,59 @@ pub struct RecurringRow {
     /// "seit März 2026 2,00 € mehr".
     pub change: Option<String>,
     pub ended: bool,
+    /// The category of its party, when it has one (#52).
+    pub category: Option<String>,
+    /// The bookings of the run, oldest first (#52).
+    pub bookings: Vec<u32>,
+    /// The last twelve payments: day and amount (#52).
+    pub history: Vec<RecurringPoint>,
+}
+
+/// One payment of a recurring payment, for its history.
+#[derive(Debug, Clone, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecurringPoint {
+    /// `YYYY-MM-DD`.
+    pub day: String,
+    pub cents: i32,
+    pub text: String,
 }
 
 fn cents32(cents: i64) -> Result<i32, CommandError> {
     i32::try_from(cents).map_err(|_| CommandError::internal())
 }
 
-pub fn row(found: &Recurring) -> Result<RecurringRow, CommandError> {
+pub fn row(conn: &rusqlite::Connection, found: &Recurring) -> Result<RecurringRow, CommandError> {
+    let category: Option<String> = conn
+        .query_row(
+            "SELECT c.name FROM parties p JOIN categories c ON c.id = p.category_id WHERE p.id = ?1",
+            [found.party],
+            |row| row.get(0),
+        )
+        .ok();
+    let mut history = Vec::new();
+    for id in found.bookings.iter().rev().take(12).rev() {
+        let (day, cents): (String, i64) = conn
+            .query_row(
+                "SELECT day, amount_cents FROM bookings WHERE id = ?1",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(|_| CommandError::internal())?;
+        history.push(RecurringPoint {
+            day,
+            cents: cents32(cents)?,
+            text: Cents::new(cents.abs()).to_string(),
+        });
+    }
     Ok(RecurringRow {
+        category,
+        bookings: found
+            .bookings
+            .iter()
+            .map(|id| u32::try_from(*id).map_err(|_| CommandError::internal()))
+            .collect::<Result<_, _>>()?,
+        history,
         party: u32::try_from(found.party).map_err(|_| CommandError::internal())?,
         name: found.name.clone(),
         incoming: found.incoming,
@@ -84,7 +129,7 @@ pub fn list_recurring(
         recurring::found(conn, today())
             .map_err(|_| CommandError::internal())?
             .iter()
-            .map(row)
+            .map(|found| row(conn, found))
             .collect()
     })
 }
