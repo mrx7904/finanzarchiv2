@@ -457,3 +457,9 @@ Issue: #72
 At a document or a booking one picture, drawn by the app from the links, shows everything joined to it with the rule of each join, and each part opens with a click.
 
 Issue: #73
+
+### FA-74 Choosing from a list in the look of the app
+
+The opened list of a filter or a choosing field is a piece of the design system, in light and dark, with the keys and the roles of a native field.
+
+Issue: #74
