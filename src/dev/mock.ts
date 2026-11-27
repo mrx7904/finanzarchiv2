@@ -40,7 +40,11 @@ const orders = [
 
 const answers: Record<string, (args: Args) => unknown> = {
   app_status: () => ({ version: "0.0.0-dev", archive: { state: "ready" } }),
-  review_groups: () => [{ key: "values", label: "Werte prüfen", count: 1 }],
+  review_groups: () => [{ key: "check:agree", label: "Werte stimmen nicht überein", count: 1 }, { key: "check:kind", label: "Art unklar", count: 1 }],
+  review_questions: (args) =>
+    args?.key === "check:kind"
+      ? [{ document: 5, key: "check:kind", name: "Gehaltsabrechnung 2026-02", text: "Was ist das für ein Dokument?", page: 1, readings: [] }]
+      : [{ document: 2, key: "check:agree", name: "Quittung Beispiel Markt 2026-03-11", text: "Ist das Brutto 34,12 €?", page: 1, readings: [{ reader: "Code", printed: "34,12", shown: "34,12 €", mark: [0.08, 0.46, 0.5, 0.03] }, { reader: "Modell", printed: "34,21", shown: "34,21 €", mark: null }] }],
   intake_overview: () => ({ paused: false, open: 2, running: [{ id: 9, name: "Rechnung_Nov.pdf", stage: "text", error: null }, { id: 10, name: "Scan_0032.pdf", stage: "queued", error: null }], failed: [], addedToday: 3 }),
   list_documents: () => documents,
   page_image: (args) => {

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { type ReviewAnswer, type ReviewGroup, type ReviewQuestion, commands } from "../bindings";
 import { PageImage } from "../documents/PageImage";
 import { kindLabel } from "../documents/describe";
-import { Button, Dialog, EmptyState, List, ListRow, TextField } from "../ui";
-import { reviewKey } from "./keys";
+import { BarActions, Button, Dialog, EmptyState, List, ListRow, TextField } from "../ui";
+import { SEQUENCE, inSequence, questionLine, reviewKey } from "./keys";
 
 /** Where "Prüfen" stands: the group chosen and the question open, both lifted into the app for the path. */
 export type ReviewAt = { group: ReviewGroup | null; question: ReviewQuestion | null };
@@ -16,7 +16,9 @@ function markStyle(mark: (number | null)[]) {
 
 const KINDS = ["invoice", "receipt", "payslip", "statement", "other"];
 
-// "Prüfen" of #17: what waits, grouped by its first reason, as questions with the page beside.
+// "Prüfen" of #17, as designed in #47 (knowledge/decision-views.md): the reasons as an overview with "Der Reihe nach
+// prüfen" in the top bar, the documents of a reason with the page of the chosen one, and the question with its page at
+// the left and the question as a large sentence at the right. Every answer of #17 is kept, and so are its keys.
 export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: ReviewAt) => void; onAnswered: () => void }) {
   const [groups, setGroups] = useState<ReviewGroup[]>([]);
   const [questions, setQuestions] = useState<ReviewQuestion[]>([]);
@@ -32,10 +34,35 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
     if (result.status === "ok") setGroups(result.data);
   }, []);
   const loadQuestions = useCallback(async (key: string) => {
+    if (key === SEQUENCE) {
+      // "Der Reihe nach prüfen": every question of every reason, each document once.
+      const listed = await commands.reviewGroups();
+      if (listed.status !== "ok") return [];
+      const byKey: Record<string, ReviewQuestion[]> = {};
+      for (const group of listed.data) {
+        const result = await commands.reviewQuestions(group.key);
+        if (result.status === "ok") byKey[group.key] = result.data;
+      }
+      const all = inSequence(listed.data, byKey);
+      setQuestions(all);
+      return all;
+    }
     const result = await commands.reviewQuestions(key);
     if (result.status === "ok") setQuestions(result.data);
     return result.status === "ok" ? result.data : [];
   }, []);
+  const [filed, setFiled] = useState<number | null>(null);
+  useEffect(() => {
+    if (groups.length > 0) return;
+    void commands.listDocuments().then((result) => {
+      if (result.status === "ok") setFiled(result.data.filter((row) => row.state === "filed").length);
+    });
+  }, [groups.length]);
+  const startSequence = async () => {
+    const all = await loadQuestions(SEQUENCE);
+    const sequence: ReviewGroup = { key: SEQUENCE, label: "Der Reihe nach", count: all.length };
+    onAt({ group: sequence, question: all[0] ?? null });
+  };
 
   useEffect(() => {
     void loadGroups();
@@ -104,9 +131,19 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
     const isDuplicate = question.key === "check:duplicate";
     const isUndone = question.key === "check:undone";
     const isLink = question.key === "link:choose";
+    const at_ = questions.findIndex((other) => other.document === question.document && other.key === question.key);
+    const nextQuestion = questions.find((other, number) => number > at_ && other.document !== question.document) ?? null;
     return (
-      <section className="grid w-full max-w-5xl grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-4">
-        <div className="relative overflow-hidden rounded-panel shadow-panel">
+      <>
+      <BarActions>
+        {at_ >= 0 && <span className="text-small text-fg-muted tabular-nums">{questionLine(at_, questions.length)}</span>}
+        <Button kind="plain" disabled={!nextQuestion} onClick={() => open(nextQuestion ?? undefined)}>
+          Überspringen
+        </Button>
+      </BarActions>
+      <section className="grid min-h-0 w-full flex-1 grid-cols-[minmax(0,1fr)_minmax(320px,440px)] gap-4 px-6 pt-4 pb-6">
+        <div className="min-h-0 overflow-y-auto rounded-panel bg-surface p-3 shadow-panel">
+        <div className="relative overflow-hidden rounded-control">
           <PageImage document={question.document} page={question.page} width={1280} label={`Seite ${question.page} von ${question.name}`} />
           {first?.mark ? (
             <span
@@ -116,8 +153,10 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
             />
           ) : null}
         </div>
-        <div className="flex flex-col gap-3 rounded-panel bg-surface p-4 shadow-panel">
-          <p className="text-body font-medium">{question.text}</p>
+        </div>
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-panel bg-surface p-5 shadow-panel">
+          <span className="truncate text-small text-fg-muted">{question.name}</span>
+          <p className="text-[22px] leading-snug font-semibold">{question.text}</p>
           {first && !isLink ? <p className="text-small text-fg-muted">Gelesen von {question.readings.map((reading) => `${reading.reader}: ${reading.shown}`).join(", ")}</p> : null}
           {isKind ? (
             <div className="flex flex-wrap gap-2">
@@ -213,34 +252,57 @@ export function Review({ at, onAt, onAnswered }: { at: ReviewAt; onAt: (at: Revi
               </>
             }
           />
+          {nextQuestion && <span className="mt-auto border-t border-line pt-3 text-small text-fg-muted">Als Nächstes: {nextQuestion.name}</span>}
+        </div>
+      </section>
+      </>
+    );
+  }
+
+  if (at.group) {
+    const chosen = questions[index] ?? null;
+    return (
+      <section className="grid min-h-0 w-full flex-1 grid-cols-[minmax(320px,440px)_minmax(0,1fr)] gap-4 px-6 pt-4 pb-6">
+        <div className="min-h-0 overflow-y-auto rounded-panel bg-surface shadow-panel">
+          <List label={at.group.label}>
+            {questions.map((question, number) => (
+              <ListRow key={`${question.document}-${question.key}`} title={question.name} detail={question.text} selected={number === index} onSelect={() => (number === index ? open(question) : setIndex(number))} />
+            ))}
+          </List>
+        </div>
+        <div className="flex min-h-0 items-center justify-center overflow-hidden rounded-panel bg-surface p-4 shadow-panel">
+          {chosen ? <PageImage key={chosen.document} document={chosen.document} page={chosen.page} width={900} label={`Seite ${chosen.page} von ${chosen.name}`} fit /> : null}
         </div>
       </section>
     );
   }
 
-  if (at.group) {
-    return (
-      <section className="flex w-full max-w-3xl flex-col gap-3">
-        <List label={at.group.label}>
-          {questions.map((question, number) => (
-            <ListRow key={question.document} title={question.name} detail={question.text} selected={number === index} onSelect={() => open(question)} />
-          ))}
-        </List>
-      </section>
-    );
-  }
-
+  const waiting = groups.reduce((sum, group) => sum + group.count, 0);
   return (
-    <section className="flex w-full max-w-3xl flex-col gap-3">
-      {groups.length === 0 ? (
-        <EmptyState icon="check" title="Nichts zu prüfen" hint="Alles, was hereinkam, ist abgelegt." />
-      ) : (
-        <List label="Gründe">
-          {groups.map((group, number) => (
-            <ListRow key={group.key} title={group.label} figure={String(group.count)} selected={number === index} onSelect={() => onAt({ group, question: null })} />
-          ))}
-        </List>
-      )}
-    </section>
+    <>
+      <BarActions>
+        <Button kind="primary" disabled={groups.length === 0} onClick={() => void startSequence()}>
+          Der Reihe nach prüfen
+        </Button>
+      </BarActions>
+      <section className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 overflow-y-auto px-6 pt-6 pb-8">
+        {groups.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center py-16">
+            <EmptyState icon="check" title="Nichts zu prüfen" hint={filed !== null ? `${filed.toLocaleString("de-DE")} Dokumente sind abgelegt.` : ""} />
+          </div>
+        ) : (
+          <>
+            <p className="text-heading font-semibold">{waiting === 1 ? "1 Frage wartet" : `${waiting} Fragen warten`}</p>
+            <div className="rounded-panel bg-surface shadow-panel">
+              <List label="Gründe">
+                {groups.map((group, number) => (
+                  <ListRow key={group.key} title={group.label} figure={String(group.count)} selected={number === index} onSelect={() => onAt({ group, question: null })} />
+                ))}
+              </List>
+            </div>
+          </>
+        )}
+      </section>
+    </>
   );
 }

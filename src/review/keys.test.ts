@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { reviewKey, reviewPath } from "./keys";
+import { inSequence, questionLine, reviewKey, reviewPath } from "./keys";
 
 const list = { count: 3, index: 1, open: false, readings: 0 };
 
@@ -33,5 +33,22 @@ describe("the keys of Prüfen", () => {
     expect(back.toGroup).toHaveBeenCalledOnce();
     expect(path[2]?.onSelect).toBeUndefined();
     expect(reviewPath(null, null, back)).toEqual([{ label: "Prüfen", onSelect: undefined }]);
+  });
+});
+
+describe("Der Reihe nach prüfen (#47)", () => {
+  it("goes through every reason in its order and asks each document once", () => {
+    const groups = [{ key: "check:kind" }, { key: "check:agree" }, { key: "link:choose" }];
+    const order = inSequence(groups, {
+      "check:agree": [{ document: 3 }, { document: 1 }],
+      "check:kind": [{ document: 1 }, { document: 2 }],
+      "link:choose": [{ document: 4 }],
+    });
+    expect(order.map((question) => question.document)).toEqual([1, 2, 3, 4]);
+    expect(inSequence([], {})).toEqual([]);
+  });
+
+  it("names the question it stands at", () => {
+    expect(questionLine(0, 12)).toBe("Frage 1 von 12");
   });
 });
