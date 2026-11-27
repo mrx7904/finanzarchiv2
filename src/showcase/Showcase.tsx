@@ -26,6 +26,7 @@ import {
   type SearchEntry,
   type WindowSystem,
 } from "../ui";
+import { EvaluationVariants } from "./Evaluations";
 import { Pieces } from "./Pieces";
 import { categories, documents, formatCents, type SampleDocument } from "./sample";
 
@@ -49,7 +50,10 @@ const views: { id: string; label: string; icon: IconName; count?: number }[][] =
     { id: "zahlungen", label: "Zahlungen", icon: "card" },
     { id: "steuern", label: "Steuern", icon: "scale" },
   ],
-  [{ id: "bausteine", label: "Bausteine", icon: "more" }],
+  [
+    { id: "bausteine", label: "Bausteine", icon: "more" },
+    { id: "auswertungen", label: "Auswertungen", icon: "scale" },
+  ],
 ];
 
 export function Showcase() {
@@ -158,7 +162,7 @@ export function Showcase() {
           </div>
         }
       >
-          {view === "bausteine" ? <Pieces /> : <>
+          {view === "bausteine" ? <Pieces /> : view === "auswertungen" ? <EvaluationVariants /> : <>
           <p className="px-6 pt-4 pb-4 text-fg-muted">Alles, was im Archiv liegt. Wähle ein Dokument, um seine Angaben zu prüfen.</p>
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(320px,400px)_minmax(0,1fr)_minmax(280px,340px)] gap-4 px-6 pb-6">
             <section aria-label="Liste" className="flex min-h-0 flex-col rounded-panel bg-surface shadow-panel">
