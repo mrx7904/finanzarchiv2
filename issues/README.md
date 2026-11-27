@@ -148,12 +148,13 @@ Faults and gaps found when 0.7.0 was read against the requirements, the concept 
 | [#70](070-log-and-one-instance.md) | A log file and one instance | FA-70 | none | open |
 | [#71](071-running-in-the-background.md) | The archive fills while the window is closed | FA-71 | #70 | open, needs the owner's word |
 | [#72](072-handling-documents.md) | Handling documents: the drop, the keys, several at once | FA-72 | #46, #48, #61 | open |
+| [#73](073-what-belongs-together.md) | What belongs together, as one picture | FA-73 | #58, #66 | open |
 
-**This block is done when the owner works through a week of real documents in the installed app without one of the faults of #55 to #60, and finds each function of #61 to #72 that was built where its issue puts it.**
+**This block is done when the owner works through a week of real documents in the installed app without one of the faults of #55 to #60, and finds each function of #61 to #73 that was built where its issue puts it.**
 
 **Status:** Cut on 2026-11-27 on the owner's word ("Bitte erstelle eine ausführliche Analyse mit neuen Issues", then "schau auch mal noch nach Funktionalitäten, ob Usability oder Feature, die noch fehlen und lege dafür ebenfalls neue Issues an"). Like the views it is no stage of `spec/concept.md`. #55 was reproduced, the other faults were found by reading the code and are to be seen in the window by their issue. #68 and #71 wait for the owner's word before they begin.
 
-Order of work: #55 first, then #56, #57 and #59, then #58 and #60. After the faults: #70, then #61, #62 and #64, then #63, #65, #66 and #67, then #69 and #72, and #68 and #71 once the owner decided.
+Order of work: #55 first, then #56, #57 and #59, then #58 and #60. After the faults: #70, then #61, #62 and #64, then #63, #65, #66 and #67, then #69 and #72, then #73, and #68 and #71 once the owner decided. #73 and the dragging of a page in #56 were added on 2026-11-27 on the owner's question about a canvas.
 
 ## Later stages
 

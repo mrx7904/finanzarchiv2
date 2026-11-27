@@ -352,7 +352,7 @@ Issue: #55
 
 ### FA-56 Scrolling through a document
 
-The pages of a document scroll by the wheel, one under the other, wherever a document is read, and Strg with the wheel zooms.
+The pages of a document scroll by the wheel, one under the other, wherever a document is read, Strg with the wheel zooms, and a zoomed page is moved by dragging it.
 
 Issue: #56
 
@@ -451,3 +451,9 @@ Issue: #71
 A drop is shown, the lists are moved through by the keys, a document opens in the program of the system, and several documents or bookings take one action at once.
 
 Issue: #72
+
+### FA-73 What belongs together
+
+At a document or a booking one picture, drawn by the app from the links, shows everything joined to it with the rule of each join, and each part opens with a click.
+
+Issue: #73

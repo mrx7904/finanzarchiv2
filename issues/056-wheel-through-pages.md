@@ -11,11 +11,13 @@ Asked by the owner on 2026-11-27 ("Kann man PDF Seiten mit Mausrad scrollen? Das
 - [ ] A click on a small image, the buttons back and forward, and the arrow and page keys scroll to that page.
 - [ ] The page column of Dokumente and of a question in "Prüfen" scrolls the same way through the pages. At "Ganze Seite" one turn of the wheel leads to the next or the previous page.
 - [ ] Strg with the wheel (⌘ on the Mac) zooms in all three places and keeps the point under the pointer where it is. Without Strg the wheel never zooms.
+- [ ] A zoomed page is moved by dragging it with the mouse button held, in every direction, with the hand as the pointer (added on the owner's yes of 2026-11-27 to the feel of a canvas for reading). A drag never selects or drags the image out of the window, and a click without a move still does what a click does.
 - [ ] Only the pages in view and one before and after are asked from the core. Measured on a document of at least 30 pages of the generated corpus: the calls of `page_image` after opening are at most 4, and scrolling to the last page asks no page twice at one width.
-- [ ] Tests cover which page counts as the current one while scrolling, and the wheel at the first and the last page.
+- [ ] Tests cover which page counts as the current one while scrolling, the wheel at the first and the last page, and a drag that ends at the edges of the page.
 - [ ] Seen by the owner on the largest document of the archive.
 
 ## Out of scope
 
 - Searching inside a document and selecting its text: a requirement of its own when the owner asks for it, as in #54.
 - Two pages side by side.
+- A free canvas as a form of the app: rejected on 2026-11-27, the archive orders by itself and the three forms of `knowledge/decision-views.md` stay. What belongs to a document as a picture: #73.
