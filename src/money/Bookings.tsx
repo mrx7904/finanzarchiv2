@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { type BookingPage, type BookingRow, type CategoryRow, commands } from "../bindings";
 import { useIntakeChanged } from "../intake/useIntakeChanged";
 import { BarActions, Button, DenseRow, Dialog, FilterMark, GroupHead, List, LoadingRows, Menu, SelectField, TextField } from "../ui";
+import type { BookingJump } from "../navigation";
 import { BookingDetail } from "./BookingDetail";
 import { amountText, bookingFilter, bookingWho, formatIsoDay, monthGroups } from "./describe";
 
@@ -15,11 +16,13 @@ type BookingsProps = {
   onOpenDocument: (document: number) => void;
   /** A text a jump set, such as a party from the quick search. */
   text?: string;
+  /** A period or a category a figure of Auswertungen set (#38). */
+  filter?: BookingJump;
   onClearText?: () => void;
   onRenamed?: (name: string) => void;
 };
 
-export function Bookings({ account, onOpenDocument, text: jumped = "", onClearText, onRenamed }: BookingsProps) {
+export function Bookings({ account, onOpenDocument, text: jumped = "", filter, onClearText, onRenamed }: BookingsProps) {
   const [year, setYear] = useState("");
   const [years, setYears] = useState<number[]>([]);
   const [category, setCategory] = useState("");
@@ -33,14 +36,15 @@ export function Bookings({ account, onOpenDocument, text: jumped = "", onClearTe
 
   const load = useCallback(
     async (offset: number) => {
-      const from = year ? `${year}-01-01` : "";
-      const to = year ? `${year}-12-31` : "";
-      const result = await commands.listBookings(bookingFilter(account?.id ?? null, from, to, category, text, offset));
+      const from = filter?.from ?? (year ? `${year}-01-01` : "");
+      const to = filter?.to ?? (year ? `${year}-12-31` : "");
+      const chosenCategory = filter?.category !== undefined ? String(filter.category) : category;
+      const result = await commands.listBookings(bookingFilter(account?.id ?? null, from, to, chosenCategory, text, offset));
       if (result.status !== "ok") return;
       setPage(result.data);
       setRows((before) => (offset === 0 ? result.data.rows : [...(before ?? []), ...result.data.rows]));
     },
-    [account, year, category, text],
+    [account, year, category, text, filter],
   );
   useEffect(() => {
     void load(0);
@@ -78,6 +82,7 @@ export function Bookings({ account, onOpenDocument, text: jumped = "", onClearTe
             </div>
             <div className="flex items-center gap-2">
               {jumped && <FilterMark label={jumped} onClear={() => onClearText?.()} />}
+              {filter && <FilterMark label={filter.label} onClear={() => onClearText?.()} />}
               <span className="text-small text-fg-muted tabular-nums">{page ? `${page.total.toLocaleString("de-DE")} Buchungen · +${page.income} · ${page.spending}` : ""}</span>
             </div>
           </div>

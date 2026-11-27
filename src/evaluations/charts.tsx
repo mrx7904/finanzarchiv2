@@ -21,7 +21,8 @@ function short(cents: number): string {
   return `${Math.round(cents / 100).toLocaleString("de-DE")} €`;
 }
 
-export type Series = { name: string; values: (number | null)[]; color: string };
+/** A value per month: `null` is a month without data ("fehlt" when the chart says so), `undefined` a month outside the range, which shows nothing. */
+export type Series = { name: string; values: (number | null | undefined)[]; color: string };
 
 /** Bars by month, one or two series side by side on one scale. `null` is a month without data: "fehlt" when `missing`. */
 export function MonthBars({ series, chosen, onChoose, missing = false, height = 180 }: { series: Series[]; chosen?: number | null; onChoose?: (month: number) => void; missing?: boolean; height?: number }) {
@@ -32,7 +33,7 @@ export function MonthBars({ series, chosen, onChoose, missing = false, height = 
       <div className="relative flex items-end gap-[6px]" style={{ height }}>
         <span className="pointer-events-none absolute top-0 right-0 text-small text-fg-muted tabular-nums">{short(top)}</span>
         {MONTH_LETTERS.map((_, month) => {
-          const empty = series.every((one) => one.values[month] === null || one.values[month] === undefined);
+          const empty = series.every((one) => one.values[month] === null);
           return (
             <button
               key={month}
